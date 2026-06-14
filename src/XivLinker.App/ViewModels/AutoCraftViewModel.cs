@@ -19,15 +19,14 @@ public partial class AutoCraftViewModel : ObservableObject
             SaveSequence);
         sequenceListViewModel = new AutoCraftSequenceListViewModel(
             craftSequenceStore,
-            ShowSequenceEditor,
-            DeleteSequence);
+            ShowSequenceEditor);
 
         ShowSequenceList();
     }
 
     public string Title => "自動クラフト";
 
-    public string Description => "クラフトシーケンスの一覧確認と新規登録画面への遷移をここから行えます。";
+    public string Description => "クラフトシーケンスの一覧確認と新規登録画面への移動をここから行えます。";
 
     public bool IsSequenceListVisible => ReferenceEquals(CurrentContentViewModel, sequenceListViewModel);
 
@@ -53,10 +52,5 @@ public partial class AutoCraftViewModel : ObservableObject
     {
         sequenceListViewModel.Save(sequence);
         ShowSequenceList();
-    }
-
-    private void DeleteSequence(Guid sequenceId)
-    {
-        sequenceListViewModel.Delete(sequenceId);
     }
 }

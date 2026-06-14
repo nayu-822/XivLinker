@@ -9,16 +9,13 @@ public sealed class AutoCraftSequenceListViewModel
 {
     private readonly ICraftSequenceStore craftSequenceStore;
     private readonly Action<CraftSequence?> openEditor;
-    private readonly Action<Guid> deleteSequence;
 
     public AutoCraftSequenceListViewModel(
         ICraftSequenceStore craftSequenceStore,
-        Action<CraftSequence?> openEditor,
-        Action<Guid> deleteSequence)
+        Action<CraftSequence?> openEditor)
     {
         this.craftSequenceStore = craftSequenceStore;
         this.openEditor = openEditor;
-        this.deleteSequence = deleteSequence;
 
         Sequences = new ObservableCollection<CraftSequenceSummaryViewModel>();
         CreateSequenceCommand = new RelayCommand(CreateSequence);
@@ -66,7 +63,7 @@ public sealed class AutoCraftSequenceListViewModel
 
     public void Delete(Guid sequenceId)
     {
-        deleteSequence(sequenceId);
+        craftSequenceStore.Delete(sequenceId);
         Refresh();
     }
 

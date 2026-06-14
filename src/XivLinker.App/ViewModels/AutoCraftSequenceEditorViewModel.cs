@@ -17,6 +17,9 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool isEditing;
 
+    [ObservableProperty]
+    private string statusMessage = string.Empty;
+
     public AutoCraftSequenceEditorViewModel(
         Action cancel,
         Action<CraftSequence> save)
@@ -63,6 +66,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         IsEditing = sequence is not null;
         sequenceId = sequence?.SequenceId ?? Guid.NewGuid();
         SequenceName = sequence?.Name ?? string.Empty;
+        StatusMessage = string.Empty;
 
         Steps.Clear();
 
@@ -70,7 +74,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         {
             Steps.Add(new CraftSequenceStepViewModel
             {
-                ActionName = "作業",
+                ActionName = "加工",
                 WaitMilliseconds = 2500,
             });
         }
@@ -87,6 +91,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 
     private void AddStep()
     {
+        StatusMessage = string.Empty;
         Steps.Add(new CraftSequenceStepViewModel
         {
             ActionName = string.Empty,
@@ -101,11 +106,30 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
             return;
         }
 
+        StatusMessage = string.Empty;
         Steps.Remove(step);
     }
 
     private void SaveSequence()
     {
+        if (Steps.Count == 0)
+        {
+            StatusMessage = "ステップを1件以上追加してください。";
+            return;
+        }
+
+        if (Steps.Any(step => string.IsNullOrWhiteSpace(step.ActionName)))
+        {
+            StatusMessage = "アクション名が空のステップがあります。";
+            return;
+        }
+
+        if (Steps.Any(step => step.WaitMilliseconds < 1))
+        {
+            StatusMessage = "待機時間は1以上で入力してください。";
+            return;
+        }
+
         var sequence = new CraftSequence
         {
             SequenceId = sequenceId,
@@ -115,6 +139,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
                 .ToArray(),
         };
 
+        StatusMessage = string.Empty;
         save(sequence);
     }
 }

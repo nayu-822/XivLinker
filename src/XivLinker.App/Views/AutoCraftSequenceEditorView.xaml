@@ -56,6 +56,11 @@
                              BorderThickness="1"
                              Foreground="{DynamicResource App.Brush.TextPrimary}" />
 
+                    <TextBlock Margin="0,8,0,0"
+                               Text="{Binding StatusMessage}"
+                               Style="{StaticResource BodyTextStyle}"
+                               Foreground="{DynamicResource App.Brush.Warning}" />
+
                     <Grid Margin="0,24,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -96,7 +101,7 @@
                                         <TextBlock Text="アクション名"
                                                    Style="{StaticResource LabelTextStyle}" />
                                         <TextBlock Grid.Column="2"
-                                                   Text="待機(ms)"
+                                                   Text="待機時間 (ms)"
                                                    Style="{StaticResource LabelTextStyle}" />
 
                                         <TextBox Grid.Row="1"

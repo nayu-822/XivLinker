@@ -5,32 +5,7 @@ namespace XivLinker.Application.Services;
 
 public sealed class CraftSequenceStore : ICraftSequenceStore
 {
-    private readonly List<CraftSequence> sequences =
-    [
-        new CraftSequence
-        {
-            SequenceId = Guid.Parse("E3C395F2-5759-45FF-8EC0-78E89BB8290D"),
-            Name = "収集品の基本回し",
-            UpdatedAt = DateTimeOffset.Now.AddDays(-1),
-            Steps =
-            [
-                new CraftSequenceStep { ActionName = "作業", WaitMilliseconds = 2500 },
-                new CraftSequenceStep { ActionName = "中級加工", WaitMilliseconds = 2500 },
-                new CraftSequenceStep { ActionName = "模範作業", WaitMilliseconds = 2500 },
-            ],
-        },
-        new CraftSequence
-        {
-            SequenceId = Guid.Parse("65CDA5E8-122A-4A49-98BC-80B484B6B7D1"),
-            Name = "耐久40向け簡易回し",
-            UpdatedAt = DateTimeOffset.Now.AddHours(-6),
-            Steps =
-            [
-                new CraftSequenceStep { ActionName = "倹約", WaitMilliseconds = 2500 },
-                new CraftSequenceStep { ActionName = "加工", WaitMilliseconds = 2500 },
-            ],
-        },
-    ];
+    private readonly List<CraftSequence> sequences = [];
 
     public IReadOnlyList<CraftSequence> GetAll()
     {
