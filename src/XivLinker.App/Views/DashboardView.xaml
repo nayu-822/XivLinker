@@ -33,7 +33,7 @@
                         <TextBlock Text="&#x63A5;&#x7D9A;&#x72B6;&#x614B;"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <ItemsControl Margin="0,16,0,0"
-                                      ItemsSource="{Binding Shell.DataSources}">
+                                      ItemsSource="{Binding DataSourceStatus.Items}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,12">
@@ -82,7 +82,7 @@
                         <TextBlock Text="&#x30A8;&#x30EA;&#x30A2;"
                                    Style="{StaticResource LabelTextStyle}" />
                         <TextBlock Grid.Column="1"
-                                   Text="{Binding Shell.CurrentArea}"
+                                   Text="{Binding Status.CurrentArea}"
                                    Style="{StaticResource ValueTextStyle}" />
 
                         <TextBlock Grid.Row="1"
@@ -92,7 +92,7 @@
                         <TextBlock Grid.Row="1"
                                    Grid.Column="1"
                                    Margin="0,12,0,0"
-                                   Text="{Binding Shell.CurrentCharacter}"
+                                   Text="{Binding Status.CurrentCharacter}"
                                    Style="{StaticResource ValueTextStyle}" />
                     </Grid>
                 </StackPanel>
@@ -104,7 +104,7 @@
                     <TextBlock Text="&#x30C7;&#x30FC;&#x30BF;&#x53D6;&#x5F97;&#x57FA;&#x76E4;"
                                Style="{StaticResource SectionTitleTextStyle}" />
                     <ItemsControl Margin="0,18,0,0"
-                                  ItemsSource="{Binding Shell.DataSources}">
+                                  ItemsSource="{Binding DataSourceStatus.Items}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="0,0,0,12"
@@ -176,7 +176,7 @@
                            Style="{StaticResource SectionTitleTextStyle}" />
 
                 <ListBox Grid.Row="2"
-                         ItemsSource="{Binding Shell.EventLogs}"
+                         ItemsSource="{Binding EventLog.Items}"
                          Background="Transparent"
                          BorderThickness="0"
                          ScrollViewer.VerticalScrollBarVisibility="Auto">

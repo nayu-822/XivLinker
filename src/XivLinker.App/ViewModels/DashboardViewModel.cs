@@ -2,10 +2,19 @@ namespace XivLinker.App.ViewModels;
 
 public sealed class DashboardViewModel
 {
-    public DashboardViewModel(MainViewModel shell)
+    public DashboardViewModel(
+        DataSourceStatusViewModel dataSourceStatus,
+        DashboardStatusViewModel status,
+        AppEventLogViewModel eventLog)
     {
-        Shell = shell;
+        DataSourceStatus = dataSourceStatus;
+        Status = status;
+        EventLog = eventLog;
     }
 
-    public MainViewModel Shell { get; }
+    public DataSourceStatusViewModel DataSourceStatus { get; }
+
+    public DashboardStatusViewModel Status { get; }
+
+    public AppEventLogViewModel EventLog { get; }
 }

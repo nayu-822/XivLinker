@@ -59,7 +59,7 @@ public partial class App : System.Windows.Application
     {
         try
         {
-            await mainViewModel.InitializeDataSourcesAsync();
+            await mainViewModel.InitializeAsync();
         }
         catch (Exception exception)
         {

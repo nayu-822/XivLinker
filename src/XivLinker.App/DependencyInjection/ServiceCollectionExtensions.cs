@@ -22,6 +22,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOverlayPluginWebSocketSessionService, OverlayPluginWebSocketSessionService>();
         services.AddSingleton<OverlayPluginConnectionStateService>();
 
+        services.AddSingleton<AppEventLogViewModel>();
+        services.AddSingleton<DashboardStatusViewModel>();
+        services.AddSingleton<DataSourceStatusViewModel>();
+        services.AddSingleton<DashboardViewModel>();
+        services.AddSingleton<AutoCraftViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
 
