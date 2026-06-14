@@ -16,6 +16,12 @@ public sealed class AppEventLogViewModel
 
     public void Add(string message)
     {
-        Items.Insert(0, message);
+        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            Items.Insert(0, message);
+            return;
+        }
+
+        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => Items.Insert(0, message));
     }
 }

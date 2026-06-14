@@ -31,7 +31,7 @@ public sealed class LuminaGameDataService : IGameDataService, IDisposable
 
     public string? ErrorMessage { get; private set; }
 
-    public async Task<GameDataStatus> CheckAvailabilityAsync()
+    public async Task<GameDataStatus> CheckAvailabilityAsync(CancellationToken cancellationToken = default)
     {
         if (!IsConfigured)
         {
@@ -50,7 +50,7 @@ public sealed class LuminaGameDataService : IGameDataService, IDisposable
             return CreateStatus(GameDataAvailabilityState.Ready);
         }
 
-        await initializationLock.WaitAsync();
+        await initializationLock.WaitAsync(cancellationToken);
         try
         {
             if (gameData is not null)
@@ -60,7 +60,7 @@ public sealed class LuminaGameDataService : IGameDataService, IDisposable
 
             try
             {
-                gameData = await Task.Run(() => new GameData(SqPackPath!));
+                gameData = await Task.Run(() => new GameData(SqPackPath!), cancellationToken);
                 ErrorMessage = null;
                 return CreateStatus(GameDataAvailabilityState.Ready);
             }

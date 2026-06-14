@@ -10,5 +10,5 @@ public interface IGameDataService
 
     string? ErrorMessage { get; }
 
-    Task<GameDataStatus> CheckAvailabilityAsync();
+    Task<GameDataStatus> CheckAvailabilityAsync(CancellationToken cancellationToken = default);
 }

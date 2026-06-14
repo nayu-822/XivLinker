@@ -9,7 +9,6 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
     private readonly IOverlayPluginWebSocketService webSocketService;
     private readonly IOverlayPluginWebSocketSessionService sessionService;
     private readonly IGameDataService gameDataService;
-    private int autoConnectAttempted;
 
     public OverlayPluginConnectionStateService(
         IOverlayPluginWebSocketService webSocketService,
@@ -30,22 +29,6 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
 
     public string Message { get; private set; }
 
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
-    {
-        if (Interlocked.Exchange(ref autoConnectAttempted, 1) == 1)
-        {
-            return;
-        }
-
-        try
-        {
-            await ConnectAsync(cancellationToken);
-        }
-        catch
-        {
-        }
-    }
-
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         await connectGate.WaitAsync(cancellationToken);
@@ -64,7 +47,7 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
                 return;
             }
 
-            GameDataStatus gameDataStatus = await gameDataService.CheckAvailabilityAsync();
+            GameDataStatus gameDataStatus = await gameDataService.CheckAvailabilityAsync(cancellationToken);
             await sessionService.StartAsync(cancellationToken);
 
             string? versionText = await GetVersionTextAsync(cancellationToken);

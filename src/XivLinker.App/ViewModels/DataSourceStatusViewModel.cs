@@ -66,29 +66,20 @@ public partial class DataSourceStatusViewModel : ObservableObject
 
     public IAsyncRelayCommand ConnectOverlayPluginCommand { get; }
 
-    public string ShellStatusText => overlayPluginConnectionStateService.State switch
-    {
-        OverlayPluginConnectionState.Connected => "\u63A5\u7D9A\u6E08\u307F",
-        OverlayPluginConnectionState.Connecting => "\u63A5\u7D9A\u4E2D...",
-        OverlayPluginConnectionState.Unavailable => "\u5229\u7528\u4E0D\u53EF",
-        OverlayPluginConnectionState.Error => "\u30A8\u30E9\u30FC",
-        _ => "\u672A\u63A5\u7D9A",
-    };
-
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        await RefreshGameDataStatusAsync();
-        await ConnectOverlayPluginAsync();
+        await RefreshGameDataStatusAsync(cancellationToken);
+        await ConnectOverlayPluginAsync(cancellationToken);
     }
 
-    private async Task RefreshGameDataStatusAsync()
+    private async Task RefreshGameDataStatusAsync(CancellationToken cancellationToken = default)
     {
         luminaItem.Status = "\u78BA\u8A8D\u4E2D...";
         luminaItem.Detail = "Lumina \u306E\u521D\u671F\u5316\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u3044\u307E\u3059\u3002";
 
         try
         {
-            GameDataStatus status = await gameDataService.CheckAvailabilityAsync();
+            GameDataStatus status = await gameDataService.CheckAvailabilityAsync(cancellationToken);
             ApplyGameDataStatus(status);
             eventLog.Add($"Lumina \u72B6\u614B: {luminaItem.Status}");
         }
@@ -101,7 +92,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         }
     }
 
-    private async Task ConnectOverlayPluginAsync()
+    private async Task ConnectOverlayPluginAsync(CancellationToken cancellationToken = default)
     {
         overlayItem.Status = "\u63A5\u7D9A\u4E2D...";
         overlayItem.Detail = "OverlayPlugin WebSocket \u3078\u63A5\u7D9A\u3057\u3066\u3044\u307E\u3059\u3002";
@@ -109,7 +100,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
 
         try
         {
-            await overlayPluginConnectionStateService.ConnectAsync();
+            await overlayPluginConnectionStateService.ConnectAsync(cancellationToken);
             ApplyOverlayPluginStatus();
             eventLog.Add($"OverlayPlugin \u72B6\u614B: {overlayItem.Status}");
         }
@@ -163,7 +154,6 @@ public partial class DataSourceStatusViewModel : ObservableObject
 
         overlayItem.Detail = overlayPluginConnectionStateService.Message;
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(ShellStatusText));
     }
 
     private void OnOverlayPluginStateChanged(object? sender, EventArgs e)

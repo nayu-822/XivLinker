@@ -3,3 +3,4 @@ obj/
 .dotnet/
 .nuget/
 .templateengine/
+*.log

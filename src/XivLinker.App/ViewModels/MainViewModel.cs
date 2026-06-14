@@ -32,14 +32,11 @@ public partial class MainViewModel : ObservableObject
         };
 
         SelectedNavigationItem = NavigationItems[0];
-        this.dataSourceStatusViewModel.PropertyChanged += OnDataSourceStatusPropertyChanged;
     }
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
     public IRelayCommand<NavigationItemViewModel> SelectNavigationItemCommand { get; }
-
-    public string ShellStatusText => dataSourceStatusViewModel.ShellStatusText;
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -65,13 +62,5 @@ public partial class MainViewModel : ObservableObject
         }
 
         SelectedNavigationItem = item;
-    }
-
-    private void OnDataSourceStatusPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(DataSourceStatusViewModel.ShellStatusText))
-        {
-            OnPropertyChanged(nameof(ShellStatusText));
-        }
     }
 }
