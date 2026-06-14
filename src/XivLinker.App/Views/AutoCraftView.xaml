@@ -17,7 +17,7 @@
                     BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                     BorderThickness="1">
                 <StackPanel>
-                    <TextBlock Text="状態"
+                    <TextBlock Text="&#x72B6;&#x614B;"
                                Style="{StaticResource LabelTextStyle}" />
                     <TextBlock Margin="0,6,0,0"
                                Text="{Binding Status}"

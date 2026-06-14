@@ -37,12 +37,12 @@
 
                 <Border Grid.Column="1"
                         Padding="14,8"
-                        Background="#22182633"
+                        Background="{DynamicResource App.Brush.StatusBadgeBackground}"
                         CornerRadius="{StaticResource App.CornerRadius.Pill}"
                         BorderBrush="{DynamicResource App.Brush.Border}"
                         BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="状態"
+                        <TextBlock Text="&#x72B6;&#x614B;"
                                    Style="{StaticResource LabelTextStyle}"
                                    VerticalAlignment="Center" />
                         <TextBlock Margin="10,0,0,0"
@@ -64,7 +64,7 @@
             <Border Grid.Column="0"
                     Style="{StaticResource NavigationRailStyle}">
                 <StackPanel>
-                    <TextBlock Text="ナビゲーション"
+                    <TextBlock Text="&#x30CA;&#x30D3;&#x30B2;&#x30FC;&#x30B7;&#x30E7;&#x30F3;"
                                Style="{StaticResource SectionTitleTextStyle}" />
                     <ItemsControl Margin="0,18,0,0"
                                   ItemsSource="{Binding NavigationItems}">

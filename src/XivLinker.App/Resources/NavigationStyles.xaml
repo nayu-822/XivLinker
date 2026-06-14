@@ -39,7 +39,7 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="#182B3B" />
+                <Setter Property="Background" Value="{DynamicResource App.Brush.NavigationHover}" />
                 <Setter Property="Foreground" Value="{DynamicResource App.Brush.TextPrimary}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource App.Brush.BorderSubtle}" />
             </Trigger>
@@ -51,7 +51,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource App.CornerRadius.Control}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                <Setter Property="Background" Value="#1F3244" />
+                <Setter Property="Background" Value="{DynamicResource App.Brush.NavigationSelected}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>

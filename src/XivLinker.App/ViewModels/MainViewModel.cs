@@ -24,7 +24,7 @@ public partial class MainViewModel : ObservableObject
     private string currentCharacter = "-";
 
     [ObservableProperty]
-    private string currentPageTitle = "ダッシュボード";
+    private string currentPageTitle = "\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9";
 
     [ObservableProperty]
     private object? currentContentViewModel;
@@ -142,6 +142,7 @@ public partial class MainViewModel : ObservableObject
     {
         overlayItem.Status = "\u63A5\u7D9A\u4E2D...";
         overlayItem.Detail = "OverlayPlugin WebSocket \u3078\u63A5\u7D9A\u3057\u3066\u3044\u307E\u3059\u3002";
+        ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
 
         try
         {
@@ -196,6 +197,7 @@ public partial class MainViewModel : ObservableObject
             OverlayPluginConnectionState.Error => "\u30A8\u30E9\u30FC",
             _ => "\u672A\u63A5\u7D9A",
         };
+
         overlayItem.Detail = overlayPluginConnectionStateService.Message;
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ShellStatusText));
@@ -203,8 +205,13 @@ public partial class MainViewModel : ObservableObject
 
     private void OnOverlayPluginStateChanged(object? sender, EventArgs e)
     {
-        ApplyOverlayPluginStatus();
-        OnPropertyChanged(nameof(ShellStatusText));
+        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            ApplyOverlayPluginStatus();
+            return;
+        }
+
+        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(ApplyOverlayPluginStatus);
     }
 
     private void AppendLog(string message)
@@ -219,7 +226,8 @@ public partial class MainViewModel : ObservableObject
 
     private bool CanConnectOverlayPlugin()
     {
-        return overlayPluginConnectionStateService.State != OverlayPluginConnectionState.Connected;
+        return overlayPluginConnectionStateService.State is not OverlayPluginConnectionState.Connected
+            and not OverlayPluginConnectionState.Connecting;
     }
 
     partial void OnSelectedNavigationItemChanged(NavigationItemViewModel? value)
