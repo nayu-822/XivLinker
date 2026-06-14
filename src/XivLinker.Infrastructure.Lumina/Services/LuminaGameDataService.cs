@@ -54,6 +54,7 @@ public sealed class LuminaGameDataService : IGameDataService, IDisposable
         }
 
         await initializationLock.WaitAsync(cancellationToken);
+
         try
         {
             if (gameData is not null)

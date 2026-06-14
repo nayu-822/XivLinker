@@ -276,7 +276,10 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
             {
                 using CancellationTokenSource timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutSource.CancelAfter(TimeSpan.FromSeconds(2));
-                await currentWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "session closed", timeoutSource.Token);
+                await currentWebSocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "session closed",
+                    timeoutSource.Token);
             }
             catch
             {

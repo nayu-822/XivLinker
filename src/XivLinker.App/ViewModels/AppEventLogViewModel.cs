@@ -8,7 +8,7 @@ public sealed class AppEventLogViewModel
     {
         Items = new ObservableCollection<string>
         {
-            "XivLinker \u3092\u8D77\u52D5\u3057\u307E\u3057\u305F\u3002",
+            "XivLinker を起動しました。",
         };
     }
 

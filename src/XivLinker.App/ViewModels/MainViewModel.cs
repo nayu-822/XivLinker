@@ -9,7 +9,7 @@ public partial class MainViewModel : ObservableObject
     private readonly DataSourceStatusViewModel dataSourceStatusViewModel;
 
     [ObservableProperty]
-    private string currentPageTitle = "\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9";
+    private string currentPageTitle = "ダッシュボード";
 
     [ObservableProperty]
     private object? currentContentViewModel;
@@ -27,8 +27,8 @@ public partial class MainViewModel : ObservableObject
 
         NavigationItems = new ObservableCollection<NavigationItemViewModel>
         {
-            new("dashboard", "\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9", "\u25A3", dashboardViewModel),
-            new("auto-craft", "\u81EA\u52D5\u30AF\u30E9\u30D5\u30C8", "\u2692", autoCraftViewModel),
+            new("dashboard", "ダッシュボード", "□", dashboardViewModel),
+            new("auto-craft", "自動クラフト", "⚒", autoCraftViewModel),
         };
 
         SelectedNavigationItem = NavigationItems[0];
