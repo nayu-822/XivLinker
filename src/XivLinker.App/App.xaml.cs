@@ -5,12 +5,15 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using XivLinker.App.DependencyInjection;
 using XivLinker.App.ViewModels;
+using XivLinker.Infrastructure.Overlay.Services;
 
 namespace XivLinker.App;
 
 public partial class App : System.Windows.Application
 {
     private readonly IHost _host;
+    private readonly CancellationTokenSource startupInitializationCancellationTokenSource = new();
+    private Task? startupInitializationTask;
 
     public App()
     {
@@ -42,12 +45,33 @@ public partial class App : System.Windows.Application
         mainWindow.Show();
 
         ILogger<App> logger = _host.Services.GetRequiredService<ILogger<App>>();
-        _ = InitializeDataSourcesAsync(mainViewModel, logger);
+        startupInitializationTask = InitializeDataSourcesAsync(
+            mainViewModel,
+            logger,
+            startupInitializationCancellationTokenSource.Token);
     }
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        startupInitializationCancellationTokenSource.Cancel();
+
+        if (startupInitializationTask is not null)
+        {
+            try
+            {
+                await startupInitializationTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        OverlayPluginConnectionStateService overlayPluginConnectionStateService =
+            _host.Services.GetRequiredService<OverlayPluginConnectionStateService>();
+        await overlayPluginConnectionStateService.StopAsync();
+
         await _host.StopAsync();
+        startupInitializationCancellationTokenSource.Dispose();
         _host.Dispose();
 
         base.OnExit(e);
@@ -55,11 +79,16 @@ public partial class App : System.Windows.Application
 
     private static async Task InitializeDataSourcesAsync(
         MainViewModel mainViewModel,
-        ILogger<App> logger)
+        ILogger<App> logger,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await mainViewModel.InitializeAsync();
+            await mainViewModel.InitializeAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // アプリ終了またはキャンセル時はエラー扱いしない
         }
         catch (Exception exception)
         {

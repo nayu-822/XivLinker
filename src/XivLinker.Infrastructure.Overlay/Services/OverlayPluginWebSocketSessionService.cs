@@ -131,14 +131,22 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
             gate.Release();
         }
 
-        Task completedTask = await Task.WhenAny(completionSource.Task, Task.Delay(requestTimeout, cancellationToken));
-        if (completedTask != completionSource.Task)
+        Task timeoutTask = Task.Delay(requestTimeout);
+        Task cancellationTask = Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        Task completedTask = await Task.WhenAny(completionSource.Task, timeoutTask, cancellationTask);
+        if (completedTask == completionSource.Task)
         {
-            pendingRequests.TryRemove(sequence, out _);
-            throw new TimeoutException($"OverlayPlugin WebSocket の応答が {requestTimeout.TotalSeconds:0} 秒以内に返りませんでした。");
+            return await completionSource.Task;
         }
 
-        return await completionSource.Task;
+        pendingRequests.TryRemove(sequence, out _);
+
+        if (completedTask == cancellationTask)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        throw new TimeoutException($"OverlayPlugin WebSocket の応答が {requestTimeout.TotalSeconds:0} 秒以内に返りませんでした。");
     }
 
     public void Dispose()
@@ -206,7 +214,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         }
         finally
         {
-            FailPendingRequests("OverlayPlugin WebSocket 接続が切断されました。");
+            FailPendingRequests("OverlayPlugin WebSocket 接続が終了しました。");
             if (ReferenceEquals(webSocket, currentWebSocket))
             {
                 webSocket = null;
@@ -270,7 +278,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         }
 
         currentWebSocket.Dispose();
-        FailPendingRequests("OverlayPlugin WebSocket 接続が切断されました。");
+        FailPendingRequests("OverlayPlugin WebSocket 接続が終了しました。");
     }
 
     private void FailPendingRequests(string message)

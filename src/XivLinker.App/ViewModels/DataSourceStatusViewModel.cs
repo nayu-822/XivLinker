@@ -83,6 +83,10 @@ public partial class DataSourceStatusViewModel : ObservableObject
             ApplyGameDataStatus(status);
             eventLog.Add($"Lumina \u72B6\u614B: {luminaItem.Status}");
         }
+        catch (OperationCanceledException)
+        {
+            // アプリ終了またはキャンセル時はエラー扱いしない
+        }
         catch (Exception exception)
         {
             logger.LogError(exception, "Lumina \u306E\u72B6\u614B\u78BA\u8A8D\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
@@ -103,6 +107,10 @@ public partial class DataSourceStatusViewModel : ObservableObject
             await overlayPluginConnectionStateService.ConnectAsync(cancellationToken);
             ApplyOverlayPluginStatus();
             eventLog.Add($"OverlayPlugin \u72B6\u614B: {overlayItem.Status}");
+        }
+        catch (OperationCanceledException)
+        {
+            ApplyOverlayPluginStatus();
         }
         catch (Exception exception)
         {

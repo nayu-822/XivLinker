@@ -68,10 +68,30 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
                 "OverlayPlugin WebSocket \u304B\u3089\u5FDC\u7B54\u304C\u3042\u308A\u307E\u305B\u3093\u3067\u3057\u305F\u3002");
             throw;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             SetState(OverlayPluginConnectionState.Error, exception.Message);
             throw;
+        }
+        finally
+        {
+            connectGate.Release();
+        }
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        await connectGate.WaitAsync(cancellationToken);
+        try
+        {
+            await sessionService.StopAsync(cancellationToken);
+            SetState(
+                OverlayPluginConnectionState.Disconnected,
+                "OverlayPlugin WebSocket \u3078\u306E\u63A5\u7D9A\u3092\u505C\u6B62\u3057\u307E\u3057\u305F\u3002");
         }
         finally
         {
