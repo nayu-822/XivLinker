@@ -1,10 +1,62 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using XivLinker.Application.Abstractions;
+using XivLinker.Domain.Models;
+
 namespace XivLinker.App.ViewModels;
 
-public sealed class AutoCraftViewModel
+public partial class AutoCraftViewModel : ObservableObject
 {
-    public string Title => "\u81EA\u52D5\u30AF\u30E9\u30D5\u30C8";
+    private readonly AutoCraftSequenceListViewModel sequenceListViewModel;
+    private readonly AutoCraftSequenceEditorViewModel sequenceEditorViewModel;
 
-    public string Description => "\u30AF\u30E9\u30D5\u30C8\u652F\u63F4\u6A5F\u80FD\u3092\u3053\u3053\u306B\u62E1\u5F35\u3059\u308B\u4E88\u5B9A\u3067\u3059\u3002";
+    [ObservableProperty]
+    private object? currentContentViewModel;
 
-    public string Status => "\u672A\u5B9F\u88C5";
+    public AutoCraftViewModel(ICraftSequenceStore craftSequenceStore)
+    {
+        sequenceEditorViewModel = new AutoCraftSequenceEditorViewModel(
+            ShowSequenceList,
+            SaveSequence);
+        sequenceListViewModel = new AutoCraftSequenceListViewModel(
+            craftSequenceStore,
+            ShowSequenceEditor,
+            DeleteSequence);
+
+        ShowSequenceList();
+    }
+
+    public string Title => "自動クラフト";
+
+    public string Description => "クラフトシーケンスの一覧確認と新規登録画面への遷移をここから行えます。";
+
+    public bool IsSequenceListVisible => ReferenceEquals(CurrentContentViewModel, sequenceListViewModel);
+
+    public bool IsSequenceEditorVisible => ReferenceEquals(CurrentContentViewModel, sequenceEditorViewModel);
+
+    private void ShowSequenceList()
+    {
+        sequenceListViewModel.Refresh();
+        CurrentContentViewModel = sequenceListViewModel;
+        OnPropertyChanged(nameof(IsSequenceListVisible));
+        OnPropertyChanged(nameof(IsSequenceEditorVisible));
+    }
+
+    private void ShowSequenceEditor(CraftSequence? sequence)
+    {
+        sequenceEditorViewModel.Load(sequence);
+        CurrentContentViewModel = sequenceEditorViewModel;
+        OnPropertyChanged(nameof(IsSequenceListVisible));
+        OnPropertyChanged(nameof(IsSequenceEditorVisible));
+    }
+
+    private void SaveSequence(CraftSequence sequence)
+    {
+        sequenceListViewModel.Save(sequence);
+        ShowSequenceList();
+    }
+
+    private void DeleteSequence(Guid sequenceId)
+    {
+        sequenceListViewModel.Delete(sequenceId);
+    }
 }

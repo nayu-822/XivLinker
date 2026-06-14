@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using XivLinker.Application.Abstractions;
+using XivLinker.Application.Services;
 using XivLinker.App.ViewModels;
 using XivLinker.Infrastructure.Lumina.Services;
 using XivLinker.Infrastructure.Overlay.Services;
@@ -21,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOverlayPluginWebSocketService, OverlayPluginWebSocketService>();
         services.AddSingleton<IOverlayPluginWebSocketSessionService, OverlayPluginWebSocketSessionService>();
         services.AddSingleton<OverlayPluginConnectionStateService>();
+        services.AddSingleton<ICraftSequenceStore, CraftSequenceStore>();
 
         services.AddSingleton<AppEventLogViewModel>();
         services.AddSingleton<DashboardStatusViewModel>();
