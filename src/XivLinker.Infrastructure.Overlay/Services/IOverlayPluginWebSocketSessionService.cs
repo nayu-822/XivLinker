@@ -4,7 +4,10 @@ public interface IOverlayPluginWebSocketSessionService
 {
     event EventHandler? ConnectionStateChanged;
 
-    bool IsStarted { get; }
+    bool IsStarted
+    {
+        get;
+    }
 
     Task StartAsync(CancellationToken cancellationToken = default);
 

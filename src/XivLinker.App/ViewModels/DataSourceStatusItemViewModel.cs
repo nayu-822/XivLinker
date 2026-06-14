@@ -19,7 +19,10 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
         ActionCommand = actionCommand;
     }
 
-    public string Name { get; }
+    public string Name
+    {
+        get;
+    }
 
     [ObservableProperty]
     private string status;
@@ -27,9 +30,15 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
     [ObservableProperty]
     private string detail;
 
-    public string? ActionLabel { get; }
+    public string? ActionLabel
+    {
+        get;
+    }
 
-    public IAsyncRelayCommand? ActionCommand { get; }
+    public IAsyncRelayCommand? ActionCommand
+    {
+        get;
+    }
 
     public bool HasAction => ActionCommand is not null && !string.IsNullOrWhiteSpace(ActionLabel);
 }

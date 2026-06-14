@@ -34,9 +34,15 @@ public partial class MainViewModel : ObservableObject
         SelectedNavigationItem = NavigationItems[0];
     }
 
-    public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
+    public ObservableCollection<NavigationItemViewModel> NavigationItems
+    {
+        get;
+    }
 
-    public IRelayCommand<NavigationItemViewModel> SelectNavigationItemCommand { get; }
+    public IRelayCommand<NavigationItemViewModel> SelectNavigationItemCommand
+    {
+        get;
+    }
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {

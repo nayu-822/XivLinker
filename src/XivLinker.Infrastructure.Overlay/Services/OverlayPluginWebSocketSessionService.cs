@@ -34,6 +34,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken);
+
         try
         {
             if (webSocket?.State == WebSocketState.Open)
@@ -70,6 +71,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken);
+
         try
         {
             await DisposeCurrentSocketAsync(cancellationToken);
@@ -90,6 +92,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         long sequence = 0;
 
         await gate.WaitAsync(cancellationToken);
+
         try
         {
             if (webSocket?.State != WebSocketState.Open)
@@ -134,6 +137,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         Task timeoutTask = Task.Delay(requestTimeout);
         Task cancellationTask = Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         Task completedTask = await Task.WhenAny(completionSource.Task, timeoutTask, cancellationTask);
+
         if (completedTask == completionSource.Task)
         {
             return await completionSource.Task;
@@ -170,6 +174,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         timeoutSource.CancelAfter(requestTimeout);
 
         await sendGate.WaitAsync(timeoutSource.Token);
+
         try
         {
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, timeoutSource.Token);
@@ -215,6 +220,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         finally
         {
             FailPendingRequests("OverlayPlugin WebSocket 接続が終了しました。");
+
             if (ReferenceEquals(webSocket, currentWebSocket))
             {
                 webSocket = null;

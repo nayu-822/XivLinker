@@ -25,13 +25,20 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
 
     public event EventHandler? StateChanged;
 
-    public OverlayPluginConnectionState State { get; private set; }
+    public OverlayPluginConnectionState State
+    {
+        get; private set;
+    }
 
-    public string Message { get; private set; }
+    public string Message
+    {
+        get; private set;
+    }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         await connectGate.WaitAsync(cancellationToken);
+
         try
         {
             SetState(
@@ -86,6 +93,7 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         await connectGate.WaitAsync(cancellationToken);
+
         try
         {
             await sessionService.StopAsync(cancellationToken);
@@ -109,6 +117,7 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
     {
         string response = await sessionService.SendRequestAsync("getVersion", cancellationToken: cancellationToken);
         using JsonDocument document = JsonDocument.Parse(response);
+
         return document.RootElement.TryGetProperty("version", out JsonElement versionElement)
             ? versionElement.GetString()
             : null;

@@ -60,11 +60,20 @@ public partial class DataSourceStatusViewModel : ObservableObject
         this.overlayPluginConnectionStateService.StateChanged += OnOverlayPluginStateChanged;
     }
 
-    public ObservableCollection<DataSourceStatusItemViewModel> Items { get; }
+    public ObservableCollection<DataSourceStatusItemViewModel> Items
+    {
+        get;
+    }
 
-    public IAsyncRelayCommand RefreshLuminaCommand { get; }
+    public IAsyncRelayCommand RefreshLuminaCommand
+    {
+        get;
+    }
 
-    public IAsyncRelayCommand ConnectOverlayPluginCommand { get; }
+    public IAsyncRelayCommand ConnectOverlayPluginCommand
+    {
+        get;
+    }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {

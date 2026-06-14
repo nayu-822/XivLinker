@@ -12,7 +12,10 @@ public sealed class AppEventLogViewModel
         };
     }
 
-    public ObservableCollection<string> Items { get; }
+    public ObservableCollection<string> Items
+    {
+        get;
+    }
 
     public void Add(string message)
     {

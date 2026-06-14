@@ -29,7 +29,10 @@ public sealed class LuminaGameDataService : IGameDataService, IDisposable
 
     public string? SqPackPath => resolvedSqPackPath ??= ResolveSqPackPath();
 
-    public string? ErrorMessage { get; private set; }
+    public string? ErrorMessage
+    {
+        get; private set;
+    }
 
     public async Task<GameDataStatus> CheckAvailabilityAsync(CancellationToken cancellationToken = default)
     {

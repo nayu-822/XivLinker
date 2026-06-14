@@ -12,9 +12,18 @@ public sealed class DashboardViewModel
         EventLog = eventLog;
     }
 
-    public DataSourceStatusViewModel DataSourceStatus { get; }
+    public DataSourceStatusViewModel DataSourceStatus
+    {
+        get;
+    }
 
-    public DashboardStatusViewModel Status { get; }
+    public DashboardStatusViewModel Status
+    {
+        get;
+    }
 
-    public AppEventLogViewModel EventLog { get; }
+    public AppEventLogViewModel EventLog
+    {
+        get;
+    }
 }

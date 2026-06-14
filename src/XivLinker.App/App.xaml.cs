@@ -39,8 +39,8 @@ public partial class App : System.Windows.Application
 
         await _host.StartAsync();
 
-        var mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
-        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        MainViewModel mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
+        MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
 
@@ -53,28 +53,60 @@ public partial class App : System.Windows.Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
-        startupInitializationCancellationTokenSource.Cancel();
+        ILogger<App>? logger = null;
 
-        if (startupInitializationTask is not null)
+        try
         {
+            startupInitializationCancellationTokenSource.Cancel();
+            logger = _host.Services.GetService<ILogger<App>>();
+
+            if (startupInitializationTask is not null)
+            {
+                try
+                {
+                    await startupInitializationTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // アプリ終了またはキャンセル時はエラー扱いしない
+                }
+            }
+
+            OverlayPluginConnectionStateService overlayPluginConnectionStateService =
+                _host.Services.GetRequiredService<OverlayPluginConnectionStateService>();
+
             try
             {
-                await startupInitializationTask;
+                await overlayPluginConnectionStateService.StopAsync();
             }
             catch (OperationCanceledException)
             {
+                // アプリ終了またはキャンセル時はエラー扱いしない
+            }
+            catch (Exception exception)
+            {
+                logger?.LogError(exception, "終了時の OverlayPlugin 停止処理に失敗しました。");
+            }
+
+            try
+            {
+                await _host.StopAsync();
+            }
+            catch (OperationCanceledException)
+            {
+                // アプリ終了またはキャンセル時はエラー扱いしない
+            }
+            catch (Exception exception)
+            {
+                logger?.LogError(exception, "終了時のホスト停止処理に失敗しました。");
             }
         }
-
-        OverlayPluginConnectionStateService overlayPluginConnectionStateService =
-            _host.Services.GetRequiredService<OverlayPluginConnectionStateService>();
-        await overlayPluginConnectionStateService.StopAsync();
-
-        await _host.StopAsync();
-        startupInitializationCancellationTokenSource.Dispose();
-        _host.Dispose();
-
-        base.OnExit(e);
+        finally
+        {
+            startupInitializationCancellationTokenSource.Dispose();
+            _host.Dispose();
+            base.OnExit(e);
+        }
     }
 
     private static async Task InitializeDataSourcesAsync(
