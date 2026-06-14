@@ -1,0 +1,3 @@
+# XivLinker.Infrastructure.CharacterConfig
+
+将来的にキャラクター設定ファイルの読み込みと解析を実装するためのプレースホルダプロジェクトです。

@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XivLinker.Application\XivLinker.Application.csproj" />
+    <ProjectReference Include="..\XivLinker.Domain\XivLinker.Domain.csproj" />
+    <ProjectReference Include="..\XivLinker.Infrastructure.CharacterConfig\XivLinker.Infrastructure.CharacterConfig.csproj" />
+    <ProjectReference Include="..\XivLinker.Infrastructure.Logs\XivLinker.Infrastructure.Logs.csproj" />
+    <ProjectReference Include="..\XivLinker.Infrastructure.Lumina\XivLinker.Infrastructure.Lumina.csproj" />
+    <ProjectReference Include="..\XivLinker.Infrastructure.Overlay\XivLinker.Infrastructure.Overlay.csproj" />
+  </ItemGroup>
+
+</Project>
