@@ -15,54 +15,40 @@
     <Grid Margin="{StaticResource App.Thickness.Page}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="24" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="20" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource HeroPanelStyle}">
+        <Border Style="{StaticResource ShellHeaderCardStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="320" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
                     <TextBlock Text="XivLinker"
                                Style="{StaticResource AppTitleTextStyle}" />
-                    <TextBlock Margin="0,10,0,0"
-                               Text="&#x4ECA;&#x5F8C;&#x306E; OverlayPlugin&#x3001;Lumina&#x3001;&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;&#x8A2D;&#x5B9A;&#x3001;&#x30ED;&#x30B0;&#x9023;&#x643A;&#x306E;&#x571F;&#x53F0;&#x3068;&#x306A;&#x308B; FF14 &#x5411;&#x3051;&#x88DC;&#x52A9;&#x30C4;&#x30FC;&#x30EB;&#x3067;&#x3059;&#x3002;"
+                    <TextBlock Margin="0,8,0,0"
+                               Text="{Binding CurrentPageTitle}"
                                Style="{StaticResource BodyTextStyle}"
-                               Foreground="{DynamicResource App.Brush.TextSecondary}"
-                               TextWrapping="Wrap" />
+                               Foreground="{DynamicResource App.Brush.TextSecondary}" />
                 </StackPanel>
 
                 <Border Grid.Column="1"
-                        Style="{StaticResource StatusSummaryPanelStyle}">
-                    <StackPanel>
-                        <TextBlock Text="&#x63A5;&#x7D9A;&#x72B6;&#x614B;"
-                                   Style="{StaticResource SectionTitleTextStyle}" />
-                        <ItemsControl Margin="0,16,0,0"
-                                      ItemsSource="{Binding DataSources}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Name}"
-                                                   Style="{StaticResource LabelTextStyle}" />
-                                        <Border Grid.Column="1"
-                                                Style="{StaticResource StatusPillStyle}">
-                                            <TextBlock Text="{Binding Status}"
-                                                       Style="{StaticResource StatusPillTextStyle}" />
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        Padding="14,8"
+                        Background="#22182633"
+                        CornerRadius="{StaticResource App.CornerRadius.Pill}"
+                        BorderBrush="{DynamicResource App.Brush.Border}"
+                        BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="状態"
+                                   Style="{StaticResource LabelTextStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Margin="10,0,0,0"
+                                   Text="{Binding ShellStatusText}"
+                                   Style="{StaticResource ValueTextStyle}"
+                                   FontSize="14" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -70,143 +56,44 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="20" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
-                    Style="{StaticResource CardStyle}">
+                    Style="{StaticResource NavigationRailStyle}">
                 <StackPanel>
-                    <TextBlock Text="&#x73FE;&#x5728;&#x306E;&#x72B6;&#x614B;"
-                               Style="{StaticResource SectionTitleTextStyle}" />
-                    <Grid Margin="0,18,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Text="&#x30A8;&#x30EA;&#x30A2;"
-                                   Style="{StaticResource LabelTextStyle}" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding CurrentArea}"
-                                   Style="{StaticResource ValueTextStyle}" />
-
-                        <TextBlock Grid.Row="1"
-                                   Margin="0,12,0,0"
-                                   Text="&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;"
-                                   Style="{StaticResource LabelTextStyle}" />
-                        <TextBlock Grid.Row="1"
-                                   Grid.Column="1"
-                                   Margin="0,12,0,0"
-                                   Text="{Binding CurrentCharacter}"
-                                   Style="{StaticResource ValueTextStyle}" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2"
-                    Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <TextBlock Text="&#x30C7;&#x30FC;&#x30BF;&#x53D6;&#x5F97;&#x57FA;&#x76E4;"
+                    <TextBlock Text="ナビゲーション"
                                Style="{StaticResource SectionTitleTextStyle}" />
                     <ItemsControl Margin="0,18,0,0"
-                                  ItemsSource="{Binding DataSources}">
+                                  ItemsSource="{Binding NavigationItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,0,0,12"
-                                        Padding="14"
-                                        CornerRadius="{StaticResource App.CornerRadius.Control}"
-                                        Background="{DynamicResource App.Brush.SurfaceAlt}"
-                                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                                        BorderThickness="1">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Name}"
-                                                       Style="{StaticResource CardTitleTextStyle}" />
-                                            <TextBlock Margin="0,4,0,0"
-                                                       Text="{Binding Detail}"
-                                                       Style="{StaticResource CaptionTextStyle}"
-                                                       TextWrapping="Wrap" />
+                                <Border Style="{StaticResource NavigationItemContainerStyle}">
+                                    <Button Command="{Binding DataContext.SelectNavigationItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource NavigationButtonStyle}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Icon}"
+                                                       Style="{StaticResource ValueTextStyle}"
+                                                       FontSize="14"
+                                                       Width="22" />
+                                            <TextBlock Text="{Binding Title}"
+                                                       Style="{StaticResource BodyTextStyle}"
+                                                       Margin="10,0,0,0"
+                                                       VerticalAlignment="Center" />
                                         </StackPanel>
-
-                                        <TextBlock Grid.Column="1"
-                                                   VerticalAlignment="Center"
-                                                   Text="{Binding Status}"
-                                                   Style="{StaticResource InlineStatusTextStyle}" />
-
-                                        <Button Grid.Row="1"
-                                                Grid.ColumnSpan="2"
-                                                Margin="0,12,0,0"
-                                                HorizontalAlignment="Left"
-                                                Command="{Binding ActionCommand}">
-                                            <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasAction}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                            <TextBlock Text="{Binding ActionLabel}" />
-                                        </Button>
-                                    </Grid>
+                                    </Button>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <ContentControl Grid.Column="2"
+                            Content="{Binding CurrentContentViewModel}" />
         </Grid>
-
-        <Border Grid.Row="4"
-                Style="{StaticResource CardStyle}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="12" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <TextBlock Text="&#x30A4;&#x30D9;&#x30F3;&#x30C8;&#x30ED;&#x30B0;"
-                           Style="{StaticResource SectionTitleTextStyle}" />
-
-                <ListBox Grid.Row="2"
-                         ItemsSource="{Binding EventLogs}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Margin="0,0,0,10"
-                                    Padding="14"
-                                    CornerRadius="{StaticResource App.CornerRadius.Control}"
-                                    Background="{DynamicResource App.Brush.SurfaceAlt}"
-                                    BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                                    BorderThickness="1">
-                                <TextBlock Text="{Binding}"
-                                           Style="{StaticResource LogTextStyle}"
-                                           TextWrapping="Wrap" />
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
-        </Border>
     </Grid>
 </Window>

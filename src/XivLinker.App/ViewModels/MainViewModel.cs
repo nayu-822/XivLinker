@@ -14,12 +14,23 @@ public partial class MainViewModel : ObservableObject
     private readonly ILogger<MainViewModel> logger;
     private readonly DataSourceStatusItemViewModel luminaItem;
     private readonly DataSourceStatusItemViewModel overlayItem;
+    private readonly DashboardViewModel dashboardViewModel;
+    private readonly AutoCraftViewModel autoCraftViewModel;
 
     [ObservableProperty]
     private string currentArea = "-";
 
     [ObservableProperty]
     private string currentCharacter = "-";
+
+    [ObservableProperty]
+    private string currentPageTitle = "ダッシュボード";
+
+    [ObservableProperty]
+    private object? currentContentViewModel;
+
+    [ObservableProperty]
+    private NavigationItemViewModel? selectedNavigationItem;
 
     public MainViewModel(
         IGameDataService gameDataService,
@@ -32,6 +43,7 @@ public partial class MainViewModel : ObservableObject
 
         RefreshLuminaCommand = new AsyncRelayCommand(RefreshGameDataStatusAsync, CanRefreshLumina);
         ConnectOverlayPluginCommand = new AsyncRelayCommand(ConnectOverlayPluginAsync, CanConnectOverlayPlugin);
+        SelectNavigationItemCommand = new RelayCommand<NavigationItemViewModel>(SelectNavigationItem);
 
         luminaItem = new DataSourceStatusItemViewModel(
             "Lumina",
@@ -65,6 +77,17 @@ public partial class MainViewModel : ObservableObject
             "XivLinker \u3092\u8D77\u52D5\u3057\u307E\u3057\u305F\u3002",
         };
 
+        dashboardViewModel = new DashboardViewModel(this);
+        autoCraftViewModel = new AutoCraftViewModel();
+
+        NavigationItems = new ObservableCollection<NavigationItemViewModel>
+        {
+            new("dashboard", "\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9", "\u25A3", dashboardViewModel),
+            new("auto-craft", "\u81EA\u52D5\u30AF\u30E9\u30D5\u30C8", "\u2692", autoCraftViewModel),
+        };
+
+        SelectedNavigationItem = NavigationItems[0];
+
         this.overlayPluginConnectionStateService.StateChanged += OnOverlayPluginStateChanged;
     }
 
@@ -72,9 +95,22 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<string> EventLogs { get; }
 
+    public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
+
     public IAsyncRelayCommand RefreshLuminaCommand { get; }
 
     public IAsyncRelayCommand ConnectOverlayPluginCommand { get; }
+
+    public IRelayCommand<NavigationItemViewModel> SelectNavigationItemCommand { get; }
+
+    public string ShellStatusText => overlayPluginConnectionStateService.State switch
+    {
+        OverlayPluginConnectionState.Connected => "\u63A5\u7D9A\u6E08\u307F",
+        OverlayPluginConnectionState.Connecting => "\u63A5\u7D9A\u4E2D...",
+        OverlayPluginConnectionState.Unavailable => "\u5229\u7528\u4E0D\u53EF",
+        OverlayPluginConnectionState.Error => "\u30A8\u30E9\u30FC",
+        _ => "\u672A\u63A5\u7D9A",
+    };
 
     public async Task InitializeDataSourcesAsync()
     {
@@ -162,11 +198,13 @@ public partial class MainViewModel : ObservableObject
         };
         overlayItem.Detail = overlayPluginConnectionStateService.Message;
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(ShellStatusText));
     }
 
     private void OnOverlayPluginStateChanged(object? sender, EventArgs e)
     {
         ApplyOverlayPluginStatus();
+        OnPropertyChanged(nameof(ShellStatusText));
     }
 
     private void AppendLog(string message)
@@ -182,5 +220,26 @@ public partial class MainViewModel : ObservableObject
     private bool CanConnectOverlayPlugin()
     {
         return overlayPluginConnectionStateService.State != OverlayPluginConnectionState.Connected;
+    }
+
+    partial void OnSelectedNavigationItemChanged(NavigationItemViewModel? value)
+    {
+        foreach (NavigationItemViewModel item in NavigationItems)
+        {
+            item.IsSelected = ReferenceEquals(item, value);
+        }
+
+        CurrentContentViewModel = value?.ContentViewModel;
+        CurrentPageTitle = value?.Title ?? "XivLinker";
+    }
+
+    private void SelectNavigationItem(NavigationItemViewModel? item)
+    {
+        if (item is null || ReferenceEquals(item, SelectedNavigationItem))
+        {
+            return;
+        }
+
+        SelectedNavigationItem = item;
     }
 }
