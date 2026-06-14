@@ -92,7 +92,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "\u8D77\u52D5\u6642\u306E\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9\u521D\u671F\u5316\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
+            logger.LogError(exception, "起動時のデータソース初期化に失敗しました。");
         }
     }
 }

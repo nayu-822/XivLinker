@@ -32,15 +32,15 @@ public partial class DataSourceStatusViewModel : ObservableObject
 
         luminaItem = new DataSourceStatusItemViewModel(
             "Lumina",
-            "\u672A\u8A2D\u5B9A",
-            "FF14 \u306E sqpack \u30D5\u30A9\u30EB\u30C0\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002",
-            "\u518D\u78BA\u8A8D",
+            "未設定",
+            "FF14 の sqpack フォルダが設定されていません。",
+            "再確認",
             RefreshLuminaCommand);
         overlayItem = new DataSourceStatusItemViewModel(
             "OverlayPlugin WebSocket",
-            "\u672A\u63A5\u7D9A",
-            "ACT \u307E\u305F\u306F OverlayPlugin \u306E WebSocket \u30B5\u30FC\u30D0\u30FC\u306B\u63A5\u7D9A\u3057\u3066\u3044\u307E\u305B\u3093\u3002",
-            "\u63A5\u7D9A",
+            "未接続",
+            "ACT または OverlayPlugin の WebSocket サーバーに接続していません。",
+            "接続",
             ConnectOverlayPluginCommand);
 
         Items = new ObservableCollection<DataSourceStatusItemViewModel>
@@ -48,13 +48,13 @@ public partial class DataSourceStatusViewModel : ObservableObject
             overlayItem,
             luminaItem,
             new(
-                "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u8A2D\u5B9A",
-                "\u672A\u8A2D\u5B9A",
-                "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u9023\u643A\u306F\u672A\u5B9F\u88C5\u3067\u3059\u3002"),
+                "キャラクター設定",
+                "未設定",
+                "キャラクター設定ファイル連携は未実装です。"),
             new(
-                "\u30ED\u30B0",
-                "\u672A\u8A2D\u5B9A",
-                "FF14 / ACT \u30ED\u30B0\u9023\u643A\u306F\u672A\u5B9F\u88C5\u3067\u3059\u3002"),
+                "ログ",
+                "未設定",
+                "FF14 / ACT ログ連携は未実装です。"),
         };
 
         this.overlayPluginConnectionStateService.StateChanged += OnOverlayPluginStateChanged;
@@ -74,14 +74,14 @@ public partial class DataSourceStatusViewModel : ObservableObject
 
     private async Task RefreshGameDataStatusAsync(CancellationToken cancellationToken = default)
     {
-        luminaItem.Status = "\u78BA\u8A8D\u4E2D...";
-        luminaItem.Detail = "Lumina \u306E\u521D\u671F\u5316\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u3044\u307E\u3059\u3002";
+        luminaItem.Status = "確認中...";
+        luminaItem.Detail = "Lumina の初期化状態を確認しています。";
 
         try
         {
             GameDataStatus status = await gameDataService.CheckAvailabilityAsync(cancellationToken);
             ApplyGameDataStatus(status);
-            eventLog.Add($"Lumina \u72B6\u614B: {luminaItem.Status}");
+            eventLog.Add($"Lumina 状態: {luminaItem.Status}");
         }
         catch (OperationCanceledException)
         {
@@ -89,24 +89,24 @@ public partial class DataSourceStatusViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Lumina \u306E\u72B6\u614B\u78BA\u8A8D\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
-            luminaItem.Status = "\u30A8\u30E9\u30FC";
-            luminaItem.Detail = "Lumina \u306E\u521D\u671F\u5316\u78BA\u8A8D\u3067\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\u3002";
-            eventLog.Add("Lumina \u306E\u521D\u671F\u5316\u78BA\u8A8D\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
+            logger.LogError(exception, "Lumina の状態確認に失敗しました。");
+            luminaItem.Status = "エラー";
+            luminaItem.Detail = "Lumina の初期化確認でエラーが発生しました。";
+            eventLog.Add("Lumina の初期化確認に失敗しました。");
         }
     }
 
     private async Task ConnectOverlayPluginAsync(CancellationToken cancellationToken = default)
     {
-        overlayItem.Status = "\u63A5\u7D9A\u4E2D...";
-        overlayItem.Detail = "OverlayPlugin WebSocket \u3078\u63A5\u7D9A\u3057\u3066\u3044\u307E\u3059\u3002";
+        overlayItem.Status = "接続中...";
+        overlayItem.Detail = "OverlayPlugin WebSocket へ接続しています。";
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
 
         try
         {
             await overlayPluginConnectionStateService.ConnectAsync(cancellationToken);
             ApplyOverlayPluginStatus();
-            eventLog.Add($"OverlayPlugin \u72B6\u614B: {overlayItem.Status}");
+            eventLog.Add($"OverlayPlugin 状態: {overlayItem.Status}");
         }
         catch (OperationCanceledException)
         {
@@ -114,9 +114,9 @@ public partial class DataSourceStatusViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "OverlayPlugin WebSocket \u3078\u306E\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
+            logger.LogWarning(exception, "OverlayPlugin WebSocket への接続に失敗しました。");
             ApplyOverlayPluginStatus();
-            eventLog.Add("OverlayPlugin WebSocket \u3078\u306E\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
+            eventLog.Add("OverlayPlugin WebSocket への接続に失敗しました。");
         }
     }
 
@@ -125,24 +125,24 @@ public partial class DataSourceStatusViewModel : ObservableObject
         switch (status.State)
         {
             case GameDataAvailabilityState.Unconfigured:
-                luminaItem.Status = "\u672A\u8A2D\u5B9A";
-                luminaItem.Detail = "FF14 \u306E sqpack \u30D5\u30A9\u30EB\u30C0\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002";
+                luminaItem.Status = "未設定";
+                luminaItem.Detail = "FF14 の sqpack フォルダが設定されていません。";
                 break;
             case GameDataAvailabilityState.PathNotFound:
-                luminaItem.Status = "\u5229\u7528\u4E0D\u53EF";
-                luminaItem.Detail = $"sqpack \u30D5\u30A9\u30EB\u30C0\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: {status.SqPackPath ?? "-"}";
+                luminaItem.Status = "利用不可";
+                luminaItem.Detail = $"sqpack フォルダが見つかりません: {status.SqPackPath ?? "-"}";
                 break;
             case GameDataAvailabilityState.Ready:
-                luminaItem.Status = "\u5229\u7528\u53EF\u80FD";
+                luminaItem.Status = "利用可能";
                 luminaItem.Detail = $"sqpack: {status.SqPackPath ?? "-"}";
                 break;
             case GameDataAvailabilityState.InitializationFailed:
-                luminaItem.Status = "\u30A8\u30E9\u30FC";
-                luminaItem.Detail = status.ErrorMessage ?? "Lumina \u306E\u521D\u671F\u5316\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002";
+                luminaItem.Status = "エラー";
+                luminaItem.Detail = status.ErrorMessage ?? "Lumina の初期化に失敗しました。";
                 break;
             default:
-                luminaItem.Status = "\u4E0D\u660E";
-                luminaItem.Detail = "Lumina \u306E\u72B6\u614B\u3092\u5224\u5B9A\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002";
+                luminaItem.Status = "不明";
+                luminaItem.Detail = "Lumina の状態を判定できませんでした。";
                 break;
         }
 
@@ -153,11 +153,11 @@ public partial class DataSourceStatusViewModel : ObservableObject
     {
         overlayItem.Status = overlayPluginConnectionStateService.State switch
         {
-            OverlayPluginConnectionState.Connecting => "\u63A5\u7D9A\u4E2D...",
-            OverlayPluginConnectionState.Connected => "\u63A5\u7D9A\u6E08\u307F",
-            OverlayPluginConnectionState.Unavailable => "\u5229\u7528\u4E0D\u53EF",
-            OverlayPluginConnectionState.Error => "\u30A8\u30E9\u30FC",
-            _ => "\u672A\u63A5\u7D9A",
+            OverlayPluginConnectionState.Connecting => "接続中...",
+            OverlayPluginConnectionState.Connected => "接続済み",
+            OverlayPluginConnectionState.Unavailable => "利用不可",
+            OverlayPluginConnectionState.Error => "エラー",
+            _ => "未接続",
         };
 
         overlayItem.Detail = overlayPluginConnectionStateService.Message;
@@ -177,7 +177,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
 
     private bool CanRefreshLumina()
     {
-        return luminaItem.Status != "\u5229\u7528\u53EF\u80FD";
+        return luminaItem.Status != "利用可能";
     }
 
     private bool CanConnectOverlayPlugin()

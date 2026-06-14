@@ -27,6 +27,10 @@ public sealed class OverlayPluginWebSocketService : IOverlayPluginWebSocketServi
             using ClientWebSocket webSocket = await ConnectAsync(cancellationToken);
             return webSocket.State == WebSocketState.Open;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch
         {
             return false;
