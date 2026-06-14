@@ -20,38 +20,14 @@
         </Grid.RowDefinitions>
 
         <Border Style="{StaticResource ShellHeaderCardStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel>
-                    <TextBlock Text="XivLinker"
-                               Style="{StaticResource AppTitleTextStyle}" />
-                    <TextBlock Margin="0,8,0,0"
-                               Text="{Binding CurrentPageTitle}"
-                               Style="{StaticResource BodyTextStyle}"
-                               Foreground="{DynamicResource App.Brush.TextSecondary}" />
-                </StackPanel>
-
-                <Border Grid.Column="1"
-                        Padding="14,8"
-                        Background="{DynamicResource App.Brush.StatusBadgeBackground}"
-                        CornerRadius="{StaticResource App.CornerRadius.Pill}"
-                        BorderBrush="{DynamicResource App.Brush.Border}"
-                        BorderThickness="1">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x72B6;&#x614B;"
-                                   Style="{StaticResource LabelTextStyle}"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Margin="10,0,0,0"
-                                   Text="{Binding ShellStatusText}"
-                                   Style="{StaticResource ValueTextStyle}"
-                                   FontSize="14" />
-                    </StackPanel>
-                </Border>
-            </Grid>
+            <StackPanel>
+                <TextBlock Text="XivLinker"
+                           Style="{StaticResource AppTitleTextStyle}" />
+                <TextBlock Margin="0,8,0,0"
+                           Text="{Binding CurrentPageTitle}"
+                           Style="{StaticResource BodyTextStyle}"
+                           Foreground="{DynamicResource App.Brush.TextSecondary}" />
+            </StackPanel>
         </Border>
 
         <Grid Grid.Row="2">
