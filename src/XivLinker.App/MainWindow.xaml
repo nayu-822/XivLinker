@@ -125,21 +125,46 @@
                                         BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                                         BorderThickness="1">
                                     <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
+
                                         <StackPanel>
                                             <TextBlock Text="{Binding Name}"
                                                        Style="{StaticResource CardTitleTextStyle}" />
                                             <TextBlock Margin="0,4,0,0"
                                                        Text="{Binding Detail}"
-                                                       Style="{StaticResource CaptionTextStyle}" />
+                                                       Style="{StaticResource CaptionTextStyle}"
+                                                       TextWrapping="Wrap" />
                                         </StackPanel>
+
                                         <TextBlock Grid.Column="1"
                                                    VerticalAlignment="Center"
                                                    Text="{Binding Status}"
                                                    Style="{StaticResource InlineStatusTextStyle}" />
+
+                                        <Button Grid.Row="1"
+                                                Grid.ColumnSpan="2"
+                                                Margin="0,12,0,0"
+                                                HorizontalAlignment="Left"
+                                                Command="{Binding ActionCommand}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasAction}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <TextBlock Text="{Binding ActionLabel}" />
+                                        </Button>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -175,7 +200,8 @@
                                     BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                                     BorderThickness="1">
                                 <TextBlock Text="{Binding}"
-                                           Style="{StaticResource LogTextStyle}" />
+                                           Style="{StaticResource LogTextStyle}"
+                                           TextWrapping="Wrap" />
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

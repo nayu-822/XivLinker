@@ -37,6 +37,38 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
+    <Style x:Key="ActionButtonStyle" TargetType="Button">
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="Foreground" Value="{DynamicResource App.Brush.TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource App.Brush.SurfaceStrong}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource App.Brush.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource App.CornerRadius.Control}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource App.Brush.Accent}" />
+                <Setter Property="Foreground" Value="#0F141D" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <Style TargetType="ListBoxItem">
         <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0" />

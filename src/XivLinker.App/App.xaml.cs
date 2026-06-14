@@ -1,7 +1,8 @@
 using System.Windows;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using XivLinker.App.DependencyInjection;
 using XivLinker.App.ViewModels;
 
 namespace XivLinker.App;
@@ -13,15 +14,16 @@ public partial class App : System.Windows.Application
     public App()
     {
         _host = Host.CreateDefaultBuilder()
-            .ConfigureLogging(logging =>
+            .ConfigureAppConfiguration((context, configuration) =>
             {
-                logging.ClearProviders();
-                logging.AddDebug();
+                configuration.Sources.Clear();
+                configuration
+                    .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
             })
-            .ConfigureServices(services =>
+            .ConfigureServices((context, services) =>
             {
-                services.AddSingleton<MainViewModel>();
-                services.AddSingleton<MainWindow>();
+                services.AddApplicationServices(context.Configuration);
             })
             .Build();
     }
@@ -29,10 +31,15 @@ public partial class App : System.Windows.Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         await _host.StartAsync();
 
+        var mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
+        await mainViewModel.InitializeDataSourcesAsync();
+
         var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        MainWindow = mainWindow;
         mainWindow.Show();
     }
 
