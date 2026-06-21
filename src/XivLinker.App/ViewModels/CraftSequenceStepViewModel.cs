@@ -1,21 +1,49 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using XivLinker.Domain.Models;
+using XivLinker.Domain.Models.Crafting;
 
 namespace XivLinker.App.ViewModels;
 
 public partial class CraftSequenceStepViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private string actionName = string.Empty;
-
-    [ObservableProperty]
-    private int waitMilliseconds = 2500;
-
-    public static CraftSequenceStepViewModel FromModel(CraftSequenceStep step)
+    public CraftSequenceStepViewModel(
+        CraftActionDefinition definition,
+        Action<CraftSequenceStepViewModel> remove)
     {
-        return new CraftSequenceStepViewModel
+        Definition = definition;
+        waitMilliseconds = definition.PostActionWaitMilliseconds;
+        RemoveCommand = new RelayCommand(() => remove(this));
+    }
+
+    public CraftActionDefinition Definition
+    {
+        get;
+    }
+
+    public CraftActionId ActionId => Definition.ActionId;
+
+    public string DisplayName => Definition.DisplayName;
+
+    public string Category => Definition.Category;
+
+    public int DefaultWaitMilliseconds => Definition.PostActionWaitMilliseconds;
+
+    [ObservableProperty]
+    private int waitMilliseconds;
+
+    public IRelayCommand RemoveCommand
+    {
+        get;
+    }
+
+    public static CraftSequenceStepViewModel FromModel(
+        CraftSequenceStep step,
+        Action<CraftSequenceStepViewModel> remove)
+    {
+        CraftActionDefinition definition = CraftActionCatalog.Get(step.ActionId);
+        return new CraftSequenceStepViewModel(definition, remove)
         {
-            ActionName = step.ActionName,
             WaitMilliseconds = step.WaitMilliseconds,
         };
     }
@@ -24,7 +52,7 @@ public partial class CraftSequenceStepViewModel : ObservableObject
     {
         return new CraftSequenceStep
         {
-            ActionName = ActionName.Trim(),
+            ActionId = ActionId,
             WaitMilliseconds = WaitMilliseconds,
         };
     }

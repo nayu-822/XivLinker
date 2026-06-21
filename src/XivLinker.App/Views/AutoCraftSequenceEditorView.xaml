@@ -21,9 +21,10 @@
                     <TextBlock Text="{Binding Title}"
                                Style="{StaticResource SectionTitleTextStyle}" />
                     <TextBlock Margin="0,8,0,0"
-                               Text="クラフトシーケンス名とステップを編集できます。"
+                               Text="左のアクションパレットから追加し、右側で順序と待機時間を調整します。"
                                Style="{StaticResource BodyTextStyle}"
-                               Foreground="{DynamicResource App.Brush.TextSecondary}" />
+                               Foreground="{DynamicResource App.Brush.TextSecondary}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
 
                 <Button Grid.Column="1"
@@ -42,102 +43,204 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2"
-                Style="{StaticResource CardStyle}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <TextBlock Text="シーケンス名"
-                               Style="{StaticResource LabelTextStyle}" />
-                    <TextBox Margin="0,8,0,0"
-                             Padding="12,10"
-                             Text="{Binding SequenceName, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource App.Brush.SurfaceAlt}"
-                             BorderBrush="{DynamicResource App.Brush.Border}"
-                             BorderThickness="1"
-                             Foreground="{DynamicResource App.Brush.TextPrimary}" />
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                    <TextBlock Margin="0,8,0,0"
-                               Text="{Binding StatusMessage}"
-                               Style="{StaticResource BodyTextStyle}"
-                               Foreground="{DynamicResource App.Brush.Warning}" />
-
-                    <Grid Margin="0,24,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="ステップ"
+            <Border Style="{StaticResource CardStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="アクションパレット"
                                    Style="{StaticResource SectionTitleTextStyle}" />
-                        <Button Grid.Column="1"
-                                Command="{Binding AddStepCommand}"
-                                Style="{StaticResource ActionButtonStyle}">
-                            <TextBlock Text="ステップ追加" />
-                        </Button>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="登録済みアクションをクリックすると、シーケンス末尾に追加されます。"
+                                   Style="{StaticResource BodyTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                   TextWrapping="Wrap" />
+
+                        <ItemsControl Margin="0,20,0,0"
+                                      ItemsSource="{Binding AvailableActions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,18">
+                                        <TextBlock Text="{Binding CategoryName}"
+                                                   Style="{StaticResource LabelTextStyle}" />
+                                        <ItemsControl Margin="0,10,0,0"
+                                                      ItemsSource="{Binding Actions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Margin="0,0,0,10"
+                                                            Command="{Binding AddToSequenceCommand}"
+                                                            Style="{StaticResource ActionButtonStyle}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           Style="{StaticResource BodyTextStyle}" />
+                                                                <TextBlock Margin="0,4,0,0"
+                                                                           Text="{Binding WaitMilliseconds, StringFormat=既定待機 {0}ms}"
+                                                                           Style="{StaticResource CaptionTextStyle}"
+                                                                           Foreground="{DynamicResource App.Brush.TextMuted}" />
+                                                            </StackPanel>
+
+                                                            <TextBlock Grid.Column="1"
+                                                                       VerticalAlignment="Center"
+                                                                       Text="追加"
+                                                                       Style="{StaticResource CaptionTextStyle}" />
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="シーケンス"
+                                   Style="{StaticResource SectionTitleTextStyle}" />
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="アクション名は固定です。待機時間のみ必要に応じて調整してください。"
+                                   Style="{StaticResource BodyTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                Margin="0,20,0,0">
+                        <TextBlock Text="シーケンス名"
+                                   Style="{StaticResource LabelTextStyle}" />
+                        <TextBox Margin="0,8,0,0"
+                                 Padding="12,10"
+                                 Text="{Binding SequenceName, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="{DynamicResource App.Brush.SurfaceAlt}"
+                                 BorderBrush="{DynamicResource App.Brush.Border}"
+                                 BorderThickness="1"
+                                 Foreground="{DynamicResource App.Brush.TextPrimary}" />
+
+                        <TextBlock Margin="0,10,0,0"
+                                   Text="{Binding StatusMessage}"
+                                   Style="{StaticResource BodyTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.Warning}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Grid Grid.Row="2"
+                          Margin="0,24,0,0">
+                        <TextBlock Text="まだアクションがありません。左のパレットから追加してください。"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource App.Brush.TextMuted}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentSteps.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <ListBox ItemsSource="{Binding CurrentSteps}"
+                                 AlternationCount="999"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.Style>
+                                <Style TargetType="ListBox">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentSteps.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.Style>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,12"
+                                            Padding="16"
+                                            CornerRadius="{StaticResource App.CornerRadius.Control}"
+                                            Background="{DynamicResource App.Brush.SurfaceAlt}"
+                                            BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                                            BorderThickness="1">
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="削除"
+                                                          Command="{Binding RemoveCommand}" />
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Style="{StaticResource CardTitleTextStyle}" />
+                                                <TextBlock Margin="0,4,0,0"
+                                                           Text="{Binding Category, StringFormat=カテゴリ: {0}}"
+                                                           Style="{StaticResource CaptionTextStyle}"
+                                                           Foreground="{DynamicResource App.Brush.TextSecondary}" />
+                                                <TextBlock Margin="0,6,0,0"
+                                                           Text="{Binding DefaultWaitMilliseconds, StringFormat=既定待機: {0}ms}"
+                                                           Style="{StaticResource CaptionTextStyle}"
+                                                           Foreground="{DynamicResource App.Brush.TextMuted}" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="16,0,0,0">
+                                                <TextBlock Text="待機時間 (ms)"
+                                                           Style="{StaticResource LabelTextStyle}" />
+                                                <TextBox Margin="0,8,0,0"
+                                                         Padding="12,10"
+                                                         Text="{Binding WaitMilliseconds, UpdateSourceTrigger=PropertyChanged}"
+                                                         Background="{DynamicResource App.Brush.SurfaceStrong}"
+                                                         BorderBrush="{DynamicResource App.Brush.Border}"
+                                                         BorderThickness="1"
+                                                         Foreground="{DynamicResource App.Brush.TextPrimary}" />
+                                            </StackPanel>
+
+                                            <Button Grid.Column="2"
+                                                    Margin="16,0,0,0"
+                                                    VerticalAlignment="Top"
+                                                    Command="{Binding RemoveCommand}"
+                                                    Style="{StaticResource ActionButtonStyle}">
+                                                <TextBlock Text="削除" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </Grid>
-
-                    <ItemsControl Margin="0,16,0,0"
-                                  ItemsSource="{Binding Steps}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="0,0,0,12"
-                                        Padding="16"
-                                        CornerRadius="{StaticResource App.CornerRadius.Control}"
-                                        Background="{DynamicResource App.Brush.SurfaceAlt}"
-                                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                                        BorderThickness="1">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="16" />
-                                            <ColumnDefinition Width="160" />
-                                            <ColumnDefinition Width="16" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Text="アクション名"
-                                                   Style="{StaticResource LabelTextStyle}" />
-                                        <TextBlock Grid.Column="2"
-                                                   Text="待機時間 (ms)"
-                                                   Style="{StaticResource LabelTextStyle}" />
-
-                                        <TextBox Grid.Row="1"
-                                                 Margin="0,8,0,0"
-                                                 Padding="12,10"
-                                                 Text="{Binding ActionName, UpdateSourceTrigger=PropertyChanged}"
-                                                 Background="{DynamicResource App.Brush.SurfaceStrong}"
-                                                 BorderBrush="{DynamicResource App.Brush.Border}"
-                                                 BorderThickness="1"
-                                                 Foreground="{DynamicResource App.Brush.TextPrimary}" />
-
-                                        <TextBox Grid.Row="1"
-                                                 Grid.Column="2"
-                                                 Margin="0,8,0,0"
-                                                 Padding="12,10"
-                                                 Text="{Binding WaitMilliseconds, UpdateSourceTrigger=PropertyChanged}"
-                                                 Background="{DynamicResource App.Brush.SurfaceStrong}"
-                                                 BorderBrush="{DynamicResource App.Brush.Border}"
-                                                 BorderThickness="1"
-                                                 Foreground="{DynamicResource App.Brush.TextPrimary}" />
-
-                                        <Button Grid.Row="1"
-                                                Grid.Column="4"
-                                                Margin="0,8,0,0"
-                                                Command="{Binding DataContext.DeleteStepCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"
-                                                Style="{StaticResource ActionButtonStyle}">
-                                            <TextBlock Text="削除" />
-                                        </Button>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

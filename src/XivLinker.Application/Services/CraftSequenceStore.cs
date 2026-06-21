@@ -50,7 +50,7 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
             Steps = sequence.Steps
                 .Select(static step => new CraftSequenceStep
                 {
-                    ActionName = step.ActionName,
+                    ActionId = step.ActionId,
                     WaitMilliseconds = step.WaitMilliseconds,
                 })
                 .ToArray(),

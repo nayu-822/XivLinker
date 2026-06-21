@@ -1,6 +1,7 @@
 using XivLinker.App.ViewModels;
 using XivLinker.Application.Services;
 using XivLinker.Domain.Models;
+using XivLinker.Domain.Models.Crafting;
 
 namespace XivLinker.Tests;
 
@@ -18,7 +19,7 @@ public sealed class AutoCraftSequenceListViewModelTests
             [
                 new CraftSequenceStep
                 {
-                    ActionName = "加工",
+                    ActionId = CraftActionId.BasicSynthesis,
                     WaitMilliseconds = 2500,
                 },
             ],

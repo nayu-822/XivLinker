@@ -1,5 +1,6 @@
 using XivLinker.Application.Services;
 using XivLinker.Domain.Models;
+using XivLinker.Domain.Models.Crafting;
 
 namespace XivLinker.Tests;
 
@@ -17,7 +18,7 @@ public sealed class CraftSequenceStoreTests
             [
                 new CraftSequenceStep
                 {
-                    ActionName = "加工",
+                    ActionId = CraftActionId.BasicTouch,
                     WaitMilliseconds = 2500,
                 },
             ],
@@ -30,6 +31,7 @@ public sealed class CraftSequenceStoreTests
         Assert.NotNull(saved);
         Assert.Equal(sequence.Name, saved.Name);
         Assert.Single(saved.Steps);
+        Assert.Equal(CraftActionId.BasicTouch, saved.Steps[0].ActionId);
     }
 
     [Fact]
@@ -39,12 +41,12 @@ public sealed class CraftSequenceStoreTests
         var sequence = new CraftSequence
         {
             SequenceId = Guid.NewGuid(),
-            Name = "削除対象",
+            Name = "削除テスト",
             Steps =
             [
                 new CraftSequenceStep
                 {
-                    ActionName = "加工",
+                    ActionId = CraftActionId.BasicSynthesis,
                     WaitMilliseconds = 2500,
                 },
             ],

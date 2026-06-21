@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XivLinker.Domain.Models;
+using XivLinker.Domain.Models.Crafting;
 
 namespace XivLinker.App.ViewModels;
 
@@ -27,14 +28,24 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         this.cancel = cancel;
         this.save = save;
 
-        Steps = new ObservableCollection<CraftSequenceStepViewModel>();
+        AvailableActions = new ObservableCollection<CraftActionPaletteCategoryViewModel>(
+            CraftActionCatalog.GetAll()
+                .GroupBy(static definition => definition.Category)
+                .Select(group => new CraftActionPaletteCategoryViewModel(
+                    group.Key,
+                    group.Select(definition => new CraftActionPaletteItemViewModel(definition, AddAction)))));
+
+        CurrentSteps = new ObservableCollection<CraftSequenceStepViewModel>();
         SaveCommand = new RelayCommand(SaveSequence);
         CancelCommand = new RelayCommand(cancel);
-        AddStepCommand = new RelayCommand(AddStep);
-        DeleteStepCommand = new RelayCommand<CraftSequenceStepViewModel>(DeleteStep);
     }
 
-    public ObservableCollection<CraftSequenceStepViewModel> Steps
+    public ObservableCollection<CraftActionPaletteCategoryViewModel> AvailableActions
+    {
+        get;
+    }
+
+    public ObservableCollection<CraftSequenceStepViewModel> CurrentSteps
     {
         get;
     }
@@ -49,17 +60,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         get;
     }
 
-    public IRelayCommand AddStepCommand
-    {
-        get;
-    }
-
-    public IRelayCommand<CraftSequenceStepViewModel> DeleteStepCommand
-    {
-        get;
-    }
-
-    public string Title => IsEditing ? "シーケンス編集" : "シーケンス新規登録";
+    public string Title => IsEditing ? "シーケンス編集" : "シーケンス新規作成";
 
     public void Load(CraftSequence? sequence)
     {
@@ -68,38 +69,27 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         SequenceName = sequence?.Name ?? string.Empty;
         StatusMessage = string.Empty;
 
-        Steps.Clear();
+        CurrentSteps.Clear();
 
-        if (sequence is null)
-        {
-            Steps.Add(new CraftSequenceStepViewModel
-            {
-                ActionName = "加工",
-                WaitMilliseconds = 2500,
-            });
-        }
-        else
+        if (sequence is not null)
         {
             foreach (CraftSequenceStep step in sequence.Steps)
             {
-                Steps.Add(CraftSequenceStepViewModel.FromModel(step));
+                CurrentSteps.Add(CraftSequenceStepViewModel.FromModel(step, RemoveStep));
             }
         }
 
         OnPropertyChanged(nameof(Title));
     }
 
-    private void AddStep()
+    public void AddAction(CraftActionId actionId)
     {
+        CraftActionDefinition actionDefinition = CraftActionCatalog.Get(actionId);
         StatusMessage = string.Empty;
-        Steps.Add(new CraftSequenceStepViewModel
-        {
-            ActionName = string.Empty,
-            WaitMilliseconds = 2500,
-        });
+        CurrentSteps.Add(new CraftSequenceStepViewModel(actionDefinition, RemoveStep));
     }
 
-    private void DeleteStep(CraftSequenceStepViewModel? step)
+    private void RemoveStep(CraftSequenceStepViewModel? step)
     {
         if (step is null)
         {
@@ -107,26 +97,20 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         }
 
         StatusMessage = string.Empty;
-        Steps.Remove(step);
+        CurrentSteps.Remove(step);
     }
 
     private void SaveSequence()
     {
-        if (Steps.Count == 0)
+        if (CurrentSteps.Count == 0)
         {
-            StatusMessage = "ステップを1件以上追加してください。";
+            StatusMessage = "シーケンスにアクションを1件以上追加してください。";
             return;
         }
 
-        if (Steps.Any(step => string.IsNullOrWhiteSpace(step.ActionName)))
+        if (CurrentSteps.Any(step => step.WaitMilliseconds < 1))
         {
-            StatusMessage = "アクション名が空のステップがあります。";
-            return;
-        }
-
-        if (Steps.Any(step => step.WaitMilliseconds < 1))
-        {
-            StatusMessage = "待機時間は1以上で入力してください。";
+            StatusMessage = "待機時間は1ms以上で入力してください。";
             return;
         }
 
@@ -134,7 +118,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         {
             SequenceId = sequenceId,
             Name = string.IsNullOrWhiteSpace(SequenceName) ? "新規シーケンス" : SequenceName.Trim(),
-            Steps = Steps
+            Steps = CurrentSteps
                 .Select(static step => step.ToModel())
                 .ToArray(),
         };
