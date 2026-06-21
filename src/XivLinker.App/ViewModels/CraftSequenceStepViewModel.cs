@@ -25,10 +25,6 @@ public partial class CraftSequenceStepViewModel : ObservableObject
 
     public string DisplayName => Definition.DisplayName;
 
-    public string Category => Definition.Category;
-
-    public int DefaultWaitMilliseconds => Definition.PostActionWaitMilliseconds;
-
     [ObservableProperty]
     private int waitMilliseconds;
 

@@ -45,7 +45,7 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="1.3*" />
                 <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
@@ -70,31 +70,34 @@
                                                    Style="{StaticResource LabelTextStyle}" />
                                         <ItemsControl Margin="0,10,0,0"
                                                       ItemsSource="{Binding Actions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Button Margin="0,0,0,10"
+                                                    <Button Width="112"
+                                                            Height="80"
+                                                            Margin="0,0,12,12"
                                                             Command="{Binding AddToSequenceCommand}"
                                                             Style="{StaticResource ActionButtonStyle}">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <StackPanel>
-                                                                <TextBlock Text="{Binding DisplayName}"
-                                                                           Style="{StaticResource BodyTextStyle}" />
-                                                                <TextBlock Margin="0,4,0,0"
-                                                                           Text="{Binding WaitMilliseconds, StringFormat=既定待機 {0}ms}"
-                                                                           Style="{StaticResource CaptionTextStyle}"
-                                                                           Foreground="{DynamicResource App.Brush.TextMuted}" />
-                                                            </StackPanel>
-
-                                                            <TextBlock Grid.Column="1"
-                                                                       VerticalAlignment="Center"
-                                                                       Text="追加"
-                                                                       Style="{StaticResource CaptionTextStyle}" />
-                                                        </Grid>
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Padding="12"
+                                                                        CornerRadius="{StaticResource App.CornerRadius.Control}"
+                                                                        Background="{TemplateBinding Background}"
+                                                                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                                                                        BorderThickness="1">
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               Text="{Binding DisplayName}"
+                                                                               TextAlignment="Center"
+                                                                               TextWrapping="Wrap"
+                                                                               Style="{StaticResource BodyTextStyle}" />
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
                                                     </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -203,14 +206,6 @@
                                             <StackPanel>
                                                 <TextBlock Text="{Binding DisplayName}"
                                                            Style="{StaticResource CardTitleTextStyle}" />
-                                                <TextBlock Margin="0,4,0,0"
-                                                           Text="{Binding Category, StringFormat=カテゴリ: {0}}"
-                                                           Style="{StaticResource CaptionTextStyle}"
-                                                           Foreground="{DynamicResource App.Brush.TextSecondary}" />
-                                                <TextBlock Margin="0,6,0,0"
-                                                           Text="{Binding DefaultWaitMilliseconds, StringFormat=既定待機: {0}ms}"
-                                                           Style="{StaticResource CaptionTextStyle}"
-                                                           Foreground="{DynamicResource App.Brush.TextMuted}" />
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1"

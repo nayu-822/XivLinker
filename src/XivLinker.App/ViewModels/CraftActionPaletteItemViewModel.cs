@@ -22,8 +22,6 @@ public sealed class CraftActionPaletteItemViewModel
 
     public string DisplayName => Definition.DisplayName;
 
-    public int WaitMilliseconds => Definition.PostActionWaitMilliseconds;
-
     public IRelayCommand AddToSequenceCommand
     {
         get;
