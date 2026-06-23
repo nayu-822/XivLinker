@@ -56,10 +56,41 @@
                         <TextBlock Text="アクションパレット"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="0,8,0,0"
-                                   Text="登録済みアクションをクリックすると、シーケンス末尾に追加されます。"
+                                   Text="利用可能なクラフターアクションをクリックすると、シーケンス末尾に追加されます。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
+
+                        <TextBlock Margin="0,16,0,0"
+                                   Text="クラフターアクションを読み込んでいます。"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLoadingActions}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <TextBlock Margin="0,12,0,0"
+                                   Text="{Binding LoadErrorMessage}"
+                                   Foreground="{DynamicResource App.Brush.Warning}"
+                                   TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LoadErrorMessage}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
 
                         <ItemsControl Margin="0,20,0,0"
                                       ItemsSource="{Binding AvailableActions}">
@@ -77,7 +108,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Button Width="112"
+                                                    <Button Width="168"
                                                             Height="80"
                                                             Margin="0,0,12,12"
                                                             Command="{Binding AddToSequenceCommand}"
@@ -89,12 +120,36 @@
                                                                         Background="{TemplateBinding Background}"
                                                                         BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                                                                         BorderThickness="1">
-                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="28" />
+                                                                            <ColumnDefinition Width="8" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                        </Grid.ColumnDefinitions>
+
+                                                                        <Image Width="24"
+                                                                               Height="24"
                                                                                VerticalAlignment="Center"
-                                                                               Text="{Binding DisplayName}"
-                                                                               TextAlignment="Center"
-                                                                               TextWrapping="Wrap"
-                                                                               Style="{StaticResource BodyTextStyle}" />
+                                                                               Source="{Binding IconSource}">
+                                                                            <Image.Style>
+                                                                                <Style TargetType="Image">
+                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IconSource}" Value="{x:Null}">
+                                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </Image.Style>
+                                                                        </Image>
+
+                                                                        <TextBlock Grid.Column="2"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Text="{Binding DisplayName}"
+                                                                                   TextAlignment="Left"
+                                                                                   TextWrapping="Wrap"
+                                                                                   Style="{StaticResource BodyTextStyle}" />
+                                                                    </Grid>
                                                                 </Border>
                                                             </ControlTemplate>
                                                         </Button.Template>
@@ -123,7 +178,7 @@
                         <TextBlock Text="シーケンス"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="0,8,0,0"
-                                   Text="アクション名は固定です。待機時間のみ必要に応じて調整してください。"
+                                   Text="アクション順は手動で整理できます。待機時間は必要に応じて調整してください。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
@@ -204,8 +259,26 @@
                                             </Grid.ColumnDefinitions>
 
                                             <StackPanel>
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           Style="{StaticResource CardTitleTextStyle}" />
+                                                <DockPanel LastChildFill="True">
+                                                    <Image Width="24"
+                                                           Height="24"
+                                                           Margin="0,0,10,0"
+                                                           Source="{Binding IconSource}"
+                                                           DockPanel.Dock="Left">
+                                                        <Image.Style>
+                                                            <Style TargetType="Image">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IconSource}" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Image.Style>
+                                                    </Image>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               Style="{StaticResource CardTitleTextStyle}" />
+                                                </DockPanel>
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1"

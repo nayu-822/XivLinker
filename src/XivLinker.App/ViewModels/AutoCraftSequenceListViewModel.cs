@@ -8,18 +8,18 @@ namespace XivLinker.App.ViewModels;
 public sealed class AutoCraftSequenceListViewModel
 {
     private readonly ICraftSequenceStore craftSequenceStore;
-    private readonly Action<CraftSequence?> openEditor;
+    private readonly Func<CraftSequence?, Task> openEditor;
 
     public AutoCraftSequenceListViewModel(
         ICraftSequenceStore craftSequenceStore,
-        Action<CraftSequence?> openEditor)
+        Func<CraftSequence?, Task> openEditor)
     {
         this.craftSequenceStore = craftSequenceStore;
         this.openEditor = openEditor;
 
         Sequences = new ObservableCollection<CraftSequenceSummaryViewModel>();
-        CreateSequenceCommand = new RelayCommand(CreateSequence);
-        EditSequenceCommand = new RelayCommand<CraftSequenceSummaryViewModel>(EditSequence);
+        CreateSequenceCommand = new AsyncRelayCommand(CreateSequenceAsync);
+        EditSequenceCommand = new AsyncRelayCommand<CraftSequenceSummaryViewModel>(EditSequenceAsync);
         DeleteSequenceCommand = new RelayCommand<CraftSequenceSummaryViewModel>(DeleteSequence);
     }
 
@@ -28,12 +28,12 @@ public sealed class AutoCraftSequenceListViewModel
         get;
     }
 
-    public IRelayCommand CreateSequenceCommand
+    public IAsyncRelayCommand CreateSequenceCommand
     {
         get;
     }
 
-    public IRelayCommand<CraftSequenceSummaryViewModel> EditSequenceCommand
+    public IAsyncRelayCommand<CraftSequenceSummaryViewModel> EditSequenceCommand
     {
         get;
     }
@@ -67,19 +67,19 @@ public sealed class AutoCraftSequenceListViewModel
         Refresh();
     }
 
-    private void CreateSequence()
+    private Task CreateSequenceAsync()
     {
-        openEditor(null);
+        return openEditor(null);
     }
 
-    private void EditSequence(CraftSequenceSummaryViewModel? sequence)
+    private Task EditSequenceAsync(CraftSequenceSummaryViewModel? sequence)
     {
         if (sequence is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        openEditor(craftSequenceStore.Find(sequence.SequenceId));
+        return openEditor(craftSequenceStore.Find(sequence.SequenceId));
     }
 
     private void DeleteSequence(CraftSequenceSummaryViewModel? sequence)

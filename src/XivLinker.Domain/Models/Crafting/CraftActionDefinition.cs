@@ -4,4 +4,5 @@ public sealed record CraftActionDefinition(
     CraftActionId ActionId,
     string DisplayName,
     int PostActionWaitMilliseconds,
-    string Category);
+    string Category,
+    uint IconId);

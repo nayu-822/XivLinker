@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using XivLinker.Application.Abstractions;
+using XivLinker.App.Services;
 using XivLinker.Domain.Models;
 
 namespace XivLinker.App.ViewModels;
@@ -12,21 +13,26 @@ public partial class AutoCraftViewModel : ObservableObject
     [ObservableProperty]
     private object? currentContentViewModel;
 
-    public AutoCraftViewModel(ICraftSequenceStore craftSequenceStore)
+    public AutoCraftViewModel(
+        ICraftSequenceStore craftSequenceStore,
+        ICrafterActionCatalogService crafterActionCatalogService,
+        CraftActionIconSourceService craftActionIconSourceService)
     {
         sequenceEditorViewModel = new AutoCraftSequenceEditorViewModel(
+            crafterActionCatalogService,
+            craftActionIconSourceService,
             ShowSequenceList,
             SaveSequence);
         sequenceListViewModel = new AutoCraftSequenceListViewModel(
             craftSequenceStore,
-            ShowSequenceEditor);
+            ShowSequenceEditorAsync);
 
         ShowSequenceList();
     }
 
     public string Title => "自動クラフト";
 
-    public string Description => "クラフトシーケンスの一覧確認と新規登録画面への移動をここから行えます。";
+    public string Description => "クラフトシーケンスの一覧確認と新規作成画面への移動をここから行えます。";
 
     public bool IsSequenceListVisible => ReferenceEquals(CurrentContentViewModel, sequenceListViewModel);
 
@@ -40,9 +46,9 @@ public partial class AutoCraftViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSequenceEditorVisible));
     }
 
-    private void ShowSequenceEditor(CraftSequence? sequence)
+    private async Task ShowSequenceEditorAsync(CraftSequence? sequence)
     {
-        sequenceEditorViewModel.Load(sequence);
+        await sequenceEditorViewModel.LoadAsync(sequence);
         CurrentContentViewModel = sequenceEditorViewModel;
         OnPropertyChanged(nameof(IsSequenceListVisible));
         OnPropertyChanged(nameof(IsSequenceEditorVisible));

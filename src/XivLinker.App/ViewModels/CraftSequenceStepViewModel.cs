@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Windows.Media;
 using XivLinker.Domain.Models;
 using XivLinker.Domain.Models.Crafting;
 
@@ -9,9 +10,11 @@ public partial class CraftSequenceStepViewModel : ObservableObject
 {
     public CraftSequenceStepViewModel(
         CraftActionDefinition definition,
+        ImageSource? iconSource,
         Action<CraftSequenceStepViewModel> remove)
     {
         Definition = definition;
+        IconSource = iconSource;
         waitMilliseconds = definition.PostActionWaitMilliseconds;
         RemoveCommand = new RelayCommand(() => remove(this));
     }
@@ -25,6 +28,11 @@ public partial class CraftSequenceStepViewModel : ObservableObject
 
     public string DisplayName => Definition.DisplayName;
 
+    public ImageSource? IconSource
+    {
+        get;
+    }
+
     [ObservableProperty]
     private int waitMilliseconds;
 
@@ -35,10 +43,11 @@ public partial class CraftSequenceStepViewModel : ObservableObject
 
     public static CraftSequenceStepViewModel FromModel(
         CraftSequenceStep step,
+        CraftActionDefinition definition,
+        ImageSource? iconSource,
         Action<CraftSequenceStepViewModel> remove)
     {
-        CraftActionDefinition definition = CraftActionCatalog.Get(step.ActionId);
-        return new CraftSequenceStepViewModel(definition, remove)
+        return new CraftSequenceStepViewModel(definition, iconSource, remove)
         {
             WaitMilliseconds = step.WaitMilliseconds,
         };

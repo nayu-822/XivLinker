@@ -29,7 +29,7 @@ public sealed class AutoCraftSequenceListViewModelTests
 
         var viewModel = new AutoCraftSequenceListViewModel(
             store,
-            _ => { });
+            _ => Task.CompletedTask);
 
         viewModel.Refresh();
         CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
