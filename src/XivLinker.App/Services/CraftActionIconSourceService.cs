@@ -9,7 +9,7 @@ namespace XivLinker.App.Services;
 public sealed class CraftActionIconSourceService
 {
     private readonly ICrafterActionCatalogService crafterActionCatalogService;
-    private readonly ConcurrentDictionary<uint, ImageSource?> imageCache = [];
+    private readonly ConcurrentDictionary<uint, ImageSource> imageCache = [];
 
     public CraftActionIconSourceService(ICrafterActionCatalogService crafterActionCatalogService)
     {
@@ -30,7 +30,11 @@ public sealed class CraftActionIconSourceService
 
         byte[]? pngBytes = await crafterActionCatalogService.GetIconPngAsync(iconId, cancellationToken);
         ImageSource? imageSource = CreateImageSource(pngBytes);
-        imageCache[iconId] = imageSource;
+        if (imageSource is not null)
+        {
+            imageCache[iconId] = imageSource;
+        }
+
         return imageSource;
     }
 

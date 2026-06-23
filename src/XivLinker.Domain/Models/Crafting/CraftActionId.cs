@@ -16,11 +16,6 @@ public readonly record struct CraftActionId(string Value)
 
     public static CraftActionId ByregotsBlessing => new("craftaction:byregots-blessing");
 
-    public static CraftActionId FromLuminaRowId(uint rowId)
-    {
-        return new($"lumina-craftaction:{rowId}");
-    }
-
     public override string ToString()
     {
         return Value;

@@ -5,4 +5,5 @@ public sealed record CraftActionDefinition(
     string DisplayName,
     int PostActionWaitMilliseconds,
     string Category,
-    uint IconId);
+    uint RepresentativeIconId,
+    IReadOnlyList<CrafterActionVariant> Variants);

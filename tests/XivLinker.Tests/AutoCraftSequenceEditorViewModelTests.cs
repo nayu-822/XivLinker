@@ -73,10 +73,10 @@ public sealed class AutoCraftSequenceEditorViewModelTests
     }
 
     [Fact]
-    public async Task LoadAsync_WhenCatalogFails_StillLoadsExistingSequence()
+    public async Task LoadAsync_WhenCatalogFails_UsesFallbackActionsAndStillLoadsExistingSequence()
     {
         var failingService = new FakeCrafterActionCatalogService(
-            new CrafterActionCatalogResult([], "Lumina initialization failed."));
+            new CrafterActionCatalogResult(CraftActionCatalog.GetAll(), "Lumina initialization failed."));
         var viewModel = new AutoCraftSequenceEditorViewModel(
             failingService,
             new CraftActionIconSourceService(failingService),
@@ -99,6 +99,7 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         await viewModel.LoadAsync(sequence);
 
         Assert.Equal("Lumina initialization failed.", viewModel.LoadErrorMessage);
+        Assert.NotEmpty(viewModel.AvailableActions);
         Assert.Single(viewModel.CurrentSteps);
         Assert.Equal("作業", viewModel.CurrentSteps[0].DisplayName);
     }
@@ -108,9 +109,9 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         var service = new FakeCrafterActionCatalogService(
             new CrafterActionCatalogResult(
             [
-                new CraftActionDefinition(CraftActionId.BasicSynthesis, "作業", 2500, "クラフターアクション", 0),
-                new CraftActionDefinition(CraftActionId.BasicTouch, "加工", 2500, "クラフターアクション", 0),
-                new CraftActionDefinition(CraftActionId.ByregotsBlessing, "ビエルゴの祝福", 2500, "クラフターアクション", 0),
+                new CraftActionDefinition(CraftActionId.BasicSynthesis, "作業", 2500, "クラフターアクション", 0, []),
+                new CraftActionDefinition(CraftActionId.BasicTouch, "加工", 2500, "クラフターアクション", 0, []),
+                new CraftActionDefinition(CraftActionId.ByregotsBlessing, "ビエルゴの祝福", 2500, "クラフターアクション", 0, []),
             ]));
 
         return new AutoCraftSequenceEditorViewModel(

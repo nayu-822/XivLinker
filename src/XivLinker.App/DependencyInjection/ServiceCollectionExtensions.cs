@@ -21,8 +21,10 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("OverlayPlugin"));
 
         services.AddSingleton<LuminaGameDataService>();
+        services.AddSingleton<ILuminaGameDataProvider>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());
+        services.AddSingleton<LuminaActionIconService>();
+        services.AddSingleton<ICrafterActionCatalogService, LuminaCrafterActionCatalogService>();
         services.AddSingleton<IGameDataService>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());
-        services.AddSingleton<ICrafterActionCatalogService>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());
         services.AddSingleton<IOverlayPluginWebSocketService, OverlayPluginWebSocketService>();
         services.AddSingleton<IOverlayPluginWebSocketSessionService, OverlayPluginWebSocketSessionService>();
         services.AddSingleton<OverlayPluginConnectionStateService>();

@@ -6,15 +6,13 @@ using XivLinker.Domain.Models.Crafting;
 
 namespace XivLinker.App.ViewModels;
 
-public partial class CraftSequenceStepViewModel : ObservableObject
+public sealed partial class CraftSequenceStepViewModel : ObservableObject
 {
     public CraftSequenceStepViewModel(
         CraftActionDefinition definition,
-        ImageSource? iconSource,
         Action<CraftSequenceStepViewModel> remove)
     {
         Definition = definition;
-        IconSource = iconSource;
         waitMilliseconds = definition.PostActionWaitMilliseconds;
         RemoveCommand = new RelayCommand(() => remove(this));
     }
@@ -28,10 +26,10 @@ public partial class CraftSequenceStepViewModel : ObservableObject
 
     public string DisplayName => Definition.DisplayName;
 
-    public ImageSource? IconSource
-    {
-        get;
-    }
+    public uint RepresentativeIconId => Definition.RepresentativeIconId;
+
+    [ObservableProperty]
+    private ImageSource? iconSource;
 
     [ObservableProperty]
     private int waitMilliseconds;
@@ -44,10 +42,9 @@ public partial class CraftSequenceStepViewModel : ObservableObject
     public static CraftSequenceStepViewModel FromModel(
         CraftSequenceStep step,
         CraftActionDefinition definition,
-        ImageSource? iconSource,
         Action<CraftSequenceStepViewModel> remove)
     {
-        return new CraftSequenceStepViewModel(definition, iconSource, remove)
+        return new CraftSequenceStepViewModel(definition, remove)
         {
             WaitMilliseconds = step.WaitMilliseconds,
         };

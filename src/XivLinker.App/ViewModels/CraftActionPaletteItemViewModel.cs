@@ -1,18 +1,17 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Windows.Media;
 using XivLinker.Domain.Models.Crafting;
 
 namespace XivLinker.App.ViewModels;
 
-public sealed class CraftActionPaletteItemViewModel
+public sealed partial class CraftActionPaletteItemViewModel : ObservableObject
 {
     public CraftActionPaletteItemViewModel(
         CraftActionDefinition definition,
-        ImageSource? iconSource,
         Action<CraftActionId> addToSequence)
     {
         Definition = definition;
-        IconSource = iconSource;
         AddToSequenceCommand = new RelayCommand(() => addToSequence(ActionId));
     }
 
@@ -25,10 +24,10 @@ public sealed class CraftActionPaletteItemViewModel
 
     public string DisplayName => Definition.DisplayName;
 
-    public ImageSource? IconSource
-    {
-        get;
-    }
+    public uint RepresentativeIconId => Definition.RepresentativeIconId;
+
+    [ObservableProperty]
+    private ImageSource? iconSource;
 
     public IRelayCommand AddToSequenceCommand
     {

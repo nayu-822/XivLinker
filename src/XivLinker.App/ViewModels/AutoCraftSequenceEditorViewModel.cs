@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XivLinker.Application.Abstractions;
@@ -11,14 +10,12 @@ namespace XivLinker.App.ViewModels;
 
 public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 {
-    private const string DefaultActionCategory = "クラフターアクション";
-
     private readonly ICrafterActionCatalogService crafterActionCatalogService;
     private readonly CraftActionIconSourceService craftActionIconSourceService;
     private readonly Action cancel;
     private readonly Action<CraftSequence> save;
     private readonly Dictionary<CraftActionId, CraftActionDefinition> availableActionDefinitions = [];
-    private readonly Dictionary<CraftActionId, ImageSource?> availableActionIcons = [];
+    private CancellationTokenSource? iconLoadingCancellationTokenSource;
     private Guid sequenceId;
 
     [ObservableProperty]
@@ -77,36 +74,43 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 
     public async Task LoadAsync(CraftSequence? sequence, CancellationToken cancellationToken = default)
     {
-        await LoadAvailableActionsAsync(cancellationToken);
+        CancelIconLoading();
+        iconLoadingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        CancellationToken iconLoadingToken = iconLoadingCancellationTokenSource.Token;
 
         IsEditing = sequence is not null;
         sequenceId = sequence?.SequenceId ?? Guid.NewGuid();
         SequenceName = sequence?.Name ?? string.Empty;
         StatusMessage = string.Empty;
-
         CurrentSteps.Clear();
+        OnPropertyChanged(nameof(Title));
 
-        if (sequence is not null)
+        await LoadAvailableActionsAsync(iconLoadingToken);
+
+        if (sequence is null)
         {
-            foreach (CraftSequenceStep step in sequence.Steps)
-            {
-                CraftActionDefinition definition = ResolveDefinition(step.ActionId);
-                CurrentSteps.Add(CraftSequenceStepViewModel.FromModel(
-                    step,
-                    definition,
-                    ResolveIcon(step.ActionId),
-                    RemoveStep));
-            }
+            return;
         }
 
-        OnPropertyChanged(nameof(Title));
+        foreach (CraftSequenceStep step in sequence.Steps)
+        {
+            CraftActionDefinition definition = ResolveDefinition(step.ActionId);
+            var stepViewModel = CraftSequenceStepViewModel.FromModel(step, definition, RemoveStep);
+            CurrentSteps.Add(stepViewModel);
+            _ = LoadIconForStepAsync(stepViewModel, iconLoadingToken);
+        }
     }
 
     public void AddAction(CraftActionId actionId)
     {
         CraftActionDefinition actionDefinition = ResolveDefinition(actionId);
         StatusMessage = string.Empty;
-        CurrentSteps.Add(new CraftSequenceStepViewModel(actionDefinition, ResolveIcon(actionId), RemoveStep));
+
+        var stepViewModel = new CraftSequenceStepViewModel(actionDefinition, RemoveStep);
+        CurrentSteps.Add(stepViewModel);
+
+        CancellationToken cancellationToken = iconLoadingCancellationTokenSource?.Token ?? CancellationToken.None;
+        _ = LoadIconForStepAsync(stepViewModel, cancellationToken);
     }
 
     private void RemoveStep(CraftSequenceStepViewModel? step)
@@ -158,33 +162,31 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 
             AvailableActions.Clear();
             availableActionDefinitions.Clear();
-            availableActionIcons.Clear();
 
             if (!result.IsSuccess)
             {
                 LoadErrorMessage = result.ErrorMessage ?? "クラフターアクション一覧の取得に失敗しました。";
             }
 
-            CatalogEntry[] entries = await Task.WhenAll(result.Actions.Select(async definition => new CatalogEntry(
-                definition,
-                await craftActionIconSourceService.GetIconSourceAsync(definition.IconId, cancellationToken))));
-
-            foreach (CatalogEntry entry in entries)
+            foreach (CraftActionDefinition definition in result.Actions)
             {
-                availableActionDefinitions[entry.Definition.ActionId] = entry.Definition;
-                availableActionIcons[entry.Definition.ActionId] = entry.IconSource;
+                availableActionDefinitions[definition.ActionId] = definition;
             }
 
-            foreach (IGrouping<string, CatalogEntry> group in entries
-                .GroupBy(static entry => string.IsNullOrWhiteSpace(entry.Definition.Category) ? DefaultActionCategory : entry.Definition.Category)
+            foreach (IGrouping<string, CraftActionDefinition> group in result.Actions
+                .GroupBy(static definition => definition.Category)
                 .OrderBy(static group => group.Key, StringComparer.CurrentCulture))
             {
-                AvailableActions.Add(new CraftActionPaletteCategoryViewModel(
-                    group.Key,
-                    group.Select(entry => new CraftActionPaletteItemViewModel(
-                        entry.Definition,
-                        entry.IconSource,
-                        AddAction))));
+                var itemViewModels = group
+                    .Select(definition => new CraftActionPaletteItemViewModel(definition, AddAction))
+                    .ToArray();
+
+                AvailableActions.Add(new CraftActionPaletteCategoryViewModel(group.Key, itemViewModels));
+
+                foreach (CraftActionPaletteItemViewModel itemViewModel in itemViewModels)
+                {
+                    _ = LoadIconForPaletteItemAsync(itemViewModel, cancellationToken);
+                }
             }
         }
         finally
@@ -201,30 +203,70 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
             return definition;
         }
 
-        return CreateFallbackDefinition(actionId);
-    }
-
-    private ImageSource? ResolveIcon(CraftActionId actionId)
-    {
-        return availableActionIcons.GetValueOrDefault(actionId);
-    }
-
-    private static CraftActionDefinition CreateFallbackDefinition(CraftActionId actionId)
-    {
-        return actionId.Value switch
+        if (CraftActionCatalog.TryGet(actionId, out CraftActionDefinition? fallback)
+            && fallback is not null)
         {
-            "craftaction:basic-synthesis" => new CraftActionDefinition(actionId, "作業", 2500, DefaultActionCategory, 0),
-            "craftaction:basic-touch" => new CraftActionDefinition(actionId, "加工", 2500, DefaultActionCategory, 0),
-            "craftaction:masters-mend" => new CraftActionDefinition(actionId, "マスターズメンド", 2500, DefaultActionCategory, 0),
-            "craftaction:veneration" => new CraftActionDefinition(actionId, "ヴェネレーション", 2500, DefaultActionCategory, 0),
-            "craftaction:innovation" => new CraftActionDefinition(actionId, "イノベーション", 2500, DefaultActionCategory, 0),
-            "craftaction:great-strides" => new CraftActionDefinition(actionId, "グレートストライド", 2500, DefaultActionCategory, 0),
-            "craftaction:byregots-blessing" => new CraftActionDefinition(actionId, "ビエルゴの祝福", 2500, DefaultActionCategory, 0),
-            _ => new CraftActionDefinition(actionId, actionId.Value, 2500, DefaultActionCategory, 0),
-        };
+            return fallback;
+        }
+
+        return new CraftActionDefinition(
+            actionId,
+            actionId.Value,
+            2500,
+            "クラフターアクション",
+            0,
+            []);
     }
 
-    private sealed record CatalogEntry(
-        CraftActionDefinition Definition,
-        ImageSource? IconSource);
+    private async Task LoadIconForPaletteItemAsync(
+        CraftActionPaletteItemViewModel itemViewModel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            itemViewModel.IconSource = await craftActionIconSourceService.GetIconSourceAsync(
+                itemViewModel.RepresentativeIconId,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            itemViewModel.IconSource = null;
+        }
+        catch
+        {
+            itemViewModel.IconSource = null;
+        }
+    }
+
+    private async Task LoadIconForStepAsync(
+        CraftSequenceStepViewModel stepViewModel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            stepViewModel.IconSource = await craftActionIconSourceService.GetIconSourceAsync(
+                stepViewModel.RepresentativeIconId,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            stepViewModel.IconSource = null;
+        }
+        catch
+        {
+            stepViewModel.IconSource = null;
+        }
+    }
+
+    private void CancelIconLoading()
+    {
+        if (iconLoadingCancellationTokenSource is null)
+        {
+            return;
+        }
+
+        iconLoadingCancellationTokenSource.Cancel();
+        iconLoadingCancellationTokenSource.Dispose();
+        iconLoadingCancellationTokenSource = null;
+    }
 }

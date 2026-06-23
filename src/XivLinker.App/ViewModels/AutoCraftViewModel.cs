@@ -48,10 +48,10 @@ public partial class AutoCraftViewModel : ObservableObject
 
     private async Task ShowSequenceEditorAsync(CraftSequence? sequence)
     {
-        await sequenceEditorViewModel.LoadAsync(sequence);
         CurrentContentViewModel = sequenceEditorViewModel;
         OnPropertyChanged(nameof(IsSequenceListVisible));
         OnPropertyChanged(nameof(IsSequenceEditorVisible));
+        await sequenceEditorViewModel.LoadAsync(sequence);
     }
 
     private void SaveSequence(CraftSequence sequence)
