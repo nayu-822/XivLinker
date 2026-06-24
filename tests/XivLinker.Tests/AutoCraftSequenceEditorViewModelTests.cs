@@ -37,23 +37,6 @@ public sealed class AutoCraftSequenceEditorViewModelTests
     }
 
     [Fact]
-    public async Task SaveCommand_WithInvalidWaitMilliseconds_DoesNotSave()
-    {
-        bool saved = false;
-        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => saved = true);
-
-        await viewModel.LoadAsync(null);
-        viewModel.AddAction(CraftActionId.BasicSynthesis);
-        CraftSequenceStepViewModel step = Assert.Single(viewModel.CurrentSteps);
-        step.WaitMilliseconds = 0;
-
-        viewModel.SaveCommand.Execute(null);
-
-        Assert.False(saved);
-        Assert.Equal("待機時間は1ms以上で入力してください。", viewModel.StatusMessage);
-    }
-
-    [Fact]
     public async Task SaveCommand_SavesActionIdBasedSequence()
     {
         CraftSequence? saved = null;
@@ -61,15 +44,12 @@ public sealed class AutoCraftSequenceEditorViewModelTests
 
         await viewModel.LoadAsync(null);
         viewModel.AddAction(CraftActionId.ByregotsBlessing);
-        CraftSequenceStepViewModel step = Assert.Single(viewModel.CurrentSteps);
-        step.WaitMilliseconds = 3200;
 
         viewModel.SaveCommand.Execute(null);
 
         Assert.NotNull(saved);
         CraftSequenceStep savedStep = Assert.Single(saved!.Steps);
         Assert.Equal(CraftActionId.ByregotsBlessing, savedStep.ActionId);
-        Assert.Equal(3200, savedStep.WaitMilliseconds);
     }
 
     [Fact]
@@ -186,7 +166,6 @@ public sealed class AutoCraftSequenceEditorViewModelTests
                 new CraftSequenceStep
                 {
                     ActionId = CraftActionId.FocusedSynthesis,
-                    WaitMilliseconds = 2500,
                 },
             ],
         };

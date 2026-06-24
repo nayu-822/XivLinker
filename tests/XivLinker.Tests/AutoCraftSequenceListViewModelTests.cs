@@ -20,7 +20,6 @@ public sealed class AutoCraftSequenceListViewModelTests
                 new CraftSequenceStep
                 {
                     ActionId = CraftActionId.BasicSynthesis,
-                    WaitMilliseconds = 2500,
                 },
             ],
         };

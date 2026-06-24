@@ -8,9 +8,4 @@ public sealed class CraftSequenceStep
     {
         get; set;
     }
-
-    public int WaitMilliseconds
-    {
-        get; set;
-    }
 }

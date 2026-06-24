@@ -13,7 +13,6 @@ public sealed partial class CraftSequenceStepViewModel : ObservableObject
         Action<CraftSequenceStepViewModel> remove)
     {
         Definition = definition;
-        waitMilliseconds = definition.PostActionWaitMilliseconds;
         RemoveCommand = new RelayCommand(() => remove(this));
     }
 
@@ -31,9 +30,6 @@ public sealed partial class CraftSequenceStepViewModel : ObservableObject
     [ObservableProperty]
     private ImageSource? iconSource;
 
-    [ObservableProperty]
-    private int waitMilliseconds;
-
     public IRelayCommand RemoveCommand
     {
         get;
@@ -44,10 +40,7 @@ public sealed partial class CraftSequenceStepViewModel : ObservableObject
         CraftActionDefinition definition,
         Action<CraftSequenceStepViewModel> remove)
     {
-        return new CraftSequenceStepViewModel(definition, remove)
-        {
-            WaitMilliseconds = step.WaitMilliseconds,
-        };
+        return new CraftSequenceStepViewModel(definition, remove);
     }
 
     public CraftSequenceStep ToModel()
@@ -55,7 +48,6 @@ public sealed partial class CraftSequenceStepViewModel : ObservableObject
         return new CraftSequenceStep
         {
             ActionId = ActionId,
-            WaitMilliseconds = WaitMilliseconds,
         };
     }
 }

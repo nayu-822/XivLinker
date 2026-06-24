@@ -51,7 +51,6 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
                 .Select(static step => new CraftSequenceStep
                 {
                     ActionId = step.ActionId,
-                    WaitMilliseconds = step.WaitMilliseconds,
                 })
                 .ToArray(),
         };

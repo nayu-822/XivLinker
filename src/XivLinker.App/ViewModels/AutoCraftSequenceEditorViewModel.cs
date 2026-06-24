@@ -132,12 +132,6 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
             return;
         }
 
-        if (CurrentSteps.Any(step => step.WaitMilliseconds < 1))
-        {
-            StatusMessage = "待機時間は1ms以上で入力してください。";
-            return;
-        }
-
         var sequence = new CraftSequence
         {
             SequenceId = sequenceId,
@@ -218,7 +212,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         return new CraftActionDefinition(
             actionId,
             actionId.Value,
-            2500,
+            CraftActionCatalog.DefaultPostActionWaitMilliseconds,
             "クラフターアクション",
             0,
             []);

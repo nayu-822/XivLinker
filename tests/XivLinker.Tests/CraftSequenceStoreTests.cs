@@ -19,7 +19,6 @@ public sealed class CraftSequenceStoreTests
                 new CraftSequenceStep
                 {
                     ActionId = CraftActionId.BasicTouch,
-                    WaitMilliseconds = 2500,
                 },
             ],
         };
@@ -47,7 +46,6 @@ public sealed class CraftSequenceStoreTests
                 new CraftSequenceStep
                 {
                     ActionId = CraftActionId.BasicSynthesis,
-                    WaitMilliseconds = 2500,
                 },
             ],
         };

@@ -21,7 +21,7 @@
                     <TextBlock Text="{Binding Title}"
                                Style="{StaticResource SectionTitleTextStyle}" />
                     <TextBlock Margin="0,8,0,0"
-                               Text="左のアクションパレットから追加し、右側で順序と待機時間を調整します。"
+                               Text="左のアクションパレットから追加して、自動クラフトのシーケンスを編集します。"
                                Style="{StaticResource BodyTextStyle}"
                                Foreground="{DynamicResource App.Brush.TextSecondary}"
                                TextWrapping="Wrap" />
@@ -56,7 +56,7 @@
                         <TextBlock Text="アクションパレット"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="0,8,0,0"
-                                   Text="利用可能なクラフターアクションをクリックすると、シーケンス末尾に追加されます。"
+                                   Text="使用可能なクラフターアクションをクリックすると、シーケンス末尾に追加されます。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
@@ -178,7 +178,7 @@
                         <TextBlock Text="シーケンス"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="0,8,0,0"
-                                   Text="アクション順は手動で整理できます。待機時間は必要に応じて調整してください。"
+                                   Text="アクションは追加順に実行されます。不要な項目は削除してください。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
@@ -254,7 +254,6 @@
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="150" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
@@ -281,20 +280,7 @@
                                                 </DockPanel>
                                             </StackPanel>
 
-                                            <StackPanel Grid.Column="1"
-                                                        Margin="16,0,0,0">
-                                                <TextBlock Text="待機時間 (ms)"
-                                                           Style="{StaticResource LabelTextStyle}" />
-                                                <TextBox Margin="0,8,0,0"
-                                                         Padding="12,10"
-                                                         Text="{Binding WaitMilliseconds, UpdateSourceTrigger=PropertyChanged}"
-                                                         Background="{DynamicResource App.Brush.SurfaceStrong}"
-                                                         BorderBrush="{DynamicResource App.Brush.Border}"
-                                                         BorderThickness="1"
-                                                         Foreground="{DynamicResource App.Brush.TextPrimary}" />
-                                            </StackPanel>
-
-                                            <Button Grid.Column="2"
+                                            <Button Grid.Column="1"
                                                     Margin="16,0,0,0"
                                                     VerticalAlignment="Top"
                                                     Command="{Binding RemoveCommand}"
