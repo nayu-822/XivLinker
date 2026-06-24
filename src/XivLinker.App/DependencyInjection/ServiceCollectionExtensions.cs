@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<OverlayPluginConnectionStateService>();
         services.AddSingleton<ICraftSequenceStore, CraftSequenceStore>();
         services.AddSingleton<CraftActionIconSourceService>();
+        services.AddSingleton<IAutoCraftSequenceEditorDialogService, AutoCraftSequenceEditorDialogService>();
 
         services.AddSingleton<AppEventLogViewModel>();
         services.AddSingleton<DashboardStatusViewModel>();

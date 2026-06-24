@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XivLinker.Application.Abstractions;
@@ -12,11 +13,11 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 {
     private readonly ICrafterActionCatalogService crafterActionCatalogService;
     private readonly CraftActionIconSourceService craftActionIconSourceService;
-    private readonly Action cancel;
     private readonly Action<CraftSequence> save;
     private readonly Dictionary<CraftActionId, CraftActionDefinition> availableActionDefinitions = [];
     private CancellationTokenSource? iconLoadingCancellationTokenSource;
     private Guid sequenceId;
+    private bool suppressDirtyTracking;
 
     [ObservableProperty]
     private string sequenceName = string.Empty;
@@ -33,6 +34,9 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
     [ObservableProperty]
     private string loadErrorMessage = string.Empty;
 
+    [ObservableProperty]
+    private bool hasUnsavedChanges;
+
     public AutoCraftSequenceEditorViewModel(
         ICrafterActionCatalogService crafterActionCatalogService,
         CraftActionIconSourceService craftActionIconSourceService,
@@ -41,11 +45,11 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
     {
         this.crafterActionCatalogService = crafterActionCatalogService;
         this.craftActionIconSourceService = craftActionIconSourceService;
-        this.cancel = cancel;
         this.save = save;
 
         AvailableActions = new ObservableCollection<CraftActionPaletteCategoryViewModel>();
         CurrentSteps = new ObservableCollection<CraftSequenceStepViewModel>();
+        CurrentSteps.CollectionChanged += OnCurrentStepsChanged;
         SaveCommand = new RelayCommand(SaveSequence);
         CancelCommand = new RelayCommand(cancel);
     }
@@ -72,11 +76,14 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 
     public string Title => IsEditing ? "シーケンス編集" : "シーケンス新規作成";
 
+    public string WindowTitle => IsEditing ? "クラフトシーケンスを編集" : "クラフトシーケンスを新規作成";
+
     public async Task LoadAsync(CraftSequence? sequence, CancellationToken cancellationToken = default)
     {
         CancelIconLoading();
         iconLoadingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         CancellationToken iconLoadingToken = iconLoadingCancellationTokenSource.Token;
+        suppressDirtyTracking = true;
 
         IsEditing = sequence is not null;
         sequenceId = sequence?.SequenceId ?? Guid.NewGuid();
@@ -84,21 +91,23 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         StatusMessage = string.Empty;
         CurrentSteps.Clear();
         OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(WindowTitle));
 
         await LoadAvailableActionsAsync(iconLoadingToken);
 
-        if (sequence is null)
+        if (sequence is not null)
         {
-            return;
+            foreach (CraftSequenceStep step in sequence.Steps)
+            {
+                CraftActionDefinition definition = ResolveDefinition(step.ActionId);
+                var stepViewModel = CraftSequenceStepViewModel.FromModel(step, definition, RemoveStep);
+                CurrentSteps.Add(stepViewModel);
+                _ = LoadIconForStepAsync(stepViewModel, iconLoadingToken);
+            }
         }
 
-        foreach (CraftSequenceStep step in sequence.Steps)
-        {
-            CraftActionDefinition definition = ResolveDefinition(step.ActionId);
-            var stepViewModel = CraftSequenceStepViewModel.FromModel(step, definition, RemoveStep);
-            CurrentSteps.Add(stepViewModel);
-            _ = LoadIconForStepAsync(stepViewModel, iconLoadingToken);
-        }
+        suppressDirtyTracking = false;
+        MarkClean();
     }
 
     public void AddAction(CraftActionId actionId)
@@ -111,6 +120,11 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
 
         CancellationToken cancellationToken = iconLoadingCancellationTokenSource?.Token ?? CancellationToken.None;
         _ = LoadIconForStepAsync(stepViewModel, cancellationToken);
+    }
+
+    public void MarkClean()
+    {
+        HasUnsavedChanges = false;
     }
 
     private void RemoveStep(CraftSequenceStepViewModel? step)
@@ -128,7 +142,7 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
     {
         if (CurrentSteps.Count == 0)
         {
-            StatusMessage = "シーケンスにアクションを1件以上追加してください。";
+            StatusMessage = "シーケンスにアクションを1つ以上追加してください。";
             return;
         }
 
@@ -268,5 +282,25 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         iconLoadingCancellationTokenSource.Cancel();
         iconLoadingCancellationTokenSource.Dispose();
         iconLoadingCancellationTokenSource = null;
+    }
+
+    partial void OnSequenceNameChanged(string value)
+    {
+        if (suppressDirtyTracking)
+        {
+            return;
+        }
+
+        HasUnsavedChanges = true;
+    }
+
+    private void OnCurrentStepsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (suppressDirtyTracking)
+        {
+            return;
+        }
+
+        HasUnsavedChanges = true;
     }
 }

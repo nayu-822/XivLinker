@@ -20,7 +20,7 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         viewModel.SaveCommand.Execute(null);
 
         Assert.False(saved);
-        Assert.Equal("シーケンスにアクションを1件以上追加してください。", viewModel.StatusMessage);
+        Assert.Equal("シーケンスにアクションを1つ以上追加してください。", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -34,6 +34,27 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         CraftSequenceStepViewModel step = Assert.Single(viewModel.CurrentSteps);
         Assert.Equal(CraftActionId.BasicTouch, step.ActionId);
         Assert.Equal("加工", step.DisplayName);
+    }
+
+    [Fact]
+    public async Task LoadAsync_StartsWithoutUnsavedChanges()
+    {
+        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => { });
+
+        await viewModel.LoadAsync(null);
+
+        Assert.False(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task AddAction_MarksViewModelAsDirty()
+    {
+        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => { });
+
+        await viewModel.LoadAsync(null);
+        viewModel.AddAction(CraftActionId.BasicSynthesis);
+
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [Fact]

@@ -1,0 +1,19 @@
+<Window x:Class="XivLinker.App.Views.AutoCraftSequenceEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:XivLinker.App.ViewModels"
+        xmlns:views="clr-namespace:XivLinker.App.Views"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=viewModels:AutoCraftSequenceEditorViewModel}"
+        Title="{Binding WindowTitle}"
+        Width="1160"
+        Height="780"
+        MinWidth="1100"
+        MinHeight="760"
+        Style="{StaticResource WindowBaseStyle}">
+    <Grid Margin="{StaticResource App.Thickness.Page}">
+        <views:AutoCraftSequenceEditorView />
+    </Grid>
+</Window>

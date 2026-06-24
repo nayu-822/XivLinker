@@ -1,17 +1,7 @@
 <UserControl x:Class="XivLinker.App.Views.AutoCraftView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:viewModels="clr-namespace:XivLinker.App.ViewModels"
              xmlns:views="clr-namespace:XivLinker.App.Views">
-    <UserControl.Resources>
-        <DataTemplate DataType="{x:Type viewModels:AutoCraftSequenceListViewModel}">
-            <views:AutoCraftSequenceListView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewModels:AutoCraftSequenceEditorViewModel}">
-            <views:AutoCraftSequenceEditorView />
-        </DataTemplate>
-    </UserControl.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -31,7 +21,7 @@
             </StackPanel>
         </Border>
 
-        <ContentControl Grid.Row="2"
-                        Content="{Binding CurrentContentViewModel}" />
+        <views:AutoCraftSequenceListView Grid.Row="2"
+                                         DataContext="{Binding SequenceList}" />
     </Grid>
 </UserControl>

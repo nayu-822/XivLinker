@@ -7,56 +7,27 @@ namespace XivLinker.App.ViewModels;
 
 public partial class AutoCraftViewModel : ObservableObject
 {
-    private readonly AutoCraftSequenceListViewModel sequenceListViewModel;
-    private readonly AutoCraftSequenceEditorViewModel sequenceEditorViewModel;
-
-    [ObservableProperty]
-    private object? currentContentViewModel;
-
     public AutoCraftViewModel(
         ICraftSequenceStore craftSequenceStore,
-        ICrafterActionCatalogService crafterActionCatalogService,
-        CraftActionIconSourceService craftActionIconSourceService)
+        IAutoCraftSequenceEditorDialogService sequenceEditorDialogService)
     {
-        sequenceEditorViewModel = new AutoCraftSequenceEditorViewModel(
-            crafterActionCatalogService,
-            craftActionIconSourceService,
-            ShowSequenceList,
-            SaveSequence);
-        sequenceListViewModel = new AutoCraftSequenceListViewModel(
+        SequenceList = new AutoCraftSequenceListViewModel(
             craftSequenceStore,
-            ShowSequenceEditorAsync);
+            sequence => sequenceEditorDialogService.ShowEditorAsync(sequence, SaveSequence));
+        SequenceList.Refresh();
+    }
 
-        ShowSequenceList();
+    public AutoCraftSequenceListViewModel SequenceList
+    {
+        get;
     }
 
     public string Title => "自動クラフト";
 
-    public string Description => "クラフトシーケンスの一覧確認と新規作成画面への移動をここから行えます。";
-
-    public bool IsSequenceListVisible => ReferenceEquals(CurrentContentViewModel, sequenceListViewModel);
-
-    public bool IsSequenceEditorVisible => ReferenceEquals(CurrentContentViewModel, sequenceEditorViewModel);
-
-    private void ShowSequenceList()
-    {
-        sequenceListViewModel.Refresh();
-        CurrentContentViewModel = sequenceListViewModel;
-        OnPropertyChanged(nameof(IsSequenceListVisible));
-        OnPropertyChanged(nameof(IsSequenceEditorVisible));
-    }
-
-    private async Task ShowSequenceEditorAsync(CraftSequence? sequence)
-    {
-        CurrentContentViewModel = sequenceEditorViewModel;
-        OnPropertyChanged(nameof(IsSequenceListVisible));
-        OnPropertyChanged(nameof(IsSequenceEditorVisible));
-        await sequenceEditorViewModel.LoadAsync(sequence);
-    }
+    public string Description => "保存済みシーケンスの確認、作成、編集、削除、実行をここから行えます。";
 
     private void SaveSequence(CraftSequence sequence)
     {
-        sequenceListViewModel.Save(sequence);
-        ShowSequenceList();
+        SequenceList.Save(sequence);
     }
 }
