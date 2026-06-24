@@ -173,15 +173,21 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
                 availableActionDefinitions[definition.ActionId] = definition;
             }
 
-            foreach (IGrouping<string, CraftActionDefinition> group in result.Actions
-                .GroupBy(static definition => definition.Category)
-                .OrderBy(static group => group.Key, StringComparer.CurrentCulture))
+            foreach (CrafterActionDefinitions.CrafterActionPaletteCategoryDefinition category in CrafterActionDefinitions.PaletteCategories)
             {
-                var itemViewModels = group
+                var itemViewModels = category.ActionIds
+                    .Select(actionId => availableActionDefinitions.GetValueOrDefault(actionId))
+                    .Where(static definition => definition is not null)
+                    .Cast<CraftActionDefinition>()
                     .Select(definition => new CraftActionPaletteItemViewModel(definition, AddAction))
                     .ToArray();
 
-                AvailableActions.Add(new CraftActionPaletteCategoryViewModel(group.Key, itemViewModels));
+                if (itemViewModels.Length == 0)
+                {
+                    continue;
+                }
+
+                AvailableActions.Add(new CraftActionPaletteCategoryViewModel(category.CategoryName, itemViewModels));
 
                 foreach (CraftActionPaletteItemViewModel itemViewModel in itemViewModels)
                 {

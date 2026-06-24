@@ -73,7 +73,102 @@ public sealed class AutoCraftSequenceEditorViewModelTests
     }
 
     [Fact]
-    public async Task LoadAsync_WhenCatalogFails_UsesFallbackActionsAndStillLoadsExistingSequence()
+    public async Task LoadAsync_BuildsPaletteWithReferenceCategoriesAndOrder()
+    {
+        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => { });
+
+        await viewModel.LoadAsync(null);
+
+        Assert.Collection(
+            viewModel.AvailableActions,
+            synthesis =>
+            {
+                Assert.Equal("作業系", synthesis.CategoryName);
+                Assert.Equal(
+                    [
+                        CraftActionId.BasicSynthesis,
+                        CraftActionId.CarefulSynthesis,
+                        CraftActionId.IntensiveSynthesis,
+                        CraftActionId.DelicateSynthesis,
+                        CraftActionId.RapidSynthesis,
+                        CraftActionId.MuscleMemory,
+                        CraftActionId.Groundwork,
+                        CraftActionId.PrudentSynthesis,
+                    ],
+                    synthesis.Actions.Select(static action => action.ActionId).ToArray());
+            },
+            touch =>
+            {
+                Assert.Equal("加工系", touch.CategoryName);
+                Assert.Equal(
+                    [
+                        CraftActionId.BasicTouch,
+                        CraftActionId.StandardTouch,
+                        CraftActionId.PreciseTouch,
+                        CraftActionId.PrudentTouch,
+                        CraftActionId.PreparatoryTouch,
+                        CraftActionId.ByregotsBlessing,
+                        CraftActionId.HastyTouch,
+                        CraftActionId.AdvancedTouch,
+                        CraftActionId.TrainedFinesse,
+                        CraftActionId.RefinedTouch,
+                        CraftActionId.DaringTouch,
+                        CraftActionId.Reflect,
+                    ],
+                    touch.Actions.Select(static action => action.ActionId).ToArray());
+            },
+            buff =>
+            {
+                Assert.Equal("バフ・補助系", buff.CategoryName);
+                Assert.Equal(
+                    [
+                        CraftActionId.MastersMend,
+                        CraftActionId.ImmaculateMend,
+                        CraftActionId.Manipulation,
+                        CraftActionId.Veneration,
+                        CraftActionId.Observe,
+                        CraftActionId.TrainedEye,
+                        CraftActionId.TricksOfTheTrade,
+                        CraftActionId.WasteNot,
+                        CraftActionId.WasteNotII,
+                        CraftActionId.GreatStrides,
+                        CraftActionId.Innovation,
+                        CraftActionId.FinalAppraisal,
+                        CraftActionId.TrainedPerfection,
+                    ],
+                    buff.Actions.Select(static action => action.ActionId).ToArray());
+            },
+            specialist =>
+            {
+                Assert.Equal("専門技能系", specialist.CategoryName);
+                Assert.Equal(
+                    [
+                        CraftActionId.CarefulObservation,
+                        CraftActionId.HeartAndSoul,
+                        CraftActionId.QuickInnovation,
+                    ],
+                    specialist.Actions.Select(static action => action.ActionId).ToArray());
+            });
+    }
+
+    [Fact]
+    public async Task LoadAsync_DoesNotShowHiddenActionsInPalette()
+    {
+        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => { });
+
+        await viewModel.LoadAsync(null);
+
+        CraftActionId[] paletteActionIds = viewModel.AvailableActions
+            .SelectMany(static category => category.Actions)
+            .Select(static action => action.ActionId)
+            .ToArray();
+
+        Assert.DoesNotContain(CraftActionId.FocusedSynthesis, paletteActionIds);
+        Assert.DoesNotContain(CraftActionId.FocusedTouch, paletteActionIds);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WhenCatalogFails_UsesFallbackActionsAndStillLoadsHiddenSequenceAction()
     {
         var failingService = new FakeCrafterActionCatalogService(
             new CrafterActionCatalogResult(CraftActionCatalog.GetAll(), "Lumina initialization failed."));
@@ -90,7 +185,7 @@ public sealed class AutoCraftSequenceEditorViewModelTests
             [
                 new CraftSequenceStep
                 {
-                    ActionId = CraftActionId.BasicSynthesis,
+                    ActionId = CraftActionId.FocusedSynthesis,
                     WaitMilliseconds = 2500,
                 },
             ],
@@ -99,20 +194,21 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         await viewModel.LoadAsync(sequence);
 
         Assert.Equal("Lumina initialization failed.", viewModel.LoadErrorMessage);
-        Assert.NotEmpty(viewModel.AvailableActions);
+        Assert.Equal(4, viewModel.AvailableActions.Count);
         Assert.Single(viewModel.CurrentSteps);
-        Assert.Equal("作業", viewModel.CurrentSteps[0].DisplayName);
+        Assert.Equal("注視作業", viewModel.CurrentSteps[0].DisplayName);
+
+        CraftActionId[] paletteActionIds = viewModel.AvailableActions
+            .SelectMany(static category => category.Actions)
+            .Select(static action => action.ActionId)
+            .ToArray();
+        Assert.DoesNotContain(CraftActionId.FocusedSynthesis, paletteActionIds);
     }
 
     private static AutoCraftSequenceEditorViewModel CreateViewModel(Action<CraftSequence> save)
     {
         var service = new FakeCrafterActionCatalogService(
-            new CrafterActionCatalogResult(
-            [
-                new CraftActionDefinition(CraftActionId.BasicSynthesis, "作業", 2500, "クラフターアクション", 0, []),
-                new CraftActionDefinition(CraftActionId.BasicTouch, "加工", 2500, "クラフターアクション", 0, []),
-                new CraftActionDefinition(CraftActionId.ByregotsBlessing, "ビエルゴの祝福", 2500, "クラフターアクション", 0, []),
-            ]));
+            new CrafterActionCatalogResult(CraftActionCatalog.GetAll()));
 
         return new AutoCraftSequenceEditorViewModel(
             service,
