@@ -239,6 +239,23 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         Assert.DoesNotContain(CraftActionId.FocusedSynthesis, paletteActionIds);
     }
 
+    [Fact]
+    public async Task LoadAsync_WhenCatalogServiceThrows_ReleasesDirtyTrackingSuppression()
+    {
+        var throwingService = new ThrowingCrafterActionCatalogService();
+        var viewModel = new AutoCraftSequenceEditorViewModel(
+            throwingService,
+            new CraftActionIconSourceService(throwingService),
+            () => { },
+            _ => { });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => viewModel.LoadAsync(null));
+
+        viewModel.SequenceName = "例外後のシーケンス";
+
+        Assert.True(viewModel.HasUnsavedChanges);
+    }
+
     private static AutoCraftSequenceEditorViewModel CreateViewModel(Action<CraftSequence> save)
     {
         var service = new FakeCrafterActionCatalogService(
@@ -263,6 +280,19 @@ public sealed class AutoCraftSequenceEditorViewModelTests
         public Task<CrafterActionCatalogResult> GetCrafterActionsAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(result);
+        }
+
+        public Task<byte[]?> GetIconPngAsync(uint iconId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<byte[]?>(null);
+        }
+    }
+
+    private sealed class ThrowingCrafterActionCatalogService : ICrafterActionCatalogService
+    {
+        public Task<CrafterActionCatalogResult> GetCrafterActionsAsync(CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("Failed to load crafter actions.");
         }
 
         public Task<byte[]?> GetIconPngAsync(uint iconId, CancellationToken cancellationToken = default)
