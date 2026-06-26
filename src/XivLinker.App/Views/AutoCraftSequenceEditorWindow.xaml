@@ -8,12 +8,12 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=viewModels:AutoCraftSequenceEditorViewModel}"
         Title="{Binding WindowTitle}"
-        Width="1160"
-        Height="780"
-        MinWidth="1100"
-        MinHeight="760"
+        Width="1200"
+        Height="760"
+        MinWidth="1140"
+        MinHeight="720"
         Style="{StaticResource WindowBaseStyle}">
-    <Grid Margin="{StaticResource App.Thickness.Page}">
+    <Grid Margin="{StaticResource App.Thickness.PageCompact}">
         <views:AutoCraftSequenceEditorView />
     </Grid>
 </Window>

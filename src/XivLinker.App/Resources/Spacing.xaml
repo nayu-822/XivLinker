@@ -13,5 +13,14 @@
     <CornerRadius x:Key="App.CornerRadius.Pill">999</CornerRadius>
 
     <Thickness x:Key="App.Thickness.Page">32</Thickness>
+    <Thickness x:Key="App.Thickness.PageCompact">24</Thickness>
     <Thickness x:Key="App.Thickness.CardPadding">24</Thickness>
+    <Thickness x:Key="App.Thickness.CardPaddingCompact">18</Thickness>
+    <Thickness x:Key="App.Thickness.ActionTilePadding">12,10</Thickness>
+    <Thickness x:Key="App.Thickness.ActionTileMargin">0,0,8,8</Thickness>
+    <Thickness x:Key="App.Thickness.ListItemCompactPadding">14</Thickness>
+
+    <sys:Double x:Key="App.Size.ActionTileWidth">164</sys:Double>
+    <sys:Double x:Key="App.Size.ActionTileHeight">68</sys:Double>
+    <sys:Double x:Key="App.Size.IconM">20</sys:Double>
 </ResourceDictionary>

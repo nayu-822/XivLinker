@@ -4,13 +4,13 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="20" />
+            <RowDefinition Height="16" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="20" />
+            <RowDefinition Height="16" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource CardStyle}">
+        <Border Style="{StaticResource CompactCardStyle}">
             <StackPanel>
                 <DockPanel LastChildFill="False">
                     <TextBlock Text="{Binding WindowTitle}"
@@ -28,8 +28,8 @@
                     </Border>
                 </DockPanel>
 
-                <TextBlock Margin="0,10,0,0"
-                           Text="左側でシーケンス名と追加済みアクションを確認し、右側のクラフターアクションパレットから順番に追加できます。"
+                <TextBlock Margin="0,8,0,0"
+                           Text="名前を付けてシーケンスを保存し、右側のクラフターアクションパレットから手順に追加できます。"
                            Style="{StaticResource BodyTextStyle}"
                            Foreground="{DynamicResource App.Brush.TextSecondary}"
                            TextWrapping="Wrap" />
@@ -38,16 +38,16 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.2*" />
-                <ColumnDefinition Width="20" />
-                <ColumnDefinition Width="0.95*" />
+                <ColumnDefinition Width="1.08*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
 
-            <Border Style="{StaticResource CardStyle}">
+            <Border Style="{StaticResource CompactCardStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="20" />
+                        <RowDefinition Height="16" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -59,7 +59,7 @@
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
-                        <TextBlock Margin="0,18,0,0"
+                        <TextBlock Margin="0,16,0,0"
                                    Text="シーケンス名"
                                    Style="{StaticResource LabelTextStyle}" />
                         <TextBox Margin="0,8,0,0"
@@ -69,7 +69,7 @@
                                  BorderBrush="{DynamicResource App.Brush.Border}"
                                  BorderThickness="1"
                                  Foreground="{DynamicResource App.Brush.TextPrimary}" />
-                        <TextBlock Margin="0,10,0,0"
+                        <TextBlock Margin="0,8,0,0"
                                    Text="{Binding StatusMessage}"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.Warning}"
@@ -111,8 +111,8 @@
                             </ListBox.Style>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,0,0,12"
-                                            Padding="16"
+                                    <Border Margin="0,0,0,8"
+                                            Padding="{StaticResource App.Thickness.ListItemCompactPadding}"
                                             CornerRadius="{StaticResource App.CornerRadius.Control}"
                                             Background="{DynamicResource App.Brush.SurfaceAlt}"
                                             BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
@@ -133,7 +133,7 @@
                                             <DockPanel LastChildFill="True">
                                                 <Image Width="24"
                                                        Height="24"
-                                                       Margin="0,0,10,0"
+                                                       Margin="0,0,8,0"
                                                        Source="{Binding IconSource}"
                                                        DockPanel.Dock="Left">
                                                     <Image.Style>
@@ -152,7 +152,7 @@
                                             </DockPanel>
 
                                             <Button Grid.Column="1"
-                                                    Margin="16,0,0,0"
+                                                    Margin="12,0,0,0"
                                                     VerticalAlignment="Top"
                                                     Command="{Binding RemoveCommand}"
                                                     Style="{StaticResource ActionButtonStyle}">
@@ -168,11 +168,11 @@
             </Border>
 
             <Border Grid.Column="2"
-                    Style="{StaticResource CardStyle}">
+                    Style="{StaticResource CompactCardStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="16" />
+                        <RowDefinition Height="12" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -180,11 +180,11 @@
                         <TextBlock Text="クラフターアクション"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="0,8,0,0"
-                                   Text="カテゴリ順に並んだパレットからアクションを追加できます。パレットの中だけ縦スクロールします。"
+                                   Text="カテゴリごとに並んだパレットからアクションを追加できます。パレットは縦スクロールします。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
-                        <TextBlock Margin="0,14,0,0"
+                        <TextBlock Margin="0,12,0,0"
                                    Text="クラフターアクションを読み込んでいます。"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}">
                             <TextBlock.Style>
@@ -198,7 +198,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Margin="0,10,0,0"
+                        <TextBlock Margin="0,8,0,0"
                                    Text="{Binding LoadErrorMessage}"
                                    Foreground="{DynamicResource App.Brush.Warning}"
                                    TextWrapping="Wrap">
@@ -217,14 +217,15 @@
 
                     <ScrollViewer Grid.Row="2"
                                   VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False">
                         <ItemsControl ItemsSource="{Binding AvailableActions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Margin="0,0,0,20">
+                                    <StackPanel Margin="0,0,0,16">
                                         <TextBlock Text="{Binding CategoryName}"
                                                    Style="{StaticResource LabelTextStyle}" />
-                                        <ItemsControl Margin="0,10,0,0"
+                                        <ItemsControl Margin="0,8,0,0"
                                                       ItemsSource="{Binding Actions}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -233,51 +234,38 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Button Width="184"
-                                                            Height="84"
-                                                            Margin="0,0,12,12"
-                                                            Command="{Binding AddToSequenceCommand}"
-                                                            Style="{StaticResource ActionButtonStyle}">
-                                                        <Button.Template>
-                                                            <ControlTemplate TargetType="Button">
-                                                                <Border Padding="14,12"
-                                                                        CornerRadius="{StaticResource App.CornerRadius.Control}"
-                                                                        Background="{TemplateBinding Background}"
-                                                                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                                                                        BorderThickness="1">
-                                                                    <Grid>
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="28" />
-                                                                            <ColumnDefinition Width="10" />
-                                                                            <ColumnDefinition Width="*" />
-                                                                        </Grid.ColumnDefinitions>
+                                                    <Button Command="{Binding AddToSequenceCommand}"
+                                                            Style="{StaticResource ActionTileButtonStyle}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
 
-                                                                        <Image Width="24"
-                                                                               Height="24"
-                                                                               VerticalAlignment="Center"
-                                                                               Source="{Binding IconSource}">
-                                                                            <Image.Style>
-                                                                                <Style TargetType="Image">
-                                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                                    <Style.Triggers>
-                                                                                        <DataTrigger Binding="{Binding IconSource}" Value="{x:Null}">
-                                                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                                                        </DataTrigger>
-                                                                                    </Style.Triggers>
-                                                                                </Style>
-                                                                            </Image.Style>
-                                                                        </Image>
+                                                            <Image Width="{StaticResource App.Size.IconM}"
+                                                                   Height="{StaticResource App.Size.IconM}"
+                                                                   VerticalAlignment="Center"
+                                                                   Source="{Binding IconSource}">
+                                                                <Image.Style>
+                                                                    <Style TargetType="Image">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IconSource}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Image.Style>
+                                                            </Image>
 
-                                                                        <TextBlock Grid.Column="2"
-                                                                                   VerticalAlignment="Center"
-                                                                                   Text="{Binding DisplayName}"
-                                                                                   TextAlignment="Left"
-                                                                                   TextWrapping="Wrap"
-                                                                                   Style="{StaticResource BodyTextStyle}" />
-                                                                    </Grid>
-                                                                </Border>
-                                                            </ControlTemplate>
-                                                        </Button.Template>
+                                                            <TextBlock Grid.Column="2"
+                                                                       VerticalAlignment="Center"
+                                                                       Text="{Binding DisplayName}"
+                                                                       TextAlignment="Left"
+                                                                       TextWrapping="Wrap"
+                                                                       Style="{StaticResource BodyTextStyle}" />
+                                                        </Grid>
                                                     </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -292,7 +280,7 @@
         </Grid>
 
         <Border Grid.Row="4"
-                Style="{StaticResource CardStyle}">
+                Style="{StaticResource CompactCardStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -302,7 +290,7 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock VerticalAlignment="Center"
-                           Text="保存するとシーケンス一覧に反映されます。キャンセル時は変更されません。"
+                           Text="保存するとシーケンス一覧に反映されます。キャンセル時の変更は保存されません。"
                            Style="{StaticResource BodyTextStyle}"
                            Foreground="{DynamicResource App.Brush.TextSecondary}"
                            TextWrapping="Wrap" />
