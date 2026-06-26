@@ -58,6 +58,40 @@ public sealed class AutoCraftSequenceEditorViewModelTests
     }
 
     [Fact]
+    public async Task LoadAsync_NullSequence_NameChangeMarksViewModelAsDirty()
+    {
+        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => { });
+
+        await viewModel.LoadAsync(null);
+        viewModel.SequenceName = "新しいシーケンス";
+
+        Assert.True(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ExistingSequenceWithSteps_DoesNotMarkViewModelAsDirty()
+    {
+        AutoCraftSequenceEditorViewModel viewModel = CreateViewModel(_ => { });
+        var sequence = new CraftSequence
+        {
+            SequenceId = Guid.NewGuid(),
+            Name = "既存シーケンス",
+            Steps =
+            [
+                new CraftSequenceStep
+                {
+                    ActionId = CraftActionId.BasicSynthesis,
+                },
+            ],
+        };
+
+        await viewModel.LoadAsync(sequence);
+
+        Assert.Single(viewModel.CurrentSteps);
+        Assert.False(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
     public async Task SaveCommand_SavesActionIdBasedSequence()
     {
         CraftSequence? saved = null;

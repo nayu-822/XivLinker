@@ -72,8 +72,18 @@ public sealed class AutoCraftSequenceEditorDialogService : IAutoCraftSequenceEdi
         window.Closed += (_, _) => currentWindow = null;
         currentWindow = window;
 
-        await viewModel.LoadAsync(sequence);
-        window.ShowDialog();
+        try
+        {
+            await viewModel.LoadAsync(sequence);
+            window.ShowDialog();
+        }
+        finally
+        {
+            if (ReferenceEquals(currentWindow, window))
+            {
+                currentWindow = null;
+            }
+        }
     }
 
     private static Window? ResolveOwnerWindow()

@@ -85,29 +85,35 @@ public partial class AutoCraftSequenceEditorViewModel : ObservableObject
         CancellationToken iconLoadingToken = iconLoadingCancellationTokenSource.Token;
         suppressDirtyTracking = true;
 
-        IsEditing = sequence is not null;
-        sequenceId = sequence?.SequenceId ?? Guid.NewGuid();
-        SequenceName = sequence?.Name ?? string.Empty;
-        StatusMessage = string.Empty;
-        CurrentSteps.Clear();
-        OnPropertyChanged(nameof(Title));
-        OnPropertyChanged(nameof(WindowTitle));
-
-        await LoadAvailableActionsAsync(iconLoadingToken);
-
-        if (sequence is not null)
+        try
         {
-            foreach (CraftSequenceStep step in sequence.Steps)
-            {
-                CraftActionDefinition definition = ResolveDefinition(step.ActionId);
-                var stepViewModel = CraftSequenceStepViewModel.FromModel(step, definition, RemoveStep);
-                CurrentSteps.Add(stepViewModel);
-                _ = LoadIconForStepAsync(stepViewModel, iconLoadingToken);
-            }
-        }
+            IsEditing = sequence is not null;
+            sequenceId = sequence?.SequenceId ?? Guid.NewGuid();
+            SequenceName = sequence?.Name ?? string.Empty;
+            StatusMessage = string.Empty;
+            CurrentSteps.Clear();
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(WindowTitle));
 
-        suppressDirtyTracking = false;
-        MarkClean();
+            await LoadAvailableActionsAsync(iconLoadingToken);
+
+            if (sequence is not null)
+            {
+                foreach (CraftSequenceStep step in sequence.Steps)
+                {
+                    CraftActionDefinition definition = ResolveDefinition(step.ActionId);
+                    var stepViewModel = CraftSequenceStepViewModel.FromModel(step, definition, RemoveStep);
+                    CurrentSteps.Add(stepViewModel);
+                    _ = LoadIconForStepAsync(stepViewModel, iconLoadingToken);
+                }
+            }
+
+            MarkClean();
+        }
+        finally
+        {
+            suppressDirtyTracking = false;
+        }
     }
 
     public void AddAction(CraftActionId actionId)
