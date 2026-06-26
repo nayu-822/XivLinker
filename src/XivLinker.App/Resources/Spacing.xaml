@@ -16,11 +16,19 @@
     <Thickness x:Key="App.Thickness.PageCompact">24</Thickness>
     <Thickness x:Key="App.Thickness.CardPadding">24</Thickness>
     <Thickness x:Key="App.Thickness.CardPaddingCompact">18</Thickness>
+    <sys:Double x:Key="App.Layout.GapS">8</sys:Double>
+    <sys:Double x:Key="App.Layout.GapM">12</sys:Double>
+    <sys:Double x:Key="App.Layout.GapL">16</sys:Double>
+    <Thickness x:Key="App.Thickness.TopGapS">0,8,0,0</Thickness>
+    <Thickness x:Key="App.Thickness.TopGapM">0,12,0,0</Thickness>
+    <Thickness x:Key="App.Thickness.TopGapL">0,16,0,0</Thickness>
+    <Thickness x:Key="App.Thickness.BottomGapL">0,0,0,16</Thickness>
     <Thickness x:Key="App.Thickness.ActionTilePadding">12,10</Thickness>
     <Thickness x:Key="App.Thickness.ActionTileMargin">0,0,8,8</Thickness>
     <Thickness x:Key="App.Thickness.ListItemCompactPadding">14</Thickness>
+    <Thickness x:Key="App.Thickness.InputPadding">12,10</Thickness>
 
     <sys:Double x:Key="App.Size.ActionTileWidth">164</sys:Double>
-    <sys:Double x:Key="App.Size.ActionTileHeight">68</sys:Double>
+    <sys:Double x:Key="App.Size.ActionTileHeight">74</sys:Double>
     <sys:Double x:Key="App.Size.IconM">20</sys:Double>
 </ResourceDictionary>

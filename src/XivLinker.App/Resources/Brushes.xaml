@@ -10,6 +10,7 @@
     <SolidColorBrush x:Key="App.Brush.TextSecondary" Color="#C5D0DD" />
     <SolidColorBrush x:Key="App.Brush.TextMuted" Color="#8D9BAA" />
     <SolidColorBrush x:Key="App.Brush.Accent" Color="#63D2C6" />
+    <SolidColorBrush x:Key="App.Brush.OnAccent" Color="#0F141D" />
     <SolidColorBrush x:Key="App.Brush.StatusBadgeBackground" Color="#22182633" />
     <SolidColorBrush x:Key="App.Brush.NavigationHover" Color="#182B3B" />
     <SolidColorBrush x:Key="App.Brush.NavigationSelected" Color="#1F3244" />

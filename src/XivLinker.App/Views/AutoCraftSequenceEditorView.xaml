@@ -4,9 +4,9 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="{StaticResource App.Layout.GapL}" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="{StaticResource App.Layout.GapL}" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -28,7 +28,7 @@
                     </Border>
                 </DockPanel>
 
-                <TextBlock Margin="0,8,0,0"
+                <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                            Text="名前を付けてシーケンスを保存し、右側のクラフターアクションパレットから手順に追加できます。"
                            Style="{StaticResource BodyTextStyle}"
                            Foreground="{DynamicResource App.Brush.TextSecondary}"
@@ -39,7 +39,7 @@
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.08*" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="{StaticResource App.Layout.GapL}" />
                 <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
 
@@ -47,29 +47,25 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="16" />
+                        <RowDefinition Height="{StaticResource App.Layout.GapL}" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <StackPanel>
                         <TextBlock Text="シーケンス"
                                    Style="{StaticResource SectionTitleTextStyle}" />
-                        <TextBlock Margin="0,8,0,0"
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                    Text="シーケンス名を入力し、左側で追加済みアクションの並びを確認できます。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
-                        <TextBlock Margin="0,16,0,0"
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapL}"
                                    Text="シーケンス名"
                                    Style="{StaticResource LabelTextStyle}" />
-                        <TextBox Margin="0,8,0,0"
-                                 Padding="12,10"
-                                 Text="{Binding SequenceName, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="{DynamicResource App.Brush.SurfaceAlt}"
-                                 BorderBrush="{DynamicResource App.Brush.Border}"
-                                 BorderThickness="1"
-                                 Foreground="{DynamicResource App.Brush.TextPrimary}" />
-                        <TextBlock Margin="0,8,0,0"
+                        <TextBox Margin="{StaticResource App.Thickness.TopGapS}"
+                                 Style="{StaticResource InputTextBoxStyle}"
+                                 Text="{Binding SequenceName, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                    Text="{Binding StatusMessage}"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.Warning}"
@@ -155,7 +151,7 @@
                                                     Margin="12,0,0,0"
                                                     VerticalAlignment="Top"
                                                     Command="{Binding RemoveCommand}"
-                                                    Style="{StaticResource ActionButtonStyle}">
+                                                    Style="{StaticResource DangerActionButtonStyle}">
                                                 <TextBlock Text="削除" />
                                             </Button>
                                         </Grid>
@@ -172,19 +168,19 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="12" />
+                        <RowDefinition Height="{StaticResource App.Layout.GapM}" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <StackPanel>
                         <TextBlock Text="クラフターアクション"
                                    Style="{StaticResource SectionTitleTextStyle}" />
-                        <TextBlock Margin="0,8,0,0"
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                    Text="カテゴリごとに並んだパレットからアクションを追加できます。パレットは縦スクロールします。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
-                        <TextBlock Margin="0,12,0,0"
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
                                    Text="クラフターアクションを読み込んでいます。"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}">
                             <TextBlock.Style>
@@ -198,7 +194,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Margin="0,8,0,0"
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                    Text="{Binding LoadErrorMessage}"
                                    Foreground="{DynamicResource App.Brush.Warning}"
                                    TextWrapping="Wrap">
@@ -222,10 +218,10 @@
                         <ItemsControl ItemsSource="{Binding AvailableActions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Margin="0,0,0,16">
+                                    <StackPanel Margin="{StaticResource App.Thickness.BottomGapL}">
                                         <TextBlock Text="{Binding CategoryName}"
                                                    Style="{StaticResource LabelTextStyle}" />
-                                        <ItemsControl Margin="0,8,0,0"
+                                        <ItemsControl Margin="{StaticResource App.Thickness.TopGapS}"
                                                       ItemsSource="{Binding Actions}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -235,17 +231,12 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Button Command="{Binding AddToSequenceCommand}"
-                                                            Style="{StaticResource ActionTileButtonStyle}">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="8" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
+                                                            Style="{StaticResource ActionTileButtonStyle}"
+                                                            ToolTip="{Binding DisplayName}">
+                                                        <StackPanel VerticalAlignment="Center">
                                                             <Image Width="{StaticResource App.Size.IconM}"
                                                                    Height="{StaticResource App.Size.IconM}"
-                                                                   VerticalAlignment="Center"
+                                                                   HorizontalAlignment="Center"
                                                                    Source="{Binding IconSource}">
                                                                 <Image.Style>
                                                                     <Style TargetType="Image">
@@ -259,13 +250,15 @@
                                                                 </Image.Style>
                                                             </Image>
 
-                                                            <TextBlock Grid.Column="2"
-                                                                       VerticalAlignment="Center"
+                                                            <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                                                       HorizontalAlignment="Center"
+                                                                       MaxWidth="136"
                                                                        Text="{Binding DisplayName}"
-                                                                       TextAlignment="Left"
-                                                                       TextWrapping="Wrap"
-                                                                       Style="{StaticResource BodyTextStyle}" />
-                                                        </Grid>
+                                                                       TextAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       TextWrapping="NoWrap"
+                                                                       Style="{StaticResource CaptionTextStyle}" />
+                                                        </StackPanel>
                                                     </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -285,7 +278,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="{StaticResource App.Layout.GapM}" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
@@ -297,7 +290,7 @@
 
                 <Button Grid.Column="1"
                         Command="{Binding CancelCommand}"
-                        Style="{StaticResource ActionButtonStyle}">
+                        Style="{StaticResource SmallActionButtonStyle}">
                     <TextBlock Text="キャンセル" />
                 </Button>
 
