@@ -4,9 +4,9 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="{StaticResource App.Layout.GapL}" />
+            <RowDefinition Height="{StaticResource App.GridLength.GapL}" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="{StaticResource App.Layout.GapL}" />
+            <RowDefinition Height="{StaticResource App.GridLength.GapL}" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -39,7 +39,7 @@
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.08*" />
-                <ColumnDefinition Width="{StaticResource App.Layout.GapL}" />
+                <ColumnDefinition Width="{StaticResource App.GridLength.GapL}" />
                 <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
 
@@ -47,7 +47,7 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="{StaticResource App.Layout.GapL}" />
+                        <RowDefinition Height="{StaticResource App.GridLength.GapL}" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -168,7 +168,7 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="{StaticResource App.Layout.GapM}" />
+                        <RowDefinition Height="{StaticResource App.GridLength.GapM}" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -278,7 +278,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="{StaticResource App.Layout.GapM}" />
+                    <ColumnDefinition Width="{StaticResource App.GridLength.GapM}" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 

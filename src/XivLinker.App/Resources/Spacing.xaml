@@ -19,6 +19,9 @@
     <sys:Double x:Key="App.Layout.GapS">8</sys:Double>
     <sys:Double x:Key="App.Layout.GapM">12</sys:Double>
     <sys:Double x:Key="App.Layout.GapL">16</sys:Double>
+    <GridLength x:Key="App.GridLength.GapS">8</GridLength>
+    <GridLength x:Key="App.GridLength.GapM">12</GridLength>
+    <GridLength x:Key="App.GridLength.GapL">16</GridLength>
     <Thickness x:Key="App.Thickness.TopGapS">0,8,0,0</Thickness>
     <Thickness x:Key="App.Thickness.TopGapM">0,12,0,0</Thickness>
     <Thickness x:Key="App.Thickness.TopGapL">0,16,0,0</Thickness>
