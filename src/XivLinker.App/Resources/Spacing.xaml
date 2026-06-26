@@ -14,14 +14,23 @@
 
     <Thickness x:Key="App.Thickness.Page">32</Thickness>
     <Thickness x:Key="App.Thickness.PageCompact">24</Thickness>
+    <Thickness x:Key="App.Thickness.PageDense">20</Thickness>
     <Thickness x:Key="App.Thickness.CardPadding">24</Thickness>
     <Thickness x:Key="App.Thickness.CardPaddingCompact">18</Thickness>
+    <Thickness x:Key="App.Thickness.SectionPadding">16</Thickness>
+    <Thickness x:Key="App.Thickness.SectionPaddingCompact">14</Thickness>
+    <Thickness x:Key="App.Thickness.PanelPadding">12</Thickness>
+    <Thickness x:Key="App.Thickness.ListItemPadding">12</Thickness>
     <sys:Double x:Key="App.Layout.GapS">8</sys:Double>
     <sys:Double x:Key="App.Layout.GapM">12</sys:Double>
     <sys:Double x:Key="App.Layout.GapL">16</sys:Double>
+    <sys:Double x:Key="App.Layout.SectionGap">14</sys:Double>
+    <sys:Double x:Key="App.Layout.ContentGap">10</sys:Double>
     <GridLength x:Key="App.GridLength.GapS">8</GridLength>
     <GridLength x:Key="App.GridLength.GapM">12</GridLength>
     <GridLength x:Key="App.GridLength.GapL">16</GridLength>
+    <GridLength x:Key="App.GridLength.SectionGap">14</GridLength>
+    <GridLength x:Key="App.GridLength.ContentGap">10</GridLength>
     <Thickness x:Key="App.Thickness.TopGapS">0,8,0,0</Thickness>
     <Thickness x:Key="App.Thickness.TopGapM">0,12,0,0</Thickness>
     <Thickness x:Key="App.Thickness.TopGapL">0,16,0,0</Thickness>

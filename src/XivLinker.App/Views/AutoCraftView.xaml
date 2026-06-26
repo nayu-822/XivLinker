@@ -5,21 +5,19 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource HeroPanelStyle}">
-            <StackPanel>
-                <TextBlock Text="{Binding Title}"
-                           Style="{StaticResource SectionTitleTextStyle}" />
-                <TextBlock Margin="0,10,0,0"
-                           Text="{Binding Description}"
-                           Style="{StaticResource BodyTextStyle}"
-                           Foreground="{DynamicResource App.Brush.TextSecondary}"
-                           TextWrapping="Wrap" />
-            </StackPanel>
-        </Border>
+        <StackPanel>
+            <TextBlock Text="{Binding Title}"
+                       Style="{StaticResource SectionTitleTextStyle}" />
+            <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                       Text="{Binding Description}"
+                       Style="{StaticResource BodyTextStyle}"
+                       Foreground="{DynamicResource App.Brush.TextSecondary}"
+                       TextWrapping="Wrap" />
+        </StackPanel>
 
         <views:AutoCraftSequenceListView Grid.Row="2"
                                          DataContext="{Binding SequenceList}" />
