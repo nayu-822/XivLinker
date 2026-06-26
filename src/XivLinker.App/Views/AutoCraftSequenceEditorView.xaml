@@ -11,13 +11,20 @@
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <DockPanel LastChildFill="False">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
                 <TextBlock Text="{Binding WindowTitle}"
-                           Style="{StaticResource SectionTitleTextStyle}"
-                           DockPanel.Dock="Left" />
-                <Border Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Style="{StaticResource SectionTitleTextStyle}" />
+
+                <Border Grid.Column="1"
+                        Margin="12,0,0,0"
                         Padding="10,4"
-                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
                         Background="{DynamicResource App.Brush.SurfaceAlt}"
                         BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                         BorderThickness="1"
@@ -25,10 +32,10 @@
                     <TextBlock Text="{Binding Title}"
                                Style="{StaticResource CaptionTextStyle}" />
                 </Border>
-            </DockPanel>
+            </Grid>
 
             <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                       Text="シーケンス名の確認と手順編集に集中できるよう、左右の作業領域を広く確保しています。"
+                       Text="手順の確認とアクション追加を行います。"
                        Style="{StaticResource BodyTextStyle}"
                        Foreground="{DynamicResource App.Brush.TextSecondary}"
                        TextWrapping="Wrap" />
@@ -53,7 +60,7 @@
                         <TextBlock Text="現在の手順"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                                   Text="名前の入力と追加済みアクションの並び替え・削除をここで確認できます。"
+                                   Text="追加済みアクションの確認・削除を行います。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
@@ -90,6 +97,7 @@
                             </TextBlock>
 
                             <ListBox ItemsSource="{Binding CurrentSteps}"
+                                     ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
                                      Background="Transparent"
                                      BorderThickness="0"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -177,7 +185,7 @@
                         <TextBlock Text="クラフターアクション"
                                    Style="{StaticResource SectionTitleTextStyle}" />
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                                   Text="カテゴリごとのパレットからアクションを追加できます。スクロールはこの領域だけで完結します。"
+                                   Text="カテゴリからアクションを追加します。"
                                    Style="{StaticResource BodyTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
@@ -223,7 +231,7 @@
                                 <ItemsControl ItemsSource="{Binding AvailableActions}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Margin="0,0,0,12">
+                                            <StackPanel Margin="0,0,0,10">
                                                 <TextBlock Text="{Binding CategoryName}"
                                                            Style="{StaticResource LabelTextStyle}" />
                                                 <ItemsControl Margin="{StaticResource App.Thickness.TopGapS}"
@@ -239,8 +247,8 @@
                                                                     Style="{StaticResource ActionTileButtonStyle}"
                                                                     ToolTip="{Binding DisplayName}">
                                                                 <StackPanel VerticalAlignment="Center">
-                                                                    <Image Width="{StaticResource App.Size.IconM}"
-                                                                           Height="{StaticResource App.Size.IconM}"
+                                                                    <Image Width="{StaticResource App.Size.ActionTileIcon}"
+                                                                           Height="{StaticResource App.Size.ActionTileIcon}"
                                                                            HorizontalAlignment="Center"
                                                                            Source="{Binding IconSource}">
                                                                         <Image.Style>
@@ -257,7 +265,7 @@
 
                                                                     <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                                                                HorizontalAlignment="Center"
-                                                                               MaxWidth="136"
+                                                                               MaxWidth="{StaticResource App.Size.ActionTileTextMaxWidth}"
                                                                                Text="{Binding DisplayName}"
                                                                                TextAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"

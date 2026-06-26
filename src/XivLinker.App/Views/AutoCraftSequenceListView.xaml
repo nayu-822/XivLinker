@@ -54,6 +54,7 @@
                 </TextBlock>
 
                 <ListBox ItemsSource="{Binding Sequences}"
+                         ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
                          Background="Transparent"
                          BorderThickness="0"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -85,8 +86,6 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="{StaticResource App.GridLength.ContentGap}" />
-                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel>
@@ -99,26 +98,28 @@
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <TextBlock Grid.Column="3"
-                                               VerticalAlignment="Top"
-                                               Text="{Binding UpdatedAtText}"
-                                               Style="{StaticResource CaptionTextStyle}" />
+                                    <StackPanel Grid.Row="2"
+                                                Grid.ColumnSpan="2"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right">
+                                        <TextBlock Margin="0,0,12,0"
+                                                   VerticalAlignment="Center"
+                                                   Text="{Binding UpdatedAtText}"
+                                                   Style="{StaticResource CaptionTextStyle}" />
 
-                                    <Button Grid.Row="2"
-                                            Grid.Column="1"
-                                            Command="{Binding DataContext.EditSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource SmallActionButtonStyle}">
-                                        <TextBlock Text="編集" />
-                                    </Button>
+                                        <Button Command="{Binding DataContext.EditSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource SmallActionButtonStyle}">
+                                            <TextBlock Text="編集" />
+                                        </Button>
 
-                                    <Button Grid.Row="2"
-                                            Grid.Column="3"
-                                            Command="{Binding DataContext.DeleteSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource DangerActionButtonStyle}">
-                                        <TextBlock Text="削除" />
-                                    </Button>
+                                        <Button Margin="8,0,0,0"
+                                                Command="{Binding DataContext.DeleteSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource DangerActionButtonStyle}">
+                                            <TextBlock Text="削除" />
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>
