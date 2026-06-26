@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Windows;
+using Microsoft.Extensions.Logging;
 using XivLinker.Application.Abstractions;
 using XivLinker.App.ViewModels;
 using XivLinker.App.Views;
@@ -11,14 +12,17 @@ public sealed class AutoCraftSequenceEditorDialogService : IAutoCraftSequenceEdi
 {
     private readonly ICrafterActionCatalogService crafterActionCatalogService;
     private readonly CraftActionIconSourceService craftActionIconSourceService;
+    private readonly ILogger<AutoCraftSequenceEditorDialogService> logger;
     private AutoCraftSequenceEditorWindow? currentWindow;
 
     public AutoCraftSequenceEditorDialogService(
         ICrafterActionCatalogService crafterActionCatalogService,
-        CraftActionIconSourceService craftActionIconSourceService)
+        CraftActionIconSourceService craftActionIconSourceService,
+        ILogger<AutoCraftSequenceEditorDialogService> logger)
     {
         this.crafterActionCatalogService = crafterActionCatalogService;
         this.craftActionIconSourceService = craftActionIconSourceService;
+        this.logger = logger;
     }
 
     public async Task ShowEditorAsync(CraftSequence? sequence, Action<CraftSequence> save)
@@ -76,6 +80,17 @@ public sealed class AutoCraftSequenceEditorDialogService : IAutoCraftSequenceEdi
         {
             await viewModel.LoadAsync(sequence);
             window.ShowDialog();
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "AutoCraft sequence editor dialog failed to open.");
+
+            MessageBox.Show(
+                ResolveOwnerWindow(),
+                "クラフトシーケンス編集ダイアログの表示中にエラーが発生しました。アプリは継続できます。",
+                "自動クラフト",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
         finally
         {

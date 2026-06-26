@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,6 +31,10 @@ public partial class App : System.Windows.Application
                 services.AddApplicationServices(context.Configuration);
             })
             .Build();
+
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnCurrentDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnTaskSchedulerUnobservedTaskException;
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -126,5 +131,59 @@ public partial class App : System.Windows.Application
         {
             logger.LogError(exception, "起動時のデータソース初期化に失敗しました。");
         }
+    }
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        try
+        {
+            ILogger<App>? logger = _host.Services.GetService<ILogger<App>>();
+            logger?.LogError(e.Exception, "Unhandled UI exception occurred.");
+        }
+        catch
+        {
+            // Logging should not throw while handling a UI exception.
+        }
+
+        MessageBox.Show(
+            MainWindow,
+            "アプリで未処理のエラーが発生しました。詳細はログを確認してください。",
+            "XivLinker",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+
+        e.Handled = true;
+    }
+
+    private void OnCurrentDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is not Exception exception)
+        {
+            return;
+        }
+
+        try
+        {
+            ILogger<App>? logger = _host.Services.GetService<ILogger<App>>();
+            logger?.LogCritical(exception, "AppDomain unhandled exception occurred.");
+        }
+        catch
+        {
+            // Logging should not throw while handling a process-level exception.
+        }
+    }
+
+    private void OnTaskSchedulerUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        try
+        {
+            ILogger<App>? logger = _host.Services.GetService<ILogger<App>>();
+            logger?.LogError(e.Exception, "Unobserved task exception occurred.");
+        }
+        catch
+        {
+            // Logging should not throw while handling a background task exception.
+        }
+
+        e.SetObserved();
     }
 }
