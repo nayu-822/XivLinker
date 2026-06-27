@@ -12,7 +12,7 @@
         </Grid.RowDefinitions>
 
         <views:PageHeaderView Title="&#x30C0;&#x30C3;&#x30B7;&#x30E5;&#x30DC;&#x30FC;&#x30C9;"
-                              Description="&#x72B6;&#x614B;&#x306E;&#x30B5;&#x30DE;&#x30EA;&#x30FC;&#x3001;&#x8A73;&#x7D30;&#x3001;&#x30ED;&#x30B0;&#x3092;&#x4E00;&#x753B;&#x9762;&#x3067;&#x78BA;&#x8A8D;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;" />
+                              Description="&#x73FE;&#x5728;&#x306E;&#x72B6;&#x614B;&#x3068;&#x63A5;&#x7D9A;&#x30FB;&#x9023;&#x643A;&#x72B6;&#x614B;&#x3092;&#x78BA;&#x8A8D;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;" />
 
         <ItemsControl Grid.Row="2"
                       ItemsSource="{Binding DataSourceStatus.Items}">
@@ -64,11 +64,6 @@
                 <ColumnDefinition Width="{StaticResource App.GridLength.SectionGap}" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
 
             <Border Grid.Column="0"
                     Style="{StaticResource CompactCardStyle}">
@@ -141,7 +136,7 @@
                                             <TextBlock Text="{Binding Name}"
                                                        Style="{StaticResource CardTitleTextStyle}" />
                                             <TextBlock Margin="0,4,0,0"
-                                                       Text="{Binding Detail}"
+                                                       Text="{Binding DashboardDescription}"
                                                        Style="{StaticResource CaptionTextStyle}"
                                                        TextWrapping="Wrap" />
                                         </StackPanel>
@@ -190,113 +185,6 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Border>
-
-            <Border Grid.Row="2"
-                    Grid.ColumnSpan="3"
-                    Style="{StaticResource CompactCardStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="{StaticResource App.GridLength.ContentGap}" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#x6700;&#x65B0;&#x30ED;&#x30B0;"
-                                   Style="{StaticResource SectionTitleTextStyle}" />
-                        <Button Grid.Column="1"
-                                Command="{Binding DataContext.NavigateToKeyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="log"
-                                Style="{StaticResource SmallActionButtonStyle}">
-                            <TextBlock Text="&#x30ED;&#x30B0;&#x753B;&#x9762;&#x3067;&#x78BA;&#x8A8D;" />
-                        </Button>
-                    </Grid>
-
-                    <Grid Grid.Row="2">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="{StaticResource App.GridLength.GapS}" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-
-                        <Grid Margin="0,0,8,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="92" />
-                                <ColumnDefinition Width="88" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#x6642;&#x523B;"
-                                       Style="{StaticResource LabelTextStyle}" />
-                            <TextBlock Grid.Column="1"
-                                       Text="&#x7A2E;&#x5225;"
-                                       Style="{StaticResource LabelTextStyle}" />
-                            <TextBlock Grid.Column="2"
-                                       Text="&#x30E1;&#x30C3;&#x30BB;&#x30FC;&#x30B8;"
-                                       Style="{StaticResource LabelTextStyle}" />
-                        </Grid>
-
-                        <ListBox Grid.Row="2"
-                                 ItemsSource="{Binding RecentEventLogItems}"
-                                 ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,0,0,6"
-                                            Style="{StaticResource LogRowStyle}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="4" />
-                                                <ColumnDefinition Width="80" />
-                                                <ColumnDefinition Width="8" />
-                                                <ColumnDefinition Width="72" />
-                                                <ColumnDefinition Width="8" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <Border Grid.Column="0"
-                                                    CornerRadius="2">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="{DynamicResource App.Brush.Accent}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Level}" Value="Warning">
-                                                                <Setter Property="Background" Value="{DynamicResource App.Brush.Warning}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Level}" Value="Error">
-                                                                <Setter Property="Background" Value="{DynamicResource App.Brush.Error}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                            </Border>
-
-                                            <TextBlock Grid.Column="1"
-                                                       VerticalAlignment="Center"
-                                                       Text="{Binding TimestampText}"
-                                                       Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Grid.Column="3"
-                                                       VerticalAlignment="Center"
-                                                       Text="{Binding Level}"
-                                                       Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Grid.Column="5"
-                                                       VerticalAlignment="Center"
-                                                       Text="{Binding Message}"
-                                                       Style="{StaticResource LogTextStyle}"
-                                                       TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Grid>
-                </Grid>
             </Border>
         </Grid>
     </Grid>
