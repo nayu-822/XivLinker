@@ -33,10 +33,14 @@
     <GridLength x:Key="App.GridLength.GapL">14</GridLength>
     <GridLength x:Key="App.GridLength.SectionGap">12</GridLength>
     <GridLength x:Key="App.GridLength.ContentGap">8</GridLength>
+    <GridLength x:Key="App.GridLength.PageContentSpacing">12</GridLength>
     <Thickness x:Key="App.Thickness.TopGapS">0,6,0,0</Thickness>
     <Thickness x:Key="App.Thickness.TopGapM">0,10,0,0</Thickness>
     <Thickness x:Key="App.Thickness.TopGapL">0,14,0,0</Thickness>
     <Thickness x:Key="App.Thickness.BottomGapL">0,0,0,14</Thickness>
+    <Thickness x:Key="App.Thickness.PageHeaderMargin">0,0,0,12</Thickness>
+    <Thickness x:Key="App.Thickness.PageHeaderDescriptionMargin">0,6,0,0</Thickness>
+    <Thickness x:Key="App.Thickness.PageHeaderActionSpacing">12,0,0,0</Thickness>
     <Thickness x:Key="App.Thickness.ActionTilePadding">10,10</Thickness>
     <Thickness x:Key="App.Thickness.ActionTileMargin">0,0,6,6</Thickness>
     <Thickness x:Key="App.Thickness.ActionTileCompactPadding">8,8</Thickness>
