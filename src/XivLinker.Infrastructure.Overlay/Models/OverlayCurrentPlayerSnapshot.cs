@@ -4,7 +4,9 @@ public sealed class OverlayCurrentPlayerSnapshot
 {
     public string PlayerName { get; init; } = string.Empty;
 
-    public uint TerritoryTypeId { get; init; }
+    public uint? TerritoryTypeId { get; init; }
+
+    public uint? MapId { get; init; }
 
     public float RawX { get; init; }
 

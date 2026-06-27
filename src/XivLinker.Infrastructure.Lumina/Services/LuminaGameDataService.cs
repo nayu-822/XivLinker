@@ -97,7 +97,8 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
     }
 
     public async Task<ResolvedMapLocation?> ResolveMapLocationAsync(
-        uint territoryTypeId,
+        uint? territoryTypeId,
+        uint? mapId,
         float rawX,
         float rawY,
         float rawZ,
@@ -111,14 +112,14 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
 
         try
         {
-            return await Task.Run(() => ResolveMapLocationCore(data, territoryTypeId, rawX, rawY), cancellationToken);
+            return await Task.Run(() => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawY), cancellationToken);
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "Failed to resolve map location. TerritoryTypeId: {TerritoryTypeId}", territoryTypeId);
+            logger.LogWarning(exception, "Failed to resolve map location. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}", territoryTypeId, mapId);
             return new ResolvedMapLocation
             {
-                MapId = 0,
+                MapId = mapId ?? 0,
                 MapName = "マップ情報を取得できません",
                 CoordinatesText = "座標を変換できません",
                 IssueMessage = "マップ情報の解決に失敗しました。",
@@ -204,25 +205,41 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         };
     }
 
-    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint territoryTypeId, float rawX, float rawY)
+    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint? territoryTypeId, uint? mapId, float rawX, float rawY)
     {
-        var territorySheet = data.GetExcelSheet<TerritoryType>(Language.Japanese);
-        if (territorySheet is null)
+        Map? map = null;
+        string? mapName = null;
+
+        if (territoryTypeId is not null and > 0)
         {
-            return null;
+            var territorySheet = data.GetExcelSheet<TerritoryType>(Language.Japanese);
+            if (territorySheet is not null)
+            {
+                TerritoryType territory = territorySheet.FirstOrDefault(row => row.RowId == territoryTypeId.Value);
+                if (territory.RowId != 0)
+                {
+                    map = territory.Map.ValueNullable;
+                    mapName = territory.PlaceNameZone.ValueNullable?.Name.ToString().Trim();
+                    if (string.IsNullOrWhiteSpace(mapName))
+                    {
+                        mapName = territory.PlaceName.ValueNullable?.Name.ToString().Trim();
+                    }
+                }
+            }
         }
 
-        TerritoryType territory = territorySheet.FirstOrDefault(row => row.RowId == territoryTypeId);
-        if (territory.RowId == 0)
+        if ((map is null || map.Value.RowId == 0) && mapId is not null and > 0)
         {
-            return null;
-        }
-
-        Map? map = territory.Map.ValueNullable;
-        string? mapName = territory.PlaceNameZone.ValueNullable?.Name.ToString().Trim();
-        if (string.IsNullOrWhiteSpace(mapName))
-        {
-            mapName = territory.PlaceName.ValueNullable?.Name.ToString().Trim();
+            var mapSheet = data.GetExcelSheet<Map>(Language.Japanese);
+            if (mapSheet is not null)
+            {
+                Map mapRow = mapSheet.FirstOrDefault(row => row.RowId == mapId.Value);
+                if (mapRow.RowId != 0)
+                {
+                    map = mapRow;
+                    mapName ??= mapRow.PlaceName.ValueNullable?.Name.ToString().Trim();
+                }
+            }
         }
 
         if (string.IsNullOrWhiteSpace(mapName))
@@ -234,10 +251,12 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         {
             return new ResolvedMapLocation
             {
-                MapId = 0,
-                MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId}" : mapName,
+                MapId = mapId ?? 0,
+                MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId ?? 0}" : mapName,
                 CoordinatesText = "座標を変換できません",
-                IssueMessage = "TerritoryType に対応する Map が見つかりません。",
+                IssueMessage = territoryTypeId is not null and > 0
+                    ? "TerritoryType に対応する Map が見つかりません。"
+                    : "MapId に対応する Map が見つかりません。",
             };
         }
 
@@ -247,7 +266,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         return new ResolvedMapLocation
         {
             MapId = map.Value.RowId,
-            MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId}" : mapName,
+            MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId ?? 0}" : mapName,
             MapX = mapX,
             MapY = mapY,
             CoordinatesText = MapCoordinateCalculator.FormatCoordinates(mapX, mapY),

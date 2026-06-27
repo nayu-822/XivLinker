@@ -104,20 +104,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
             sequence = Interlocked.Increment(ref sequenceNumber);
             pendingRequests[sequence] = completionSource;
 
-            JsonObject payload = new()
-            {
-                ["type"] = "request",
-                ["call"] = call,
-                ["rseq"] = sequence,
-            };
-
-            if (parameters is not null)
-            {
-                foreach ((string key, object? value) in parameters)
-                {
-                    payload[key] = value is null ? null : JsonSerializer.SerializeToNode(value);
-                }
-            }
+            JsonObject payload = OverlayPluginRequestFactory.CreateRequestPayload(call, sequence, parameters);
 
             await SendJsonAsync(payload.ToJsonString(), cancellationToken);
         }
@@ -152,6 +139,24 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         }
 
         throw new TimeoutException($"OverlayPlugin WebSocket の応答が {requestTimeout.TotalSeconds:0} 秒以内に返りませんでした。");
+    }
+
+    public Task SubscribeAsync(
+        IEnumerable<string> events,
+        CancellationToken cancellationToken = default)
+    {
+        string[] eventArray = events
+            .Where(static x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return SendRequestAsync(
+            "subscribe",
+            new Dictionary<string, object?>
+            {
+                ["events"] = eventArray,
+            },
+            cancellationToken);
     }
 
     public void Dispose()

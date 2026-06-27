@@ -56,8 +56,14 @@ public static class OverlayPluginMessageParser
             return false;
         }
 
-        territoryTypeId = ReadUInt32(message.Payload, "zoneID") ?? ReadUInt32(message.Payload, "territoryType") ?? 0;
-        zoneName = ReadString(message.Payload, "zoneName") ?? string.Empty;
+        territoryTypeId = ReadUInt32(message.Payload, "zoneID")
+            ?? ReadUInt32(message.Payload, "zoneId")
+            ?? ReadUInt32(message.Payload, "territoryType")
+            ?? ReadUInt32(message.Payload, "territoryTypeId")
+            ?? 0;
+        zoneName = ReadString(message.Payload, "zoneName")
+            ?? ReadString(message.Payload, "ZoneName")
+            ?? string.Empty;
         return territoryTypeId > 0 || !string.IsNullOrWhiteSpace(zoneName);
     }
 
@@ -71,6 +77,7 @@ public static class OverlayPluginMessageParser
         }
 
         playerName = ReadString(message.Payload, "charName")
+            ?? ReadString(message.Payload, "charname")
             ?? ReadString(message.Payload, "name")
             ?? string.Empty;
 
@@ -115,11 +122,6 @@ public static class OverlayPluginMessageParser
 
             JsonElement current = selectedCombatant.Value;
             string resolvedName = ReadString(current, "Name") ?? playerName ?? string.Empty;
-            uint territoryTypeId = ReadUInt32(current, "CurrentZoneID")
-                ?? ReadUInt32(current, "TerritoryType")
-                ?? ReadUInt32(current, "CurrentMapID")
-                ?? 0;
-
             if (string.IsNullOrWhiteSpace(resolvedName))
             {
                 return null;
@@ -128,7 +130,11 @@ public static class OverlayPluginMessageParser
             return new OverlayCurrentPlayerSnapshot
             {
                 PlayerName = resolvedName,
-                TerritoryTypeId = territoryTypeId,
+                TerritoryTypeId = ReadUInt32(current, "CurrentZoneID")
+                    ?? ReadUInt32(current, "TerritoryType"),
+                MapId = ReadUInt32(current, "CurrentMapID")
+                    ?? ReadUInt32(current, "MapID")
+                    ?? ReadUInt32(current, "MapId"),
                 RawX = ReadSingle(current, "PosX") ?? 0,
                 RawY = ReadSingle(current, "PosY") ?? 0,
                 RawZ = ReadSingle(current, "PosZ") ?? 0,
@@ -157,7 +163,7 @@ public static class OverlayPluginMessageParser
 
     private static uint? ReadUInt32(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out JsonElement property))
         {
             return null;
         }
@@ -172,7 +178,7 @@ public static class OverlayPluginMessageParser
 
     private static int? ReadInt32(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out JsonElement property))
         {
             return null;
         }
@@ -187,7 +193,7 @@ public static class OverlayPluginMessageParser
 
     private static float? ReadSingle(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out JsonElement property))
         {
             return null;
         }
@@ -202,11 +208,31 @@ public static class OverlayPluginMessageParser
 
     private static string? ReadString(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out JsonElement property))
         {
             return null;
         }
 
         return property.ValueKind == JsonValueKind.String ? property.GetString() : property.ToString();
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement property)
+    {
+        if (element.TryGetProperty(propertyName, out property))
+        {
+            return true;
+        }
+
+        foreach (JsonProperty candidate in element.EnumerateObject())
+        {
+            if (string.Equals(candidate.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                property = candidate.Value;
+                return true;
+            }
+        }
+
+        property = default;
+        return false;
     }
 }

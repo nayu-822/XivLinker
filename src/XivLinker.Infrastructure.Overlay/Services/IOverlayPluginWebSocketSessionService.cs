@@ -18,4 +18,8 @@ public interface IOverlayPluginWebSocketSessionService
         string call,
         IReadOnlyDictionary<string, object?>? parameters = null,
         CancellationToken cancellationToken = default);
+
+    Task SubscribeAsync(
+        IEnumerable<string> events,
+        CancellationToken cancellationToken = default);
 }

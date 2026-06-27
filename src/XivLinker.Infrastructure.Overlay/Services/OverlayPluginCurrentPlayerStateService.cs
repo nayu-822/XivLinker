@@ -12,8 +12,10 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private CancellationTokenSource? pollingCancellationTokenSource;
     private Task? pollingTask;
+    private bool hasLoggedZoneEventPayload;
     private string? primaryPlayerName;
     private uint? currentTerritoryTypeId;
+    private uint? currentMapId;
     private string? currentZoneName;
     private CurrentPlayerState currentState = CreateUnavailableState("接続待ち");
 
@@ -47,13 +49,14 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
         if (sessionService.IsStarted)
         {
             logger.LogInformation("OverlayPlugin current player state polling started.");
-            StartPolling();
+            _ = InitializeSubscriptionsAsync();
             return;
         }
 
         StopPolling();
         primaryPlayerName = null;
         currentTerritoryTypeId = null;
+        currentMapId = null;
         currentZoneName = null;
         UpdateState(CreateUnavailableState("切断中"));
     }
@@ -74,10 +77,41 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
         if (OverlayPluginMessageParser.TryParseChangeZone(message, out uint territoryTypeId, out string zoneName))
         {
+            if (!hasLoggedZoneEventPayload)
+            {
+                hasLoggedZoneEventPayload = true;
+                logger.LogInformation("Received ChangeZone payload: {Payload}", message.RawJson);
+            }
+
             currentTerritoryTypeId = territoryTypeId > 0 ? territoryTypeId : currentTerritoryTypeId;
             currentZoneName = string.IsNullOrWhiteSpace(zoneName) ? currentZoneName : zoneName;
             _ = RefreshCurrentPlayerStateAsync();
         }
+    }
+
+    private async Task InitializeSubscriptionsAsync()
+    {
+        try
+        {
+            await sessionService.SubscribeAsync(["ChangeZone", "ChangePrimaryPlayer"]);
+            logger.LogInformation("OverlayPlugin events subscribed: ChangeZone, ChangePrimaryPlayer");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "OverlayPlugin event subscription failed.");
+        }
+
+        try
+        {
+            await sessionService.SendRequestAsync("startOverlayEvents");
+            logger.LogInformation("OverlayPlugin startOverlayEvents requested.");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "OverlayPlugin startOverlayEvents request failed.");
+        }
+
+        StartPolling();
     }
 
     private void StartPolling()
@@ -159,20 +193,34 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
             primaryPlayerName = snapshot.PlayerName;
             currentTerritoryTypeId = snapshot.TerritoryTypeId > 0 ? snapshot.TerritoryTypeId : currentTerritoryTypeId;
+            currentMapId = snapshot.MapId > 0 ? snapshot.MapId : currentMapId;
             uint? territoryTypeId = currentTerritoryTypeId;
+            uint? mapId = currentMapId;
 
             string mapName = !string.IsNullOrWhiteSpace(currentZoneName) ? currentZoneName! : "未取得";
-            uint? mapId = null;
             double? mapX = null;
             double? mapY = null;
             string coordinatesText = "未取得";
             string classJobName = "未取得";
             string? issueMessage = null;
 
-            if (territoryTypeId is not null and > 0)
+            if (territoryTypeId is null or 0)
+            {
+                issueMessage = "ChangeZone を受信していないため TerritoryTypeId が未取得です。";
+                logger.LogDebug("TerritoryTypeId is not available yet.");
+            }
+
+            if (snapshot.RawX == 0 && snapshot.RawY == 0 && snapshot.RawZ == 0)
+            {
+                issueMessage ??= "ワールド座標が未取得です。";
+                logger.LogDebug("World coordinates are not available from getCombatants.");
+            }
+
+            if ((territoryTypeId is not null and > 0) || (mapId is not null and > 0))
             {
                 ResolvedMapLocation? location = await luminaGameDataProvider.ResolveMapLocationAsync(
-                    territoryTypeId.Value,
+                    territoryTypeId,
+                    mapId,
                     snapshot.RawX,
                     snapshot.RawY,
                     snapshot.RawZ,
@@ -190,7 +238,9 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                 else
                 {
                     coordinatesText = "マップ情報を取得できません";
-                    issueMessage = "Lumina からマップ情報を解決できませんでした。";
+                    issueMessage = territoryTypeId is null or 0
+                        ? "Lumina 解決に必要な TerritoryTypeId が未取得です。"
+                        : "Lumina から TerritoryType / Map を解決できませんでした。";
                 }
             }
 

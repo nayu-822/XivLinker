@@ -1,5 +1,6 @@
 using XivLinker.Infrastructure.Overlay.Models;
 using XivLinker.Infrastructure.Overlay.Services;
+using System.Text.Json.Nodes;
 
 namespace XivLinker.Tests;
 
@@ -13,8 +14,8 @@ public sealed class OverlayPluginMessageParserTests
               "type": "broadcast",
               "msgtype": "ChangeZone",
               "msg": {
-                "zoneID": 129,
-                "zoneName": "リムサ・ロミンサ：上甲板層"
+                "zoneId": 129,
+                "ZoneName": "リムサ・ロミンサ：上甲板層"
               }
             }
             """;
@@ -26,6 +27,25 @@ public sealed class OverlayPluginMessageParserTests
         Assert.True(zoneParsed);
         Assert.Equal((uint)129, territoryTypeId);
         Assert.Equal("リムサ・ロミンサ：上甲板層", zoneName);
+    }
+
+    [Fact]
+    public void OverlayPluginRequestFactory_CreateRequestPayload_BuildsSubscribePayload()
+    {
+        JsonObject payload = OverlayPluginRequestFactory.CreateRequestPayload(
+            "subscribe",
+            7,
+            new Dictionary<string, object?>
+            {
+                ["events"] = new[] { "ChangeZone", "ChangePrimaryPlayer" },
+            });
+
+        Assert.Equal("request", payload["type"]?.GetValue<string>());
+        Assert.Equal("subscribe", payload["call"]?.GetValue<string>());
+        Assert.Equal(7L, payload["rseq"]?.GetValue<long>());
+        Assert.Equal(
+            """["ChangeZone","ChangePrimaryPlayer"]""",
+            payload["events"]?.ToJsonString());
     }
 
     [Fact]
@@ -83,8 +103,61 @@ public sealed class OverlayPluginMessageParserTests
         Assert.Equal((uint)11, snapshot.ClassJobId);
         Assert.Equal(90, snapshot.Level);
         Assert.Equal((uint)148, snapshot.TerritoryTypeId);
+        Assert.Null(snapshot.MapId);
         Assert.Equal(120.5f, snapshot.RawX);
         Assert.Equal(-30.2f, snapshot.RawY);
+    }
+
+    [Fact]
+    public void TryParseCurrentPlayerSnapshot_DoesNotTreatCurrentMapIdAsTerritoryTypeId()
+    {
+        const string json = """
+            {
+              "combatants": [
+                {
+                  "Name": "Example Crafter",
+                  "Job": 11,
+                  "Level": 90,
+                  "CurrentMapID": 584,
+                  "PosX": 120.5,
+                  "PosY": -30.2,
+                  "PosZ": 7.8
+                }
+              ]
+            }
+            """;
+
+        OverlayCurrentPlayerSnapshot? snapshot = OverlayPluginMessageParser.TryParseCurrentPlayerSnapshot(json, "Example Crafter");
+
+        Assert.NotNull(snapshot);
+        Assert.Null(snapshot!.TerritoryTypeId);
+        Assert.Equal((uint)584, snapshot.MapId);
+    }
+
+    [Fact]
+    public void TryParseCurrentPlayerSnapshot_AllowsJobWithoutCoordinatesOrTerritory()
+    {
+        const string json = """
+            {
+              "combatants": [
+                {
+                  "Name": "Example Crafter",
+                  "Job": 11,
+                  "Level": 90
+                }
+              ]
+            }
+            """;
+
+        OverlayCurrentPlayerSnapshot? snapshot = OverlayPluginMessageParser.TryParseCurrentPlayerSnapshot(json, "Example Crafter");
+
+        Assert.NotNull(snapshot);
+        Assert.Equal((uint)11, snapshot!.ClassJobId);
+        Assert.Equal(90, snapshot.Level);
+        Assert.Null(snapshot.TerritoryTypeId);
+        Assert.Null(snapshot.MapId);
+        Assert.Equal(0, snapshot.RawX);
+        Assert.Equal(0, snapshot.RawY);
     }
 
     [Fact]

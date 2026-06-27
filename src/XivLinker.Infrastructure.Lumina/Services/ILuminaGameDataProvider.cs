@@ -7,7 +7,8 @@ public interface ILuminaGameDataProvider
     Task<GameData?> GetGameDataAsync(CancellationToken cancellationToken = default);
 
     Task<ResolvedMapLocation?> ResolveMapLocationAsync(
-        uint territoryTypeId,
+        uint? territoryTypeId,
+        uint? mapId,
         float rawX,
         float rawY,
         float rawZ,
