@@ -35,15 +35,10 @@
         <Border Grid.Row="2"
                 Style="{StaticResource DenseSubtlePanelStyle}">
             <Grid>
-                <Border Padding="{StaticResource App.Thickness.PanelPaddingDense}"
-                        Background="{DynamicResource App.Brush.Surface}"
-                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                        BorderThickness="1"
-                        CornerRadius="{StaticResource App.CornerRadius.Control}"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top">
-                    <Border.Style>
-                        <Style TargetType="Border">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Sequences.Count}" Value="0">
@@ -51,21 +46,15 @@
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <TextBlock Text="{Binding EmptyMessage}"
-                                   Style="{StaticResource BodyTextStyle}" />
-                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                                   Text="&#x307E;&#x305A;&#x306F;&#x65B0;&#x3057;&#x3044;&#x30B7;&#x30FC;&#x30B1;&#x30F3;&#x30B9;&#x3092;&#x4F5C;&#x6210;&#x3057;&#x3066;&#x304F;&#x3060;&#x3055;&#x3044;&#x3002;"
-                                   Style="{StaticResource CaptionTextStyle}" />
-                        <Button Margin="{StaticResource App.Thickness.TopGapS}"
-                                HorizontalAlignment="Left"
-                                Command="{Binding CreateSequenceCommand}"
-                                Style="{StaticResource SmallActionButtonStyle}">
-                            <TextBlock Text="&#x65B0;&#x898F;&#x4F5C;&#x6210;" />
-                        </Button>
-                    </StackPanel>
-                </Border>
+                    </StackPanel.Style>
+                    <TextBlock Text="{Binding EmptyMessage}"
+                               HorizontalAlignment="Center"
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                               Text="&#x53F3;&#x4E0A;&#x306E;&#x65B0;&#x898F;&#x4F5C;&#x6210;&#x304B;&#x3089;&#x30B7;&#x30FC;&#x30B1;&#x30F3;&#x30B9;&#x3092;&#x8FFD;&#x52A0;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;"
+                               HorizontalAlignment="Center"
+                               Style="{StaticResource CaptionTextStyle}" />
+                </StackPanel>
 
                 <ListBox ItemsSource="{Binding Sequences}"
                          ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"

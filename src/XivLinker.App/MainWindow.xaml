@@ -12,28 +12,11 @@
         MinWidth="1040"
         MinHeight="720"
         Background="{DynamicResource App.Brush.Background}">
-    <Grid Margin="{StaticResource App.Thickness.Page}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="20" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <Border Style="{StaticResource ShellHeaderCardStyle}">
-            <StackPanel>
-                <TextBlock Text="XivLinker"
-                           Style="{StaticResource AppTitleTextStyle}" />
-                <TextBlock Margin="0,8,0,0"
-                           Text="{Binding CurrentPageTitle}"
-                           Style="{StaticResource BodyTextStyle}"
-                           Foreground="{DynamicResource App.Brush.TextSecondary}" />
-            </StackPanel>
-        </Border>
-
-        <Grid Grid.Row="2">
+    <Grid Margin="{StaticResource App.Thickness.PageCompact}">
+        <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" />
-                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="212" />
+                <ColumnDefinition Width="{StaticResource App.GridLength.SectionGap}" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 

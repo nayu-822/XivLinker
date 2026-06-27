@@ -4,58 +4,56 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource CompactCardStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="320" />
-                </Grid.ColumnDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="320" />
+            </Grid.ColumnDefinitions>
 
+            <StackPanel>
+                <TextBlock Text="&#x30C0;&#x30C3;&#x30B7;&#x30E5;&#x30DC;&#x30FC;&#x30C9;"
+                           Style="{StaticResource SectionTitleTextStyle}" />
+                <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                           Text="&#x4E3B;&#x306A;&#x63A5;&#x7D9A;&#x72B6;&#x614B;&#x3068;&#x53D6;&#x5F97;&#x60C5;&#x5831;&#x3092;&#x78BA;&#x8A8D;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;"
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{DynamicResource App.Brush.TextSecondary}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border Grid.Column="1"
+                    Style="{StaticResource CompactCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="&#x30C0;&#x30C3;&#x30B7;&#x30E5;&#x30DC;&#x30FC;&#x30C9;"
+                    <TextBlock Text="&#x63A5;&#x7D9A;&#x72B6;&#x614B;"
                                Style="{StaticResource SectionTitleTextStyle}" />
-                    <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                               Text="&#x004F;&#x0076;&#x0065;&#x0072;&#x006C;&#x0061;&#x0079;&#x0050;&#x006C;&#x0075;&#x0067;&#x0069;&#x006E;&#x3001;&#x004C;&#x0075;&#x006D;&#x0069;&#x006E;&#x0061;&#x3001;&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;&#x8A2D;&#x5B9A;&#x3001;&#x30ED;&#x30B0;&#x9023;&#x643A;&#x306E;&#x72B6;&#x614B;&#x3092;&#x96C6;&#x7D04;&#x3059;&#x308B;&#x30C0;&#x30C3;&#x30B7;&#x30E5;&#x30DC;&#x30FC;&#x30C9;&#x3067;&#x3059;&#x3002;"
-                               Style="{StaticResource CaptionTextStyle}"
-                               Foreground="{DynamicResource App.Brush.TextSecondary}"
-                               TextWrapping="Wrap" />
+                    <ItemsControl Margin="{StaticResource App.Thickness.TopGapM}"
+                                  ItemsSource="{Binding DataSourceStatus.Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}"
+                                               Style="{StaticResource LabelTextStyle}" />
+                                    <Border Grid.Column="1"
+                                            Style="{StaticResource StatusPillStyle}">
+                                        <TextBlock Text="{Binding Status}"
+                                                   Style="{StaticResource StatusPillTextStyle}" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
-
-                <Border Grid.Column="1"
-                        Style="{StaticResource StatusSummaryPanelStyle}">
-                    <StackPanel>
-                        <TextBlock Text="&#x63A5;&#x7D9A;&#x72B6;&#x614B;"
-                                   Style="{StaticResource SectionTitleTextStyle}" />
-                        <ItemsControl Margin="0,16,0,0"
-                                      ItemsSource="{Binding DataSourceStatus.Items}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Name}"
-                                                   Style="{StaticResource LabelTextStyle}" />
-                                        <Border Grid.Column="1"
-                                                Style="{StaticResource StatusPillStyle}">
-                                            <TextBlock Text="{Binding Status}"
-                                                       Style="{StaticResource StatusPillTextStyle}" />
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+            </Border>
+        </Grid>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>

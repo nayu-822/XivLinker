@@ -4,24 +4,12 @@
              xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="{StaticResource App.GridLength.GapS}" />
             <RowDefinition Height="*" />
             <RowDefinition Height="{StaticResource App.GridLength.GapS}" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border HorizontalAlignment="Right"
-                Padding="8,3"
-                Background="{DynamicResource App.Brush.SurfaceAlt}"
-                BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource App.CornerRadius.Pill}">
-            <TextBlock Text="{Binding Title}"
-                       Style="{StaticResource CaptionTextStyle}" />
-        </Border>
-
-        <Grid Grid.Row="2">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.88*" />
                 <ColumnDefinition Width="{StaticResource App.GridLength.SectionGap}" />
@@ -62,15 +50,10 @@
                     <Border Grid.Row="2"
                             Style="{StaticResource DenseSubtlePanelStyle}">
                         <Grid>
-                            <Border Padding="{StaticResource App.Thickness.PanelPaddingDense}"
-                                    Background="{DynamicResource App.Brush.Surface}"
-                                    BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource App.CornerRadius.Control}"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Top">
-                                <Border.Style>
-                                    <Style TargetType="Border">
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding CurrentSteps.Count}" Value="0">
@@ -78,7 +61,7 @@
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </Border.Style>
+                                </StackPanel.Style>
                                 <StackPanel>
                                     <TextBlock Text="&#x307E;&#x3060;&#x624B;&#x9806;&#x304C;&#x3042;&#x308A;&#x307E;&#x305B;&#x3093;&#x3002;"
                                                Style="{StaticResource BodyTextStyle}" />
@@ -89,7 +72,7 @@
                                                Text="&#x5404;&#x884C;&#x306E;&#x524A;&#x9664;&#x30DC;&#x30BF;&#x30F3;&#x304B;&#x53F3;&#x30AF;&#x30EA;&#x30C3;&#x30AF;&#x30E1;&#x30CB;&#x30E5;&#x30FC;&#x3067;&#x53D6;&#x308A;&#x9664;&#x3051;&#x307E;&#x3059;&#x3002;"
                                                Style="{StaticResource CaptionTextStyle}" />
                                 </StackPanel>
-                            </Border>
+                            </StackPanel>
 
                             <ListBox ItemsSource="{Binding CurrentSteps}"
                                      ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
@@ -224,7 +207,8 @@
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
                                           CanContentScroll="False">
-                                <ItemsControl ItemsSource="{Binding AvailableActions}">
+                                <ItemsControl ItemsSource="{Binding AvailableActions}"
+                                              Margin="0,0,0,8">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <StackPanel Margin="0,0,0,8">
@@ -283,7 +267,7 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="4"
+        <Border Grid.Row="2"
                 Style="{StaticResource DenseSubtlePanelStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
