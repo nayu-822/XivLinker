@@ -8,7 +8,6 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
     public DataSourceStatusItemViewModel(
         string name,
         string status,
-        string dashboardDescription,
         string settingsDetail,
         string statusTone = "neutral",
         string? actionLabel = null,
@@ -16,7 +15,6 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
     {
         Name = name;
         this.status = status;
-        this.dashboardDescription = dashboardDescription;
         this.settingsDetail = settingsDetail;
         this.statusTone = statusTone;
         ActionLabel = actionLabel;
@@ -30,9 +28,6 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
 
     [ObservableProperty]
     private string status;
-
-    [ObservableProperty]
-    private string dashboardDescription;
 
     [ObservableProperty]
     private string settingsDetail;

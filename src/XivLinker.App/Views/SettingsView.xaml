@@ -90,6 +90,222 @@
                                    Style="{StaticResource CaptionTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />
+                        <Button Margin="{StaticResource App.Thickness.TopGapM}"
+                                HorizontalAlignment="Left"
+                                Command="{Binding AddCharacterProfileCommand}"
+                                Style="{StaticResource SmallActionButtonStyle}">
+                            <TextBlock Text="&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;&#x8A2D;&#x5B9A;&#x30D5;&#x30A9;&#x30EB;&#x30C0;&#x30FC;&#x3092;&#x8FFD;&#x52A0;" />
+                        </Button>
+
+                        <Border Margin="{StaticResource App.Thickness.TopGapM}"
+                                Style="{StaticResource DenseSubtlePanelStyle}">
+                            <Grid>
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CharacterProfiles.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="&#x307E;&#x3060;&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;&#x8A2D;&#x5B9A;&#x304C;&#x767B;&#x9332;&#x3055;&#x308C;&#x3066;&#x3044;&#x307E;&#x305B;&#x3093;&#x3002;"
+                                               Style="{StaticResource BodyTextStyle}" />
+                                    <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                               Text="FF14 &#x306E; CHR... &#x30D5;&#x30A9;&#x30EB;&#x30C0;&#x30FC;&#x3092;&#x9078;&#x3093;&#x3067;&#x8FFD;&#x52A0;&#x3057;&#x3066;&#x304F;&#x3060;&#x3055;&#x3044;&#x3002;"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <ListBox ItemsSource="{Binding CharacterProfiles}"
+                                         ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
+                                         Background="Transparent"
+                                         BorderThickness="0">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CharacterProfiles.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,8"
+                                                    Padding="{StaticResource App.Thickness.ListItemDensePadding}"
+                                                    Background="{DynamicResource App.Brush.Surface}"
+                                                    BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="{StaticResource App.CornerRadius.Control}">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   Style="{StaticResource CardTitleTextStyle}" />
+                                                        <Border Margin="8,0,0,0"
+                                                                Padding="8,2"
+                                                                Background="{DynamicResource App.Brush.SurfaceStrong}"
+                                                                BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="{StaticResource App.CornerRadius.Pill}">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="&#x9078;&#x629E;&#x4E2D;"
+                                                                       Style="{StaticResource CaptionTextStyle}" />
+                                                        </Border>
+                                                    </StackPanel>
+
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.ColumnSpan="2"
+                                                               Margin="{StaticResource App.Thickness.TopGapS}"
+                                                               Text="{Binding CharacterSettingsDirectory}"
+                                                               Style="{StaticResource CaptionTextStyle}"
+                                                               Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                                               TextWrapping="Wrap" />
+
+                                                    <Grid Grid.Row="2"
+                                                          Grid.ColumnSpan="2"
+                                                          Margin="{StaticResource App.Thickness.TopGapM}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="{StaticResource App.GridLength.GapS}" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="{StaticResource App.GridLength.GapS}" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock VerticalAlignment="Center"
+                                                                   Text="{Binding LastLoadedAtText}"
+                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                   Foreground="{DynamicResource App.Brush.TextSecondary}" />
+
+                                                        <Button Grid.Column="1"
+                                                                Command="{Binding DataContext.SelectCharacterProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Style="{StaticResource SmallActionButtonStyle}">
+                                                            <TextBlock Text="&#x9078;&#x629E;" />
+                                                        </Button>
+
+                                                        <Button Grid.Column="3"
+                                                                Command="{Binding DataContext.ReloadCharacterProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Style="{StaticResource SmallActionButtonStyle}">
+                                                            <TextBlock Text="&#x518D;&#x8AAD;&#x307F;&#x8FBC;&#x307F;" />
+                                                        </Button>
+
+                                                        <Button Grid.Column="5"
+                                                                Command="{Binding DataContext.RemoveCharacterProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Style="{StaticResource TinyDangerActionButtonStyle}">
+                                                            <TextBlock Text="&#x524A;&#x9664;" />
+                                                        </Button>
+                                                    </Grid>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+
+                        <Border Margin="{StaticResource App.Thickness.TopGapM}"
+                                Style="{StaticResource DenseSubtlePanelStyle}">
+                            <StackPanel>
+                                <TextBlock Text="&#x9078;&#x629E;&#x4E2D;&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;"
+                                           Style="{StaticResource LabelTextStyle}" />
+                                <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                           Text="{Binding SelectedCharacterName}"
+                                           Style="{StaticResource CardTitleTextStyle}" />
+                                <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
+                                           Text="{Binding SelectedCharacterStatus}"
+                                           Style="{StaticResource BodyTextStyle}" />
+                                <Grid Margin="{StaticResource App.Thickness.TopGapM}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="HOTBAR.DAT"
+                                               Style="{StaticResource LabelTextStyle}" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding SelectedHotbarStatus}"
+                                               Style="{StaticResource BodyTextStyle}" />
+
+                                    <TextBlock Grid.Row="1"
+                                               Margin="{StaticResource App.Thickness.TopGapS}"
+                                               Text="KEYBIND.DAT"
+                                               Style="{StaticResource LabelTextStyle}" />
+                                    <TextBlock Grid.Row="1"
+                                               Grid.Column="1"
+                                               Margin="{StaticResource App.Thickness.TopGapS}"
+                                               Text="{Binding SelectedKeybindStatus}"
+                                               Style="{StaticResource BodyTextStyle}" />
+                                </Grid>
+                                <Border Margin="{StaticResource App.Thickness.TopGapM}"
+                                        Style="{StaticResource ReadOnlyValueContainerStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="HOTBAR.DAT"
+                                                   Style="{StaticResource LabelTextStyle}" />
+                                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                                   Text="{Binding SelectedHotbarPath}"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
+                                                   Text="KEYBIND.DAT"
+                                                   Style="{StaticResource LabelTextStyle}" />
+                                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                                   Text="{Binding SelectedKeybindPath}"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
+                                           Text="{Binding SelectedCharacterErrors}"
+                                           Foreground="{DynamicResource App.Brush.Error}"
+                                           TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedCharacterErrors}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding SelectedCharacterErrors}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
 

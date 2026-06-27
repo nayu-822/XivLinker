@@ -132,14 +132,8 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Name}"
-                                                       Style="{StaticResource CardTitleTextStyle}" />
-                                            <TextBlock Margin="0,4,0,0"
-                                                       Text="{Binding DashboardDescription}"
-                                                       Style="{StaticResource CaptionTextStyle}"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   Style="{StaticResource CardTitleTextStyle}" />
 
                                         <TextBlock Grid.Column="1"
                                                    VerticalAlignment="Center"

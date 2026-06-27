@@ -4,6 +4,7 @@ using XivLinker.Application.Abstractions;
 using XivLinker.Application.Services;
 using XivLinker.App.Services;
 using XivLinker.App.ViewModels;
+using XivLinker.Infrastructure.CharacterConfig.Services;
 using XivLinker.Infrastructure.Lumina.Services;
 using XivLinker.Infrastructure.Overlay.Services;
 
@@ -28,8 +29,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOverlayPluginWebSocketService, OverlayPluginWebSocketService>();
         services.AddSingleton<IOverlayPluginWebSocketSessionService, OverlayPluginWebSocketSessionService>();
         services.AddSingleton<OverlayPluginConnectionStateService>();
+        services.AddSingleton<ICharacterConfigDataService, CharacterConfigDataService>();
+        services.AddSingleton<ICharacterProfileStore, CharacterProfileStore>();
         services.AddSingleton<ICraftSequenceStore, CraftSequenceStore>();
         services.AddSingleton<CraftActionIconSourceService>();
+        services.AddSingleton<IFolderPickerService, FolderPickerService>();
         services.AddSingleton<IAutoCraftSequenceEditorDialogService, AutoCraftSequenceEditorDialogService>();
 
         services.AddSingleton<AppEventLogViewModel>();
