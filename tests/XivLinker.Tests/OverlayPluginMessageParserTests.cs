@@ -70,6 +70,48 @@ public sealed class OverlayPluginMessageParserTests
     }
 
     [Fact]
+    public void TryParseEventMessage_ParsesEventPayloadShape()
+    {
+        const string json = """
+            {
+              "type": "event",
+              "event": "ChangeZone",
+              "payload": {
+                "territoryTypeId": 339,
+                "zoneName": "黒衣森：中央森林"
+              }
+            }
+            """;
+
+        bool parsed = OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message);
+        bool zoneParsed = OverlayPluginMessageParser.TryParseChangeZone(message!, out uint territoryTypeId, out string zoneName);
+
+        Assert.True(parsed);
+        Assert.True(zoneParsed);
+        Assert.Equal((uint)339, territoryTypeId);
+        Assert.Equal("黒衣森：中央森林", zoneName);
+    }
+
+    [Fact]
+    public void TryParseEventMessage_ParsesRootPayloadShape()
+    {
+        const string json = """
+            {
+              "type": "event",
+              "name": "ChangePrimaryPlayer",
+              "charName": "Example Crafter"
+            }
+            """;
+
+        bool parsed = OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message);
+        bool playerParsed = OverlayPluginMessageParser.TryParsePrimaryPlayer(message!, out string playerName);
+
+        Assert.True(parsed);
+        Assert.True(playerParsed);
+        Assert.Equal("Example Crafter", playerName);
+    }
+
+    [Fact]
     public void TryParseCurrentPlayerSnapshot_SelectsNamedCombatant()
     {
         const string json = """

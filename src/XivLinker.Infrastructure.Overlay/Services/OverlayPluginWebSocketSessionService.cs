@@ -12,6 +12,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly SemaphoreSlim sendGate = new(1, 1);
+    private readonly ConcurrentDictionary<long, byte> ignoredResponses = new();
     private readonly ConcurrentDictionary<long, TaskCompletionSource<string>> pendingRequests = new();
     private readonly TimeSpan requestTimeout;
     private readonly Uri webSocketUri;
@@ -28,6 +29,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     }
 
     public event EventHandler? ConnectionStateChanged;
+
     public event EventHandler<string>? EventReceived;
 
     public bool IsStarted => webSocket?.State == WebSocketState.Open;
@@ -96,16 +98,12 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
         try
         {
-            if (webSocket?.State != WebSocketState.Open)
-            {
-                throw new InvalidOperationException("OverlayPlugin WebSocket が開始されていません。");
-            }
+            EnsureConnected();
 
-            sequence = Interlocked.Increment(ref sequenceNumber);
+            sequence = CreateSequence();
             pendingRequests[sequence] = completionSource;
 
             JsonObject payload = OverlayPluginRequestFactory.CreateRequestPayload(call, sequence, parameters);
-
             await SendJsonAsync(payload.ToJsonString(), cancellationToken);
         }
         catch
@@ -138,7 +136,41 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
             throw new OperationCanceledException(cancellationToken);
         }
 
-        throw new TimeoutException($"OverlayPlugin WebSocket の応答が {requestTimeout.TotalSeconds:0} 秒以内に返りませんでした。");
+        throw new TimeoutException($"OverlayPlugin WebSocket request timed out after {requestTimeout.TotalSeconds:0} seconds.");
+    }
+
+    public async Task SendCommandAsync(
+        string call,
+        IReadOnlyDictionary<string, object?>? parameters = null,
+        CancellationToken cancellationToken = default)
+    {
+        long sequence = 0;
+
+        await gate.WaitAsync(cancellationToken);
+
+        try
+        {
+            EnsureConnected();
+
+            sequence = CreateSequence();
+            ignoredResponses[sequence] = 0;
+
+            JsonObject payload = OverlayPluginRequestFactory.CreateRequestPayload(call, sequence, parameters);
+            await SendJsonAsync(payload.ToJsonString(), cancellationToken);
+        }
+        catch
+        {
+            if (sequence > 0)
+            {
+                ignoredResponses.TryRemove(sequence, out _);
+            }
+
+            throw;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     public Task SubscribeAsync(
@@ -150,7 +182,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        return SendRequestAsync(
+        return SendCommandAsync(
             "subscribe",
             new Dictionary<string, object?>
             {
@@ -170,10 +202,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
     private async Task SendJsonAsync(string json, CancellationToken cancellationToken)
     {
-        if (webSocket?.State != WebSocketState.Open)
-        {
-            throw new InvalidOperationException("OverlayPlugin WebSocket が開始されていません。");
-        }
+        EnsureConnected();
 
         byte[] bytes = Encoding.UTF8.GetBytes(json);
         using CancellationTokenSource timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -183,7 +212,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
         try
         {
-            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, timeoutSource.Token);
+            await webSocket!.SendAsync(bytes, WebSocketMessageType.Text, true, timeoutSource.Token);
         }
         finally
         {
@@ -225,7 +254,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         }
         finally
         {
-            FailPendingRequests("OverlayPlugin WebSocket 接続が終了しました。");
+            FailPendingRequests("OverlayPlugin WebSocket connection was closed.");
 
             if (ReferenceEquals(webSocket, currentWebSocket))
             {
@@ -244,11 +273,18 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
             if (root.TryGetProperty("rseq", out JsonElement rseqElement)
                 && rseqElement.ValueKind == JsonValueKind.Number
-                && rseqElement.TryGetInt64(out long rseq)
-                && pendingRequests.TryRemove(rseq, out TaskCompletionSource<string>? completionSource))
+                && rseqElement.TryGetInt64(out long rseq))
             {
-                completionSource.TrySetResult(rawJson);
-                return;
+                if (pendingRequests.TryRemove(rseq, out TaskCompletionSource<string>? completionSource))
+                {
+                    completionSource.TrySetResult(rawJson);
+                    return;
+                }
+
+                if (ignoredResponses.TryRemove(rseq, out _))
+                {
+                    return;
+                }
             }
 
             EventReceived?.Invoke(this, rawJson);
@@ -303,17 +339,32 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         }
 
         currentWebSocket.Dispose();
-        FailPendingRequests("OverlayPlugin WebSocket 接続が終了しました。");
+        FailPendingRequests("OverlayPlugin WebSocket connection was closed.");
     }
 
     private void FailPendingRequests(string message)
     {
+        ignoredResponses.Clear();
+
         foreach ((long sequence, TaskCompletionSource<string> completionSource) in pendingRequests.ToArray())
         {
             if (pendingRequests.TryRemove(sequence, out _))
             {
                 completionSource.TrySetException(new InvalidOperationException(message));
             }
+        }
+    }
+
+    private long CreateSequence()
+    {
+        return Interlocked.Increment(ref sequenceNumber);
+    }
+
+    private void EnsureConnected()
+    {
+        if (webSocket?.State != WebSocketState.Open)
+        {
+            throw new InvalidOperationException("OverlayPlugin WebSocket is not connected.");
         }
     }
 }

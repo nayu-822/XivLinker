@@ -14,22 +14,23 @@ public static class OverlayPluginMessageParser
             using JsonDocument document = JsonDocument.Parse(rawJson);
             JsonElement root = document.RootElement;
 
-            if (!root.TryGetProperty("type", out JsonElement typeElement)
-                || !string.Equals(typeElement.GetString(), "broadcast", StringComparison.OrdinalIgnoreCase)
-                || !root.TryGetProperty("msgtype", out JsonElement messageTypeElement))
+            string? type = ReadString(root, "type");
+            if (!string.IsNullOrWhiteSpace(type)
+                && !string.Equals(type, "broadcast", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(type, "event", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            string? messageType = messageTypeElement.GetString();
+            string? messageType = ReadString(root, "msgtype")
+                ?? ReadString(root, "event")
+                ?? ReadString(root, "name");
             if (string.IsNullOrWhiteSpace(messageType))
             {
                 return false;
             }
 
-            JsonElement payload = root.TryGetProperty("msg", out JsonElement msgElement)
-                ? msgElement.Clone()
-                : root.Clone();
+            JsonElement payload = GetPayload(root);
 
             message = new OverlayPluginEventMessage
             {
@@ -214,6 +215,21 @@ public static class OverlayPluginMessageParser
         }
 
         return property.ValueKind == JsonValueKind.String ? property.GetString() : property.ToString();
+    }
+
+    private static JsonElement GetPayload(JsonElement root)
+    {
+        if (TryGetPropertyIgnoreCase(root, "msg", out JsonElement msgElement))
+        {
+            return msgElement.Clone();
+        }
+
+        if (TryGetPropertyIgnoreCase(root, "payload", out JsonElement payloadElement))
+        {
+            return payloadElement.Clone();
+        }
+
+        return root.Clone();
     }
 
     private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement property)

@@ -103,7 +103,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
         try
         {
-            await sessionService.SendRequestAsync("startOverlayEvents");
+            await sessionService.SendCommandAsync("startOverlayEvents");
             logger.LogInformation("OverlayPlugin startOverlayEvents requested.");
         }
         catch (Exception exception)
