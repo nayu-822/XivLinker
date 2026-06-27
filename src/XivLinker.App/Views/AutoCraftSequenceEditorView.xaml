@@ -5,42 +5,21 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="{StaticResource App.GridLength.ContentGap}" />
+            <RowDefinition Height="{StaticResource App.GridLength.GapS}" />
             <RowDefinition Height="*" />
             <RowDefinition Height="{StaticResource App.GridLength.GapS}" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Text="{Binding WindowTitle}"
-                           VerticalAlignment="Center"
-                           Style="{StaticResource SectionTitleTextStyle}" />
-
-                <Border Grid.Column="1"
-                        Margin="12,0,0,0"
-                        Padding="10,4"
-                        VerticalAlignment="Center"
-                        Background="{DynamicResource App.Brush.SurfaceAlt}"
-                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                        BorderThickness="1"
-                        CornerRadius="{StaticResource App.CornerRadius.Pill}">
-                    <TextBlock Text="{Binding Title}"
-                               Style="{StaticResource CaptionTextStyle}" />
-                </Border>
-            </Grid>
-
-            <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                       Text="&#x540D;&#x524D;&#x3092;&#x4ED8;&#x3051;&#x3066;&#x3001;&#x53F3;&#x5074;&#x304B;&#x3089;&#x30A2;&#x30AF;&#x30B7;&#x30E7;&#x30F3;&#x3092;&#x8FFD;&#x52A0;&#x3057;&#x307E;&#x3059;&#x3002;"
-                       Style="{StaticResource BodyTextStyle}"
-                       Foreground="{DynamicResource App.Brush.TextSecondary}"
-                       TextWrapping="Wrap" />
-        </StackPanel>
+        <Border HorizontalAlignment="Right"
+                Padding="8,3"
+                Background="{DynamicResource App.Brush.SurfaceAlt}"
+                BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource App.CornerRadius.Pill}">
+            <TextBlock Text="{Binding Title}"
+                       Style="{StaticResource CaptionTextStyle}" />
+        </Border>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
@@ -60,11 +39,6 @@
                     <StackPanel>
                         <TextBlock Text="&#x73FE;&#x5728;&#x306E;&#x624B;&#x9806;"
                                    Style="{StaticResource SectionTitleTextStyle}" />
-                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                                   Text="&#x8FFD;&#x52A0;&#x3057;&#x305F;&#x30A2;&#x30AF;&#x30B7;&#x30E7;&#x30F3;&#x3092;&#x78BA;&#x8A8D;&#x3057;&#x3001;&#x4E0D;&#x8981;&#x306A;&#x624B;&#x9806;&#x306F;&#x524A;&#x9664;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;"
-                                   Style="{StaticResource CaptionTextStyle}"
-                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
-                                   TextWrapping="Wrap" />
                         <Grid Margin="{StaticResource App.Thickness.TopGapM}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
@@ -211,11 +185,6 @@
                     <StackPanel>
                         <TextBlock Text="&#x30AF;&#x30E9;&#x30D5;&#x30BF;&#x30FC;&#x30A2;&#x30AF;&#x30B7;&#x30E7;&#x30F3;"
                                    Style="{StaticResource SectionTitleTextStyle}" />
-                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                                   Text="&#x9078;&#x3093;&#x3060;&#x30A2;&#x30AF;&#x30B7;&#x30E7;&#x30F3;&#x3092;&#x3059;&#x3050;&#x73FE;&#x5728;&#x306E;&#x624B;&#x9806;&#x3078;&#x8FFD;&#x52A0;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;"
-                                   Style="{StaticResource CaptionTextStyle}"
-                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
-                                   TextWrapping="Wrap" />
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                    Text="{Binding LoadErrorMessage}"
                                    Foreground="{DynamicResource App.Brush.Warning}"

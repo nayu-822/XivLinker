@@ -8,31 +8,29 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource CompactCardStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <StackPanel>
-                    <TextBlock Text="&#x81EA;&#x52D5;&#x30AF;&#x30E9;&#x30D5;&#x30C8;"
-                               Style="{StaticResource SectionTitleTextStyle}" />
-                    <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                               Text="&#x767B;&#x9332;&#x6E08;&#x307F;&#x30B7;&#x30FC;&#x30B1;&#x30F3;&#x30B9;&#x306E;&#x78BA;&#x8A8D;&#x3068;&#x7DE8;&#x96C6;&#x3092;&#x884C;&#x3044;&#x307E;&#x3059;&#x3002;"
-                               Style="{StaticResource BodyTextStyle}"
-                               Foreground="{DynamicResource App.Brush.TextSecondary}"
-                               TextWrapping="Wrap" />
-                </StackPanel>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="&#x81EA;&#x52D5;&#x30AF;&#x30E9;&#x30D5;&#x30C8;"
+                           Style="{StaticResource SectionTitleTextStyle}" />
+                <TextBlock Margin="0,2,0,0"
+                           Text="&#x767B;&#x9332;&#x6E08;&#x307F;&#x30B7;&#x30FC;&#x30B1;&#x30F3;&#x30B9;&#x3092;&#x3059;&#x3070;&#x3084;&#x304F;&#x78BA;&#x8A8D;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;"
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{DynamicResource App.Brush.TextSecondary}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
 
-                <Button Grid.Column="1"
-                        VerticalAlignment="Top"
-                        Command="{Binding CreateSequenceCommand}"
-                        Style="{StaticResource ActionButtonStyle}">
-                    <TextBlock Text="&#x65B0;&#x898F;&#x4F5C;&#x6210;" />
-                </Button>
-            </Grid>
-        </Border>
+            <Button Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Command="{Binding CreateSequenceCommand}"
+                    Style="{StaticResource SmallActionButtonStyle}">
+                <TextBlock Text="&#x65B0;&#x898F;&#x4F5C;&#x6210;" />
+            </Button>
+        </Grid>
 
         <Border Grid.Row="2"
                 Style="{StaticResource DenseSubtlePanelStyle}">
