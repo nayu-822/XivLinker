@@ -156,6 +156,22 @@
                                             </TextBlock.Style>
                                         </TextBlock>
 
+                                        <TextBlock Grid.Row="1"
+                                                   Margin="{StaticResource App.Thickness.TopGapS}"
+                                                   Text="{Binding SupplementText}"
+                                                   Foreground="{DynamicResource App.Brush.TextSecondary}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasSupplementText}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
                                         <Button Grid.Row="1"
                                                 Grid.ColumnSpan="2"
                                                 Margin="{StaticResource App.Thickness.TopGapM}"
@@ -167,6 +183,9 @@
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding HasAction}" Value="True">
                                                             <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasSupplementText}" Value="True">
+                                                            <Setter Property="Margin" Value="0,10,0,0" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>

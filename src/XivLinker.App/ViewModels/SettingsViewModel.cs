@@ -1,6 +1,6 @@
-using System.IO;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Options;
@@ -19,6 +19,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string selectedCharacterName = "未選択";
+
+    [ObservableProperty]
+    private string editableSelectedCharacterName = string.Empty;
 
     [ObservableProperty]
     private string selectedCharacterStatus = "未設定";
@@ -65,6 +68,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectCharacterProfileCommand = new AsyncRelayCommand<CharacterProfileItemViewModel>(SelectCharacterProfileAsync);
         ReloadCharacterProfileCommand = new AsyncRelayCommand<CharacterProfileItemViewModel>(ReloadCharacterProfileAsync);
         RemoveCharacterProfileCommand = new AsyncRelayCommand<CharacterProfileItemViewModel>(RemoveCharacterProfileAsync);
+        SaveSelectedCharacterNameCommand = new AsyncRelayCommand(SaveSelectedCharacterNameAsync, CanSaveSelectedCharacterName);
         CharacterProfiles = [];
 
         // These page view models are singletons today. If their lifetime changes,
@@ -74,30 +78,15 @@ public partial class SettingsViewModel : ObservableObject
         RefreshCharacterProfiles();
     }
 
-    public DataSourceStatusViewModel DataSourceStatus
-    {
-        get;
-    }
+    public DataSourceStatusViewModel DataSourceStatus { get; }
 
-    public AppEventLogViewModel EventLog
-    {
-        get;
-    }
+    public AppEventLogViewModel EventLog { get; }
 
-    public ObservableCollection<CharacterProfileItemViewModel> CharacterProfiles
-    {
-        get;
-    }
+    public ObservableCollection<CharacterProfileItemViewModel> CharacterProfiles { get; }
 
-    public string OverlayWebSocketUri
-    {
-        get;
-    }
+    public string OverlayWebSocketUri { get; }
 
-    public string SqPackPath
-    {
-        get;
-    }
+    public string SqPackPath { get; }
 
     public string CharacterConfigStatus => "登録済みキャラクター";
 
@@ -107,39 +96,25 @@ public partial class SettingsViewModel : ObservableObject
 
     public string LogRetentionDescription => "未実装: 現在はメモリ上のログをそのまま表示しています。";
 
-    public IAsyncRelayCommand ReconnectOverlayCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand ReconnectOverlayCommand { get; }
 
-    public IAsyncRelayCommand RefreshLuminaCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand RefreshLuminaCommand { get; }
 
-    public IRelayCommand ClearLogCommand
-    {
-        get;
-    }
+    public IRelayCommand ClearLogCommand { get; }
 
-    public IAsyncRelayCommand AddCharacterProfileCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand AddCharacterProfileCommand { get; }
 
-    public IAsyncRelayCommand<CharacterProfileItemViewModel> SelectCharacterProfileCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand<CharacterProfileItemViewModel> SelectCharacterProfileCommand { get; }
 
-    public IAsyncRelayCommand<CharacterProfileItemViewModel> ReloadCharacterProfileCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand<CharacterProfileItemViewModel> ReloadCharacterProfileCommand { get; }
 
-    public IAsyncRelayCommand<CharacterProfileItemViewModel> RemoveCharacterProfileCommand
+    public IAsyncRelayCommand<CharacterProfileItemViewModel> RemoveCharacterProfileCommand { get; }
+
+    public IAsyncRelayCommand SaveSelectedCharacterNameCommand { get; }
+
+    partial void OnEditableSelectedCharacterNameChanged(string value)
     {
-        get;
+        SaveSelectedCharacterNameCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanClearLog()
@@ -197,6 +172,28 @@ public partial class SettingsViewModel : ObservableObject
         EventLog.Add($"キャラクター設定を削除しました: {profile.DisplayName}", "Warning");
     }
 
+    private async Task SaveSelectedCharacterNameAsync()
+    {
+        CharacterProfile? selectedProfile = characterProfileStore.SelectedProfile;
+        if (selectedProfile is null)
+        {
+            return;
+        }
+
+        await characterProfileStore.UpdateDisplayNameAsync(selectedProfile.Id, EditableSelectedCharacterName);
+        EventLog.Add($"キャラクター設定名を更新しました: {EditableSelectedCharacterName}");
+    }
+
+    private bool CanSaveSelectedCharacterName()
+    {
+        if (!HasSelectedCharacter)
+        {
+            return false;
+        }
+
+        return !string.IsNullOrWhiteSpace(EditableSelectedCharacterName);
+    }
+
     private void RefreshCharacterProfiles()
     {
         CharacterProfiles.Clear();
@@ -220,6 +217,7 @@ public partial class SettingsViewModel : ObservableObject
 
         HasSelectedCharacter = selectedProfile is not null;
         SelectedCharacterName = selectedProfile?.DisplayName ?? "未選択";
+        EditableSelectedCharacterName = selectedProfile?.DisplayName ?? string.Empty;
         SelectedHotbarPath = selectedData?.HotbarAnalysisResult.FilePath
             ?? selectedProfile?.HotbarDatPath
             ?? (selectedProfile is null ? "-" : Path.Combine(selectedProfile.CharacterSettingsDirectory, "HOTBAR.DAT"));
@@ -233,6 +231,7 @@ public partial class SettingsViewModel : ObservableObject
             SelectedHotbarStatus = "未設定";
             SelectedKeybindStatus = "未設定";
             SelectedCharacterErrors = string.Empty;
+            SaveSelectedCharacterNameCommand.NotifyCanExecuteChanged();
             return;
         }
 
@@ -242,6 +241,7 @@ public partial class SettingsViewModel : ObservableObject
             SelectedHotbarStatus = "未確認";
             SelectedKeybindStatus = "未確認";
             SelectedCharacterErrors = string.Empty;
+            SaveSelectedCharacterNameCommand.NotifyCanExecuteChanged();
             return;
         }
 
@@ -251,6 +251,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedCharacterErrors = selectedData.Errors.Count == 0
             ? string.Empty
             : string.Join(Environment.NewLine, selectedData.Errors);
+        SaveSelectedCharacterNameCommand.NotifyCanExecuteChanged();
     }
 
     private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)

@@ -11,20 +11,19 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
         string settingsDetail,
         string statusTone = "neutral",
         string? actionLabel = null,
-        IAsyncRelayCommand? actionCommand = null)
+        IAsyncRelayCommand? actionCommand = null,
+        string? supplementText = null)
     {
         Name = name;
         this.status = status;
         this.settingsDetail = settingsDetail;
         this.statusTone = statusTone;
+        this.supplementText = supplementText ?? string.Empty;
         ActionLabel = actionLabel;
         ActionCommand = actionCommand;
     }
 
-    public string Name
-    {
-        get;
-    }
+    public string Name { get; }
 
     [ObservableProperty]
     private string status;
@@ -35,15 +34,14 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
     [ObservableProperty]
     private string statusTone;
 
-    public string? ActionLabel
-    {
-        get;
-    }
+    [ObservableProperty]
+    private string supplementText;
 
-    public IAsyncRelayCommand? ActionCommand
-    {
-        get;
-    }
+    public string? ActionLabel { get; }
+
+    public IAsyncRelayCommand? ActionCommand { get; }
 
     public bool HasAction => ActionCommand is not null && !string.IsNullOrWhiteSpace(ActionLabel);
+
+    public bool HasSupplementText => !string.IsNullOrWhiteSpace(SupplementText);
 }

@@ -58,42 +58,34 @@ public partial class DataSourceStatusViewModel : ObservableObject
             "キャラクター設定フォルダーを追加して読み込みできます。",
             "warning");
 
-        Items = new ObservableCollection<DataSourceStatusItemViewModel>
-        {
+        Items =
+        [
             overlayItem,
             luminaItem,
             characterConfigItem,
-            new(
+            new DataSourceStatusItemViewModel(
                 "ログ",
                 "利用可能",
                 "ログ画面で確認できます。",
                 "success"),
-        };
+        ];
 
         this.overlayPluginConnectionStateService.StateChanged += OnOverlayPluginStateChanged;
         this.characterProfileStore.StateChanged += OnCharacterProfileStoreStateChanged;
         UpdateCharacterConfigStatus();
     }
 
-    public ObservableCollection<DataSourceStatusItemViewModel> Items
-    {
-        get;
-    }
+    public ObservableCollection<DataSourceStatusItemViewModel> Items { get; }
 
-    public IAsyncRelayCommand RefreshLuminaCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand RefreshLuminaCommand { get; }
 
-    public IAsyncRelayCommand ConnectOverlayPluginCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand ConnectOverlayPluginCommand { get; }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await RefreshGameDataStatusAsync(cancellationToken);
         await ConnectOverlayPluginAsync(cancellationToken);
+        await characterProfileStore.InitializeAsync(cancellationToken);
     }
 
     private async Task RefreshGameDataStatusAsync(CancellationToken cancellationToken = default)
@@ -216,6 +208,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
             characterConfigItem.Status = "未設定";
             characterConfigItem.StatusTone = "warning";
             characterConfigItem.SettingsDetail = "キャラクター設定フォルダーを追加してください。";
+            characterConfigItem.SupplementText = string.Empty;
             return;
         }
 
@@ -224,8 +217,11 @@ public partial class DataSourceStatusViewModel : ObservableObject
             characterConfigItem.Status = "未選択";
             characterConfigItem.StatusTone = "warning";
             characterConfigItem.SettingsDetail = "設定画面で対象キャラクターを選択してください。";
+            characterConfigItem.SupplementText = "設定画面で選択";
             return;
         }
+
+        characterConfigItem.SupplementText = selectedProfile.DisplayName;
 
         if (selectedData is null)
         {

@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddOptions<OverlayPluginOptions>()
             .Bind(configuration.GetSection("OverlayPlugin"));
 
+        services.AddSingleton<IAppDataPathService, AppDataPathService>();
         services.AddSingleton<LuminaGameDataService>();
         services.AddSingleton<ILuminaGameDataProvider>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());
         services.AddSingleton<LuminaActionIconService>();

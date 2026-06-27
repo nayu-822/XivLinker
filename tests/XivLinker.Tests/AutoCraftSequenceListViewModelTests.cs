@@ -1,4 +1,6 @@
 using XivLinker.App.ViewModels;
+using Microsoft.Extensions.Logging.Abstractions;
+using XivLinker.Application.Abstractions;
 using XivLinker.Application.Services;
 using XivLinker.Domain.Models;
 using XivLinker.Domain.Models.Crafting;
@@ -10,32 +12,47 @@ public sealed class AutoCraftSequenceListViewModelTests
     [Fact]
     public void DeleteSequenceCommand_RemovesSequenceFromStore()
     {
-        var store = new CraftSequenceStore();
-        var sequence = new CraftSequence
+        string rootPath = Path.Combine(Path.GetTempPath(), "XivLinkerTests", Guid.NewGuid().ToString("N"));
+
+        try
         {
-            SequenceId = Guid.NewGuid(),
-            Name = "削除テスト",
-            Steps =
-            [
-                new CraftSequenceStep
-                {
-                    ActionId = CraftActionId.BasicSynthesis,
-                },
-            ],
-        };
+            ICraftSequenceStore store = new CraftSequenceStore(
+                new AppDataPathService(rootPath),
+                NullLogger<CraftSequenceStore>.Instance);
 
-        store.Save(sequence);
+            var sequence = new CraftSequence
+            {
+                SequenceId = Guid.NewGuid(),
+                Name = "削除テスト",
+                Steps =
+                [
+                    new CraftSequenceStep
+                    {
+                        ActionId = CraftActionId.BasicSynthesis,
+                    },
+                ],
+            };
 
-        var viewModel = new AutoCraftSequenceListViewModel(
-            store,
-            _ => Task.CompletedTask);
+            store.Save(sequence);
 
-        viewModel.Refresh();
-        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
+            var viewModel = new AutoCraftSequenceListViewModel(
+                store,
+                _ => Task.CompletedTask);
 
-        viewModel.DeleteSequenceCommand.Execute(summary);
+            viewModel.Refresh();
+            CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
 
-        Assert.Empty(viewModel.Sequences);
-        Assert.Null(store.Find(sequence.SequenceId));
+            viewModel.DeleteSequenceCommand.Execute(summary);
+
+            Assert.Empty(viewModel.Sequences);
+            Assert.Null(store.Find(sequence.SequenceId));
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
     }
 }

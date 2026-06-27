@@ -239,6 +239,20 @@
                                 <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                            Text="{Binding SelectedCharacterName}"
                                            Style="{StaticResource CardTitleTextStyle}" />
+                                <Grid Margin="{StaticResource App.Thickness.TopGapM}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding EditableSelectedCharacterName, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource InputTextBoxStyle}" />
+                                    <Button Grid.Column="1"
+                                            Margin="{StaticResource App.Thickness.PageHeaderActionSpacing}"
+                                            Command="{Binding SaveSelectedCharacterNameCommand}"
+                                            Style="{StaticResource SmallActionButtonStyle}">
+                                        <TextBlock Text="&#x540D;&#x524D;&#x3092;&#x4FDD;&#x5B58;" />
+                                    </Button>
+                                </Grid>
                                 <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
                                            Text="{Binding SelectedCharacterStatus}"
                                            Style="{StaticResource BodyTextStyle}" />

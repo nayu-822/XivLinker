@@ -12,11 +12,15 @@ public interface ICharacterProfileStore
 
     CharacterData? SelectedCharacterData { get; }
 
-    Task AddProfileAsync(string path, CancellationToken cancellationToken = default);
+    Task InitializeAsync(CancellationToken cancellationToken = default);
+
+    Task AddProfileAsync(string path, string? displayName = null, CancellationToken cancellationToken = default);
 
     Task SelectProfileAsync(string profileId, CancellationToken cancellationToken = default);
 
     Task ReloadProfileAsync(string profileId, CancellationToken cancellationToken = default);
+
+    Task UpdateDisplayNameAsync(string profileId, string? displayName, CancellationToken cancellationToken = default);
 
     Task RemoveProfileAsync(string profileId, CancellationToken cancellationToken = default);
 }
