@@ -93,8 +93,15 @@
                                                    Text="{Binding UpdatedAtText}"
                                                    Style="{StaticResource CaptionTextStyle}" />
 
+                                        <Button Command="{Binding DataContext.RunSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource TinyActionButtonStyle}">
+                                            <TextBlock Text="&#x5B9F;&#x884C;" />
+                                        </Button>
+
                                         <Button Command="{Binding DataContext.EditSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
+                                                Margin="6,0,0,0"
                                                 Style="{StaticResource TinyActionButtonStyle}">
                                             <TextBlock Text="&#x7DE8;&#x96C6;" />
                                         </Button>

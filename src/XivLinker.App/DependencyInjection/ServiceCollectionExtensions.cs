@@ -36,6 +36,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<CraftActionIconSourceService>();
         services.AddSingleton<IFolderPickerService, FolderPickerService>();
         services.AddSingleton<IAutoCraftSequenceEditorDialogService, AutoCraftSequenceEditorDialogService>();
+        services.AddSingleton<OverlayWindowService>();
+        services.AddSingleton<AutoCraftExecutionService>();
 
         services.AddSingleton<AppEventLogViewModel>();
         services.AddSingleton<DashboardStatusViewModel>();

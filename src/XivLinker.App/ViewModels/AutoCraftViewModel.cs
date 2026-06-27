@@ -9,11 +9,15 @@ public partial class AutoCraftViewModel : ObservableObject
 {
     public AutoCraftViewModel(
         ICraftSequenceStore craftSequenceStore,
-        IAutoCraftSequenceEditorDialogService sequenceEditorDialogService)
+        IAutoCraftSequenceEditorDialogService sequenceEditorDialogService,
+        OverlayWindowService overlayWindowService,
+        AutoCraftExecutionService autoCraftExecutionService)
     {
         SequenceList = new AutoCraftSequenceListViewModel(
             craftSequenceStore,
-            sequence => sequenceEditorDialogService.ShowEditorAsync(sequence, SaveSequence));
+            sequence => sequenceEditorDialogService.ShowEditorAsync(sequence, SaveSequence),
+            overlayWindowService,
+            autoCraftExecutionService);
         SequenceList.Refresh();
     }
 

@@ -1,0 +1,37 @@
+<Window x:Class="XivLinker.App.Views.AutoCraftRunOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="320"
+        Height="140"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        Style="{StaticResource WindowBaseStyle}">
+    <Grid Margin="{StaticResource App.Thickness.PageDense}">
+        <Border Style="{StaticResource CompactCardStyle}"
+                Opacity="0.92">
+            <StackPanel>
+                <TextBlock Text="自動クラフト実行中"
+                           Style="{StaticResource SectionTitleTextStyle}" />
+                <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                           Text="{Binding SequenceName}"
+                           Style="{StaticResource CardTitleTextStyle}"
+                           TextWrapping="Wrap" />
+                <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                           Text="{Binding StatusText}"
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{DynamicResource App.Brush.TextSecondary}" />
+                <Button Margin="{StaticResource App.Thickness.TopGapM}"
+                        HorizontalAlignment="Left"
+                        Command="{Binding StopCommand}"
+                        Style="{StaticResource DangerActionButtonStyle}">
+                    <TextBlock Text="停止" />
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

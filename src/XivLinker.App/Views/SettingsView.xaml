@@ -120,12 +120,9 @@
                                                TextWrapping="Wrap" />
                                 </StackPanel>
 
-                                <ListBox ItemsSource="{Binding CharacterProfiles}"
-                                         ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
-                                         Background="Transparent"
-                                         BorderThickness="0">
-                                    <ListBox.Style>
-                                        <Style TargetType="ListBox">
+                                <ItemsControl ItemsSource="{Binding CharacterProfiles}">
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
                                             <Setter Property="Visibility" Value="Visible" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding CharacterProfiles.Count}" Value="0">
@@ -133,8 +130,8 @@
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </ListBox.Style>
-                                    <ListBox.ItemTemplate>
+                                    </ItemsControl.Style>
+                                    <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Margin="0,0,0,8"
                                                     Padding="{StaticResource App.Thickness.ListItemDensePadding}"
@@ -226,8 +223,8 @@
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Grid>
                         </Border>
 

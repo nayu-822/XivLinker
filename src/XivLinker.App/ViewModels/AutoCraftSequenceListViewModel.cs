@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
+using XivLinker.App.Services;
 using XivLinker.Application.Abstractions;
 using XivLinker.Domain.Models;
 
@@ -9,18 +10,30 @@ public sealed class AutoCraftSequenceListViewModel
 {
     private readonly ICraftSequenceStore craftSequenceStore;
     private readonly Func<CraftSequence?, Task> openEditor;
+    private readonly OverlayWindowService? overlayWindowService;
+    private readonly AutoCraftExecutionService? autoCraftExecutionService;
 
     public AutoCraftSequenceListViewModel(
         ICraftSequenceStore craftSequenceStore,
-        Func<CraftSequence?, Task> openEditor)
+        Func<CraftSequence?, Task> openEditor,
+        OverlayWindowService? overlayWindowService = null,
+        AutoCraftExecutionService? autoCraftExecutionService = null)
     {
         this.craftSequenceStore = craftSequenceStore;
         this.openEditor = openEditor;
+        this.overlayWindowService = overlayWindowService;
+        this.autoCraftExecutionService = autoCraftExecutionService;
 
         Sequences = new ObservableCollection<CraftSequenceSummaryViewModel>();
         CreateSequenceCommand = new AsyncRelayCommand(CreateSequenceAsync);
         EditSequenceCommand = new AsyncRelayCommand<CraftSequenceSummaryViewModel>(EditSequenceAsync);
         DeleteSequenceCommand = new RelayCommand<CraftSequenceSummaryViewModel>(DeleteSequence);
+        RunSequenceCommand = new AsyncRelayCommand<CraftSequenceSummaryViewModel>(RunSequenceAsync, CanRunSequence);
+
+        if (autoCraftExecutionService is not null)
+        {
+            autoCraftExecutionService.StateChanged += (_, _) => RunSequenceCommand.NotifyCanExecuteChanged();
+        }
     }
 
     public ObservableCollection<CraftSequenceSummaryViewModel> Sequences
@@ -39,6 +52,11 @@ public sealed class AutoCraftSequenceListViewModel
     }
 
     public IRelayCommand<CraftSequenceSummaryViewModel> DeleteSequenceCommand
+    {
+        get;
+    }
+
+    public IAsyncRelayCommand<CraftSequenceSummaryViewModel> RunSequenceCommand
     {
         get;
     }
@@ -90,5 +108,37 @@ public sealed class AutoCraftSequenceListViewModel
         }
 
         Delete(sequence.SequenceId);
+    }
+
+    private bool CanRunSequence(CraftSequenceSummaryViewModel? sequence)
+    {
+        return sequence is not null && autoCraftExecutionService?.IsRunning != true;
+    }
+
+    private async Task RunSequenceAsync(CraftSequenceSummaryViewModel? sequence)
+    {
+        if (sequence is null || overlayWindowService is null || autoCraftExecutionService is null)
+        {
+            return;
+        }
+
+        if (autoCraftExecutionService.IsRunning)
+        {
+            return;
+        }
+
+        CraftSequence? fullSequence = craftSequenceStore.Find(sequence.SequenceId);
+        if (fullSequence is null)
+        {
+            return;
+        }
+
+        int? runCount = await overlayWindowService.ShowRunOptionsAsync(fullSequence.Name);
+        if (runCount is null)
+        {
+            return;
+        }
+
+        await autoCraftExecutionService.StartAsync(fullSequence, runCount.Value);
     }
 }
