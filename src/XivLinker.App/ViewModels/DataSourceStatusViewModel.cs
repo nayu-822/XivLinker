@@ -99,7 +99,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // キャンセル時は状態変更を行わない。
+            // キャンセル時の状態更新は行わない。
         }
         catch (Exception exception)
         {
@@ -146,7 +146,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
                 luminaItem.Detail = "FF14 の sqpack フォルダーがまだ設定されていません。";
                 break;
             case GameDataAvailabilityState.PathNotFound:
-                luminaItem.Status = "パス不明";
+                luminaItem.Status = "パス不正";
                 luminaItem.StatusTone = "error";
                 luminaItem.Detail = $"sqpack フォルダーが見つかりません: {status.SqPackPath ?? "-"}";
                 break;

@@ -9,7 +9,7 @@ public partial class MainViewModel : ObservableObject
     private readonly DataSourceStatusViewModel dataSourceStatusViewModel;
 
     [ObservableProperty]
-    private string currentPageTitle = "ダッシュボード";
+    private string currentPageTitle = "\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9";
 
     [ObservableProperty]
     private object? currentContentViewModel;
@@ -20,15 +20,20 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         DashboardViewModel dashboardViewModel,
         AutoCraftViewModel autoCraftViewModel,
+        LogViewModel logViewModel,
+        SettingsViewModel settingsViewModel,
         DataSourceStatusViewModel dataSourceStatusViewModel)
     {
         this.dataSourceStatusViewModel = dataSourceStatusViewModel;
         SelectNavigationItemCommand = new RelayCommand<NavigationItemViewModel>(SelectNavigationItem);
+        NavigateToKeyCommand = new RelayCommand<string>(NavigateToKey);
 
         NavigationItems = new ObservableCollection<NavigationItemViewModel>
         {
-            new("dashboard", "ダッシュボード", "□", dashboardViewModel),
-            new("auto-craft", "自動クラフト", "⚒", autoCraftViewModel),
+            new("dashboard", "\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9", "\u2302", dashboardViewModel),
+            new("auto-craft", "\u81EA\u52D5\u30AF\u30E9\u30D5\u30C8", "\u2692", autoCraftViewModel),
+            new("log", "\u30ED\u30B0", "\u2630", logViewModel),
+            new("settings", "\u8A2D\u5B9A", "\u2699", settingsViewModel),
         };
 
         SelectedNavigationItem = NavigationItems[0];
@@ -40,6 +45,11 @@ public partial class MainViewModel : ObservableObject
     }
 
     public IRelayCommand<NavigationItemViewModel> SelectNavigationItemCommand
+    {
+        get;
+    }
+
+    public IRelayCommand<string> NavigateToKeyCommand
     {
         get;
     }
@@ -68,5 +78,16 @@ public partial class MainViewModel : ObservableObject
         }
 
         SelectedNavigationItem = item;
+    }
+
+    private void NavigateToKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        NavigationItemViewModel? item = NavigationItems.FirstOrDefault(x => x.Key == key);
+        SelectNavigationItem(item);
     }
 }

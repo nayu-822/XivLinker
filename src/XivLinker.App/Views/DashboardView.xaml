@@ -107,8 +107,20 @@
             <Border Grid.Column="2"
                     Style="{StaticResource CompactCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="&#x30C7;&#x30FC;&#x30BF;&#x53D6;&#x5F97;&#x57FA;&#x76E4;"
-                               Style="{StaticResource SectionTitleTextStyle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#x30C7;&#x30FC;&#x30BF;&#x53D6;&#x5F97;&#x57FA;&#x76E4;"
+                                   Style="{StaticResource SectionTitleTextStyle}" />
+                        <Button Grid.Column="1"
+                                Command="{Binding DataContext.NavigateToKeyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="settings"
+                                Style="{StaticResource SmallActionButtonStyle}">
+                            <TextBlock Text="&#x8A2D;&#x5B9A;&#x3092;&#x958B;&#x304F;" />
+                        </Button>
+                    </Grid>
                     <ItemsControl Margin="{StaticResource App.Thickness.TopGapM}"
                                   ItemsSource="{Binding DataSourceStatus.Items}">
                         <ItemsControl.ItemTemplate>
@@ -190,8 +202,20 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="&#x30A4;&#x30D9;&#x30F3;&#x30C8;&#x30ED;&#x30B0;"
-                               Style="{StaticResource SectionTitleTextStyle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#x6700;&#x65B0;&#x30ED;&#x30B0;"
+                                   Style="{StaticResource SectionTitleTextStyle}" />
+                        <Button Grid.Column="1"
+                                Command="{Binding DataContext.NavigateToKeyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="log"
+                                Style="{StaticResource SmallActionButtonStyle}">
+                            <TextBlock Text="&#x30ED;&#x30B0;&#x753B;&#x9762;&#x3067;&#x78BA;&#x8A8D;" />
+                        </Button>
+                    </Grid>
 
                     <Grid Grid.Row="2">
                         <Grid.RowDefinitions>
@@ -217,7 +241,7 @@
                         </Grid>
 
                         <ListBox Grid.Row="2"
-                                 ItemsSource="{Binding EventLog.Items}"
+                                 ItemsSource="{Binding RecentEventLogItems}"
                                  ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
                                  Background="Transparent"
                                  BorderThickness="0"

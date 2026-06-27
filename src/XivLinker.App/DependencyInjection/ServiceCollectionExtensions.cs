@@ -37,6 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<DataSourceStatusViewModel>();
         services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<AutoCraftViewModel>();
+        services.AddSingleton<LogViewModel>();
+        services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
 

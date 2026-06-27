@@ -29,4 +29,15 @@ public sealed class AppEventLogViewModel
 
         _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => Items.Insert(0, item));
     }
+
+    public void Clear()
+    {
+        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            Items.Clear();
+            return;
+        }
+
+        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(Items.Clear);
+    }
 }
