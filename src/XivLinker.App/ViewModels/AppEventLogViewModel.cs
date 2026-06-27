@@ -6,25 +6,27 @@ public sealed class AppEventLogViewModel
 {
     public AppEventLogViewModel()
     {
-        Items = new ObservableCollection<string>
+        Items = new ObservableCollection<AppEventLogItemViewModel>
         {
-            "XivLinker を起動しました。",
+            new("Info", "XivLinker を起動しました。"),
         };
     }
 
-    public ObservableCollection<string> Items
+    public ObservableCollection<AppEventLogItemViewModel> Items
     {
         get;
     }
 
-    public void Add(string message)
+    public void Add(string message, string level = "Info")
     {
+        var item = new AppEventLogItemViewModel(level, message);
+
         if (System.Windows.Application.Current.Dispatcher.CheckAccess())
         {
-            Items.Insert(0, message);
+            Items.Insert(0, item);
             return;
         }
 
-        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => Items.Insert(0, message));
+        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => Items.Insert(0, item));
     }
 }

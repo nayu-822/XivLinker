@@ -20,6 +20,13 @@
         <Setter Property="Padding" Value="{StaticResource App.Thickness.CardPaddingCompact}" />
     </Style>
 
+    <Style x:Key="DashboardStatusCardStyle"
+           BasedOn="{StaticResource CompactCardStyle}"
+           TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource App.Brush.SurfaceAlt}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource App.Brush.BorderSubtle}" />
+    </Style>
+
     <Style x:Key="SectionSurfaceStyle"
            TargetType="Border">
         <Setter Property="Padding" Value="{StaticResource App.Thickness.SectionPadding}" />
@@ -42,6 +49,15 @@
            BasedOn="{StaticResource SubtlePanelStyle}"
            TargetType="Border">
         <Setter Property="Padding" Value="{StaticResource App.Thickness.PanelPaddingDense}" />
+    </Style>
+
+    <Style x:Key="LogRowStyle"
+           TargetType="Border">
+        <Setter Property="Padding" Value="{StaticResource App.Thickness.ListItemDensePadding}" />
+        <Setter Property="Background" Value="{DynamicResource App.Brush.SurfaceAlt}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource App.Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource App.CornerRadius.Control}" />
     </Style>
 
     <Style x:Key="HeroPanelStyle"

@@ -33,14 +33,16 @@ public partial class DataSourceStatusViewModel : ObservableObject
         luminaItem = new DataSourceStatusItemViewModel(
             "Lumina",
             "未設定",
-            "FF14 の sqpack フォルダが設定されていません。",
-            "再確認",
+            "FF14 の sqpack フォルダーがまだ設定されていません。",
+            "warning",
+            "状態を確認",
             RefreshLuminaCommand);
         overlayItem = new DataSourceStatusItemViewModel(
             "OverlayPlugin WebSocket",
             "未接続",
             "ACT または OverlayPlugin の WebSocket サーバーに接続していません。",
-            "接続",
+            "warning",
+            "接続する",
             ConnectOverlayPluginCommand);
 
         Items = new ObservableCollection<DataSourceStatusItemViewModel>
@@ -50,11 +52,13 @@ public partial class DataSourceStatusViewModel : ObservableObject
             new(
                 "キャラクター設定",
                 "未設定",
-                "キャラクター設定ファイル連携は未実装です。"),
+                "キャラクター設定ファイル連携はまだ未実装です。",
+                "warning"),
             new(
                 "ログ",
                 "未設定",
-                "FF14 / ACT ログ連携は未実装です。"),
+                "FF14 / ACT ログ連携はまだ未実装です。",
+                "warning"),
         };
 
         this.overlayPluginConnectionStateService.StateChanged += OnOverlayPluginStateChanged;
@@ -84,6 +88,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
     private async Task RefreshGameDataStatusAsync(CancellationToken cancellationToken = default)
     {
         luminaItem.Status = "確認中...";
+        luminaItem.StatusTone = "neutral";
         luminaItem.Detail = "Lumina の初期化状態を確認しています。";
 
         try
@@ -94,21 +99,23 @@ public partial class DataSourceStatusViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // アプリ終了またはキャンセル時はエラー扱いしない
+            // キャンセル時は状態変更を行わない。
         }
         catch (Exception exception)
         {
             logger.LogError(exception, "Lumina の状態確認に失敗しました。");
             luminaItem.Status = "エラー";
+            luminaItem.StatusTone = "error";
             luminaItem.Detail = "Lumina の初期化確認でエラーが発生しました。";
-            eventLog.Add("Lumina の初期化確認に失敗しました。");
+            eventLog.Add("Lumina の初期化確認に失敗しました。", "Error");
         }
     }
 
     private async Task ConnectOverlayPluginAsync(CancellationToken cancellationToken = default)
     {
         overlayItem.Status = "接続中...";
-        overlayItem.Detail = "OverlayPlugin WebSocket へ接続しています。";
+        overlayItem.StatusTone = "neutral";
+        overlayItem.Detail = "OverlayPlugin WebSocket に接続しています。";
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
 
         try
@@ -125,7 +132,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         {
             logger.LogWarning(exception, "OverlayPlugin WebSocket への接続に失敗しました。");
             ApplyOverlayPluginStatus();
-            eventLog.Add("OverlayPlugin WebSocket への接続に失敗しました。");
+            eventLog.Add("OverlayPlugin WebSocket への接続に失敗しました。", "Error");
         }
     }
 
@@ -135,22 +142,27 @@ public partial class DataSourceStatusViewModel : ObservableObject
         {
             case GameDataAvailabilityState.Unconfigured:
                 luminaItem.Status = "未設定";
-                luminaItem.Detail = "FF14 の sqpack フォルダが設定されていません。";
+                luminaItem.StatusTone = "warning";
+                luminaItem.Detail = "FF14 の sqpack フォルダーがまだ設定されていません。";
                 break;
             case GameDataAvailabilityState.PathNotFound:
-                luminaItem.Status = "利用不可";
-                luminaItem.Detail = $"sqpack フォルダが見つかりません: {status.SqPackPath ?? "-"}";
+                luminaItem.Status = "パス不明";
+                luminaItem.StatusTone = "error";
+                luminaItem.Detail = $"sqpack フォルダーが見つかりません: {status.SqPackPath ?? "-"}";
                 break;
             case GameDataAvailabilityState.Ready:
                 luminaItem.Status = "利用可能";
+                luminaItem.StatusTone = "success";
                 luminaItem.Detail = $"sqpack: {status.SqPackPath ?? "-"}";
                 break;
             case GameDataAvailabilityState.InitializationFailed:
                 luminaItem.Status = "エラー";
+                luminaItem.StatusTone = "error";
                 luminaItem.Detail = status.ErrorMessage ?? "Lumina の初期化に失敗しました。";
                 break;
             default:
                 luminaItem.Status = "不明";
+                luminaItem.StatusTone = "neutral";
                 luminaItem.Detail = "Lumina の状態を判定できませんでした。";
                 break;
         }
@@ -167,6 +179,15 @@ public partial class DataSourceStatusViewModel : ObservableObject
             OverlayPluginConnectionState.Unavailable => "利用不可",
             OverlayPluginConnectionState.Error => "エラー",
             _ => "未接続",
+        };
+
+        overlayItem.StatusTone = overlayPluginConnectionStateService.State switch
+        {
+            OverlayPluginConnectionState.Connected => "success",
+            OverlayPluginConnectionState.Connecting => "neutral",
+            OverlayPluginConnectionState.Unavailable => "error",
+            OverlayPluginConnectionState.Error => "error",
+            _ => "warning",
         };
 
         overlayItem.Detail = overlayPluginConnectionStateService.Message;

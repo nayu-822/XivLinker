@@ -9,12 +9,14 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
         string name,
         string status,
         string detail,
+        string statusTone = "neutral",
         string? actionLabel = null,
         IAsyncRelayCommand? actionCommand = null)
     {
         Name = name;
         this.status = status;
         this.detail = detail;
+        this.statusTone = statusTone;
         ActionLabel = actionLabel;
         ActionCommand = actionCommand;
     }
@@ -29,6 +31,9 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
 
     [ObservableProperty]
     private string detail;
+
+    [ObservableProperty]
+    private string statusTone;
 
     public string? ActionLabel
     {

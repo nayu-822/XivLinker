@@ -69,7 +69,7 @@
                                                Text="&#x53F3;&#x5074;&#x306E;&#x30A2;&#x30AF;&#x30B7;&#x30E7;&#x30F3;&#x4E00;&#x89A7;&#x304B;&#x3089;&#x8FFD;&#x52A0;&#x3057;&#x3066;&#x304F;&#x3060;&#x3055;&#x3044;&#x3002;"
                                                Style="{StaticResource CaptionTextStyle}" />
                                     <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                                               Text="&#x5404;&#x884C;&#x306E;&#x524A;&#x9664;&#x30DC;&#x30BF;&#x30F3;&#x304B;&#x53F3;&#x30AF;&#x30EA;&#x30C3;&#x30AF;&#x30E1;&#x30CB;&#x30E5;&#x30FC;&#x3067;&#x53D6;&#x308A;&#x9664;&#x3051;&#x307E;&#x3059;&#x3002;"
+                                               Text="&#x8FFD;&#x52A0;&#x5F8C;&#x306F;&#x5404;&#x884C;&#x306E;&#x524A;&#x9664;&#x30DC;&#x30BF;&#x30F3;&#x304B;&#x3089;&#x6574;&#x7406;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;"
                                                Style="{StaticResource CaptionTextStyle}" />
                                 </StackPanel>
                             </StackPanel>
@@ -98,13 +98,6 @@
                                                 Background="{DynamicResource App.Brush.Surface}"
                                                 BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                                                 BorderThickness="1">
-                                            <Border.ContextMenu>
-                                                <ContextMenu>
-                                                    <MenuItem Header="&#x524A;&#x9664;"
-                                                              Command="{Binding RemoveCommand}" />
-                                                </ContextMenu>
-                                            </Border.ContextMenu>
-
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
@@ -135,7 +128,7 @@
                                                                Style="{StaticResource CardTitleTextStyle}"
                                                                TextWrapping="NoWrap"
                                                                TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="&#x524A;&#x9664;&#x30DC;&#x30BF;&#x30F3;&#x307E;&#x305F;&#x306F;&#x53F3;&#x30AF;&#x30EA;&#x30C3;&#x30AF;&#x3067;&#x524A;&#x9664;"
+                                                    <TextBlock Text="&#x53F3;&#x5074;&#x306E;&#x524A;&#x9664;&#x30DC;&#x30BF;&#x30F3;&#x304B;&#x3089;&#x624B;&#x9806;&#x3092;&#x5916;&#x305B;&#x307E;&#x3059;&#x3002;"
                                                                Style="{StaticResource CaptionTextStyle}" />
                                                 </StackPanel>
 
