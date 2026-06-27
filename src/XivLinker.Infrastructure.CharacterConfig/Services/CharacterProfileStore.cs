@@ -18,6 +18,8 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
     private readonly IAppDataPathService appDataPathService;
     private readonly ILogger<CharacterProfileStore> logger;
     private readonly List<CharacterProfile> profiles = [];
+    private CharacterProfile? selectedProfile;
+    private CharacterData? selectedCharacterData;
 
     public CharacterProfileStore(
         ICharacterConfigDataService characterConfigDataService,
@@ -32,21 +34,22 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
 
     public event EventHandler? StateChanged;
 
-    public IReadOnlyList<CharacterProfile> Profiles => profiles;
+    // Expose snapshots so callers cannot mutate store state without persistence.
+    public IReadOnlyList<CharacterProfile> Profiles => profiles.Select(CloneProfile).ToArray();
 
-    public CharacterProfile? SelectedProfile { get; private set; }
+    public CharacterProfile? SelectedProfile => selectedProfile is null ? null : CloneProfile(selectedProfile);
 
-    public CharacterData? SelectedCharacterData { get; private set; }
+    public CharacterData? SelectedCharacterData => selectedCharacterData is null ? null : CloneCharacterData(selectedCharacterData);
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (SelectedProfile is null)
+        if (selectedProfile is null)
         {
             RaiseStateChanged();
             return;
         }
 
-        await LoadSelectedProfileAsync(SelectedProfile, cancellationToken);
+        await LoadSelectedProfileAsync(selectedProfile, cancellationToken);
     }
 
     public async Task AddProfileAsync(string path, string? displayName = null, CancellationToken cancellationToken = default)
@@ -86,8 +89,8 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
             profile.IsSelected = profile.Id == profileId;
         }
 
-        SelectedProfile = selected;
-        SelectedCharacterData = null;
+        selectedProfile = selected;
+        selectedCharacterData = null;
         Persist();
         RaiseStateChanged();
         await LoadSelectedProfileAsync(selected, cancellationToken);
@@ -101,15 +104,15 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
             return;
         }
 
-        if (!ReferenceEquals(SelectedProfile, profile))
+        if (!ReferenceEquals(selectedProfile, profile))
         {
             foreach (CharacterProfile candidate in profiles)
             {
                 candidate.IsSelected = candidate.Id == profileId;
             }
 
-            SelectedProfile = profile;
-            SelectedCharacterData = null;
+            selectedProfile = profile;
+            selectedCharacterData = null;
             Persist();
             RaiseStateChanged();
         }
@@ -144,8 +147,8 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
 
         if (!profiles.Any())
         {
-            SelectedProfile = null;
-            SelectedCharacterData = null;
+            selectedProfile = null;
+            selectedCharacterData = null;
             Persist();
             RaiseStateChanged();
             return;
@@ -164,6 +167,8 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
 
     private void LoadProfilesFromDisk()
     {
+        // The persisted store is a small user-data JSON file, so synchronous I/O keeps
+        // the implementation simple for now. If the payload grows, move this path to async.
         string path = appDataPathService.CharacterProfilesFilePath;
         if (!File.Exists(path))
         {
@@ -198,18 +203,18 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
             string? selectedProfileId = document.SelectedProfileId;
             if (!string.IsNullOrWhiteSpace(selectedProfileId))
             {
-                SelectedProfile = profiles.FirstOrDefault(profile => profile.Id == selectedProfileId);
+                selectedProfile = profiles.FirstOrDefault(profile => profile.Id == selectedProfileId);
             }
             else
             {
-                SelectedProfile = profiles.FirstOrDefault(profile => profile.IsSelected);
+                selectedProfile = profiles.FirstOrDefault(profile => profile.IsSelected);
             }
 
-            if (SelectedProfile is not null)
+            if (selectedProfile is not null)
             {
                 foreach (CharacterProfile profile in profiles)
                 {
-                    profile.IsSelected = profile.Id == SelectedProfile.Id;
+                    profile.IsSelected = profile.Id == selectedProfile.Id;
                 }
             }
         }
@@ -218,7 +223,7 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
             BackupBrokenFile(path);
             logger.LogError(exception, "Failed to parse character profile store file.");
         }
-        catch (IOException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             logger.LogError(exception, "Failed to read character profile store file.");
         }
@@ -230,15 +235,15 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
         {
             CharacterData characterData = await characterConfigDataService.LoadAsync(profile, cancellationToken);
             profile.LastLoadedAt = characterData.LoadedAt;
-            SelectedCharacterData = characterData;
+            selectedCharacterData = CloneCharacterData(characterData);
         }
         catch (Exception exception)
         {
             logger.LogError(exception, "Failed to load character profile {ProfileId}.", profile.Id);
             profile.LastLoadedAt = DateTimeOffset.Now;
-            SelectedCharacterData = new CharacterData
+            selectedCharacterData = new CharacterData
             {
-                Profile = profile,
+                Profile = CloneProfile(profile),
                 HotbarAnalysisResult = new HotbarAnalysisResult
                 {
                     FilePath = CharacterConfigPathResolver.ResolveHotbarDatPath(profile),
@@ -265,7 +270,7 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
             var document = new CharacterProfileStoreDocument
             {
                 SchemaVersion = CurrentSchemaVersion,
-                SelectedProfileId = SelectedProfile?.Id,
+                SelectedProfileId = selectedProfile?.Id,
                 Profiles = profiles.Select(profile => new CharacterProfileDocument
                 {
                     Id = profile.Id,
@@ -280,11 +285,7 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
 
             WriteAtomically(appDataPathService.CharacterProfilesFilePath, JsonSerializer.Serialize(document, JsonOptions));
         }
-        catch (IOException exception)
-        {
-            logger.LogError(exception, "Failed to persist character profiles.");
-        }
-        catch (UnauthorizedAccessException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             logger.LogError(exception, "Failed to persist character profiles.");
         }
@@ -295,9 +296,9 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
         try
         {
             string backupPath = $"{path}.{DateTimeOffset.Now:yyyyMMddHHmmss}.bak";
-            File.Copy(path, backupPath, overwrite: true);
+            File.Move(path, backupPath, overwrite: true);
         }
-        catch (IOException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             logger.LogWarning(exception, "Failed to back up broken character profile store file.");
         }
@@ -309,6 +310,7 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
         Directory.CreateDirectory(directory);
 
         string tempPath = Path.Combine(directory, $"{Path.GetFileName(path)}.tmp");
+        // These payloads are small enough that synchronous writes are acceptable for now.
         File.WriteAllText(tempPath, content);
 
         if (File.Exists(path))
@@ -318,6 +320,46 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
         }
 
         File.Move(tempPath, path);
+    }
+
+    private static CharacterProfile CloneProfile(CharacterProfile profile)
+    {
+        return new CharacterProfile
+        {
+            Id = profile.Id,
+            DisplayName = profile.DisplayName,
+            CharacterSettingsDirectory = profile.CharacterSettingsDirectory,
+            HotbarDatPath = profile.HotbarDatPath,
+            KeybindDatPath = profile.KeybindDatPath,
+            IsSelected = profile.IsSelected,
+            LastLoadedAt = profile.LastLoadedAt,
+        };
+    }
+
+    private static CharacterData CloneCharacterData(CharacterData characterData)
+    {
+        return new CharacterData
+        {
+            Profile = CloneProfile(characterData.Profile),
+            HotbarAnalysisResult = new HotbarAnalysisResult
+            {
+                FilePath = characterData.HotbarAnalysisResult.FilePath,
+                Exists = characterData.HotbarAnalysisResult.Exists,
+                ByteLength = characterData.HotbarAnalysisResult.ByteLength,
+                LastWriteTime = characterData.HotbarAnalysisResult.LastWriteTime,
+                RawBytes = characterData.HotbarAnalysisResult.RawBytes?.ToArray(),
+            },
+            KeybindAnalysisResult = new KeybindAnalysisResult
+            {
+                FilePath = characterData.KeybindAnalysisResult.FilePath,
+                Exists = characterData.KeybindAnalysisResult.Exists,
+                ByteLength = characterData.KeybindAnalysisResult.ByteLength,
+                LastWriteTime = characterData.KeybindAnalysisResult.LastWriteTime,
+                RawBytes = characterData.KeybindAnalysisResult.RawBytes?.ToArray(),
+            },
+            LoadedAt = characterData.LoadedAt,
+            Errors = characterData.Errors.ToArray(),
+        };
     }
 
     private static string NormalizeDisplayName(string? displayName, string characterSettingsDirectory)

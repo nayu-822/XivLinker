@@ -92,6 +92,8 @@ public partial class SettingsViewModel : ObservableObject
 
     public string CharacterConfigDescription => "FF14 のキャラクター設定フォルダーを登録して、対象キャラクターを切り替えられます。";
 
+    public string CharacterNameDescription => "表示名は後から変更できます。空で保存するとフォルダー名に戻ります。";
+
     public string LuminaPathDescription => "パスの変更や参照ダイアログは今後対応予定です。";
 
     public string LogRetentionDescription => "未実装: 現在はメモリ上のログをそのまま表示しています。";
@@ -181,7 +183,8 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         await characterProfileStore.UpdateDisplayNameAsync(selectedProfile.Id, EditableSelectedCharacterName);
-        EventLog.Add($"キャラクター設定名を更新しました: {EditableSelectedCharacterName}");
+        string savedName = characterProfileStore.SelectedProfile?.DisplayName ?? EditableSelectedCharacterName;
+        EventLog.Add($"キャラクター設定名を更新しました: {savedName}");
     }
 
     private bool CanSaveSelectedCharacterName()
@@ -191,7 +194,7 @@ public partial class SettingsViewModel : ObservableObject
             return false;
         }
 
-        return !string.IsNullOrWhiteSpace(EditableSelectedCharacterName);
+        return true;
     }
 
     private void RefreshCharacterProfiles()

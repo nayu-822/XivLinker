@@ -8,7 +8,7 @@ public partial class DataSourceStatusItemViewModel : ObservableObject
     public DataSourceStatusItemViewModel(
         string name,
         string status,
-        string settingsDetail,
+        string settingsDetail = "",
         string statusTone = "neutral",
         string? actionLabel = null,
         IAsyncRelayCommand? actionCommand = null,

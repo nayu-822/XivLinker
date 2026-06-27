@@ -124,6 +124,29 @@ public sealed class CraftSequenceStoreTests
         }
     }
 
+    [Fact]
+    public void Constructor_WithBrokenJson_DoesNotThrowAndBacksUpFile()
+    {
+        string rootPath = CreateAppDataRoot();
+
+        try
+        {
+            string filePath = new AppDataPathService(rootPath).CraftSequencesFilePath;
+            File.WriteAllText(filePath, "{broken json");
+
+            var store = new CraftSequenceStore(new AppDataPathService(rootPath), NullLogger<CraftSequenceStore>.Instance);
+
+            Assert.Empty(store.GetAll());
+            string[] backups = Directory.GetFiles(rootPath, "craft-sequences.json.*.bak");
+            Assert.Single(backups);
+            Assert.False(File.Exists(filePath));
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+        }
+    }
+
     private static string CreateAppDataRoot()
     {
         string rootPath = Path.Combine(Path.GetTempPath(), $"xivlinker-craft-store-{Guid.NewGuid():N}");

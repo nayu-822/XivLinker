@@ -39,7 +39,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         overlayItem = new DataSourceStatusItemViewModel(
             "OverlayPlugin WebSocket",
             "未接続",
-            "接続先 URI は設定画面で確認できます。",
+            "接続設定は設定画面で確認できます。",
             "warning",
             "接続する",
             ConnectOverlayPluginCommand);
@@ -47,7 +47,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         luminaItem = new DataSourceStatusItemViewModel(
             "Lumina",
             "未設定",
-            "sqpack パスは設定画面で確認できます。",
+            "参照設定は設定画面で確認できます。",
             "warning",
             "状態を確認",
             RefreshLuminaCommand);
@@ -55,7 +55,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         characterConfigItem = new DataSourceStatusItemViewModel(
             "キャラクター設定",
             "未設定",
-            "キャラクター設定フォルダーを追加して読み込みできます。",
+            "キャラクター設定は設定画面で管理できます。",
             "warning");
 
         Items =
@@ -92,7 +92,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
     {
         luminaItem.Status = "確認中...";
         luminaItem.StatusTone = "neutral";
-        luminaItem.SettingsDetail = "sqpack パスを確認しています。";
+        luminaItem.SettingsDetail = "参照状態を確認しています。";
 
         try
         {
@@ -109,7 +109,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
             logger.LogError(exception, "Lumina の状態確認に失敗しました。");
             luminaItem.Status = "エラー";
             luminaItem.StatusTone = "error";
-            luminaItem.SettingsDetail = "設定画面で sqpack パスを確認してから再試行してください。";
+            luminaItem.SettingsDetail = "設定画面で Lumina 設定を確認してから再試行してください。";
             eventLog.Add("Lumina の状態確認に失敗しました。", "Error");
         }
     }
@@ -118,7 +118,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
     {
         overlayItem.Status = "接続中...";
         overlayItem.StatusTone = "neutral";
-        overlayItem.SettingsDetail = "接続先 URI は設定画面で確認できます。";
+        overlayItem.SettingsDetail = "接続設定は設定画面で確認できます。";
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
 
         try
@@ -151,17 +151,17 @@ public partial class DataSourceStatusViewModel : ObservableObject
             case GameDataAvailabilityState.PathNotFound:
                 luminaItem.Status = "利用不可";
                 luminaItem.StatusTone = "error";
-                luminaItem.SettingsDetail = $"設定済みの sqpack パスを確認してください: {status.SqPackPath ?? "-"}";
+                luminaItem.SettingsDetail = "設定済みの sqpack パスを確認してください。";
                 break;
             case GameDataAvailabilityState.Ready:
                 luminaItem.Status = "利用可能";
                 luminaItem.StatusTone = "success";
-                luminaItem.SettingsDetail = $"設定済みの sqpack パス: {status.SqPackPath ?? "-"}";
+                luminaItem.SettingsDetail = "FF14 データの参照状態は正常です。";
                 break;
             case GameDataAvailabilityState.InitializationFailed:
                 luminaItem.Status = "エラー";
                 luminaItem.StatusTone = "error";
-                luminaItem.SettingsDetail = status.ErrorMessage ?? "sqpack パスと Lumina の初期化状態を確認してください。";
+                luminaItem.SettingsDetail = "sqpack パスと Lumina の初期化状態を確認してください。";
                 break;
             default:
                 luminaItem.Status = "不明";
@@ -193,7 +193,14 @@ public partial class DataSourceStatusViewModel : ObservableObject
             _ => "warning",
         };
 
-        overlayItem.SettingsDetail = overlayPluginConnectionStateService.Message;
+        overlayItem.SettingsDetail = overlayPluginConnectionStateService.State switch
+        {
+            OverlayPluginConnectionState.Connected => "OverlayPlugin との通信は正常です。",
+            OverlayPluginConnectionState.Connecting => "OverlayPlugin へ接続しています。",
+            OverlayPluginConnectionState.Unavailable => "OverlayPlugin に接続できません。設定を確認してください。",
+            OverlayPluginConnectionState.Error => "OverlayPlugin の接続でエラーが発生しました。",
+            _ => "接続先は設定画面で確認できます。",
+        };
         ConnectOverlayPluginCommand.NotifyCanExecuteChanged();
     }
 
@@ -227,7 +234,7 @@ public partial class DataSourceStatusViewModel : ObservableObject
         {
             characterConfigItem.Status = "未読み込み";
             characterConfigItem.StatusTone = "neutral";
-            characterConfigItem.SettingsDetail = $"{selectedProfile.DisplayName} の設定読み込みを実行してください。";
+            characterConfigItem.SettingsDetail = "設定画面から読み込み状態を確認してください。";
             return;
         }
 
@@ -235,13 +242,13 @@ public partial class DataSourceStatusViewModel : ObservableObject
         {
             characterConfigItem.Status = "エラー";
             characterConfigItem.StatusTone = "error";
-            characterConfigItem.SettingsDetail = string.Join(Environment.NewLine, selectedData.Errors);
+            characterConfigItem.SettingsDetail = "読み込みエラーがあります。詳細は設定画面またはログ画面で確認してください。";
             return;
         }
 
         characterConfigItem.Status = "読み込み済み";
         characterConfigItem.StatusTone = "success";
-        characterConfigItem.SettingsDetail = $"{selectedProfile.DisplayName} の HOTBAR.DAT / KEYBIND.DAT を読み込み済みです。";
+        characterConfigItem.SettingsDetail = "選択中のキャラクター設定を読み込み済みです。";
     }
 
     private void OnOverlayPluginStateChanged(object? sender, EventArgs e)

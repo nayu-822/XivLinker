@@ -68,6 +68,7 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
 
     private void LoadFromDisk()
     {
+        // The persisted payload is intentionally small, so synchronous JSON I/O is acceptable here.
         string path = appDataPathService.CraftSequencesFilePath;
         if (!File.Exists(path))
         {
@@ -91,7 +92,7 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
             BackupBrokenFile(path);
             logger.LogError(exception, "Failed to parse craft sequence store file.");
         }
-        catch (IOException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             logger.LogError(exception, "Failed to read craft sequence store file.");
         }
@@ -109,11 +110,7 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
 
             WriteAtomically(appDataPathService.CraftSequencesFilePath, JsonSerializer.Serialize(document, JsonOptions));
         }
-        catch (IOException exception)
-        {
-            logger.LogError(exception, "Failed to persist craft sequences.");
-        }
-        catch (UnauthorizedAccessException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             logger.LogError(exception, "Failed to persist craft sequences.");
         }
@@ -124,9 +121,9 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
         try
         {
             string backupPath = $"{path}.{DateTimeOffset.Now:yyyyMMddHHmmss}.bak";
-            File.Copy(path, backupPath, overwrite: true);
+            File.Move(path, backupPath, overwrite: true);
         }
-        catch (IOException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             logger.LogWarning(exception, "Failed to back up broken craft sequence store file.");
         }
@@ -138,6 +135,7 @@ public sealed class CraftSequenceStore : ICraftSequenceStore
         Directory.CreateDirectory(directory);
 
         string tempPath = Path.Combine(directory, $"{Path.GetFileName(path)}.tmp");
+        // If replacement fails, the temporary file may remain and can be safely overwritten next time.
         File.WriteAllText(tempPath, content);
 
         if (File.Exists(path))

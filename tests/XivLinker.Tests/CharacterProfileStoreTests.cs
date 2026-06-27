@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Application.Services;
+using XivLinker.Infrastructure.CharacterConfig.Models;
 using XivLinker.Infrastructure.CharacterConfig.Services;
 
 namespace XivLinker.Tests;
@@ -57,6 +58,33 @@ public sealed class CharacterProfileStoreTests
     }
 
     [Fact]
+    public async Task UpdateDisplayNameAsync_WithEmptyName_RestoresFolderName()
+    {
+        string rootPath = CreateAppDataRoot();
+        string characterDirectory = CreateCharacterDirectory();
+
+        try
+        {
+            var store = CreateStore(rootPath);
+            await store.AddProfileAsync(characterDirectory, "初期名");
+            string profileId = store.Profiles[0].Id;
+
+            await store.UpdateDisplayNameAsync(profileId, string.Empty);
+
+            string expected = Path.GetFileName(characterDirectory);
+            Assert.Equal(expected, store.SelectedProfile!.DisplayName);
+
+            var reloadedStore = CreateStore(rootPath);
+            Assert.Equal(expected, reloadedStore.SelectedProfile!.DisplayName);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+            Directory.Delete(characterDirectory, true);
+        }
+    }
+
+    [Fact]
     public async Task RemoveProfileAsync_PersistsRemoval()
     {
         string rootPath = CreateAppDataRoot();
@@ -98,6 +126,80 @@ public sealed class CharacterProfileStoreTests
             Assert.Empty(reloadedStore.SelectedCharacterData!.Errors);
             Assert.True(reloadedStore.SelectedCharacterData.HotbarAnalysisResult.Exists);
             Assert.True(reloadedStore.SelectedCharacterData.KeybindAnalysisResult.Exists);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+            Directory.Delete(characterDirectory, true);
+        }
+    }
+
+    [Fact]
+    public async Task AddProfileAsync_WithSameDirectory_DoesNotCreateDuplicateProfile()
+    {
+        string rootPath = CreateAppDataRoot();
+        string characterDirectory = CreateCharacterDirectory();
+
+        try
+        {
+            var store = CreateStore(rootPath);
+            await store.AddProfileAsync(characterDirectory, "メインキャラ");
+            string originalProfileId = store.SelectedProfile!.Id;
+
+            await store.AddProfileAsync(characterDirectory, "別名");
+
+            Assert.Single(store.Profiles);
+            Assert.Equal(originalProfileId, store.SelectedProfile!.Id);
+            Assert.Equal("メインキャラ", store.SelectedProfile.DisplayName);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+            Directory.Delete(characterDirectory, true);
+        }
+    }
+
+    [Fact]
+    public void Constructor_WithBrokenJson_DoesNotThrowAndBacksUpFile()
+    {
+        string rootPath = CreateAppDataRoot();
+
+        try
+        {
+            string filePath = new AppDataPathService(rootPath).CharacterProfilesFilePath;
+            File.WriteAllText(filePath, "{broken json");
+
+            var store = CreateStore(rootPath);
+
+            Assert.Empty(store.Profiles);
+            string[] backups = Directory.GetFiles(rootPath, "character-profiles.json.*.bak");
+            Assert.Single(backups);
+            Assert.False(File.Exists(filePath));
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+        }
+    }
+
+    [Fact]
+    public async Task Profiles_ReturnSnapshots_ThatDoNotMutateStoreState()
+    {
+        string rootPath = CreateAppDataRoot();
+        string characterDirectory = CreateCharacterDirectory();
+
+        try
+        {
+            var store = CreateStore(rootPath);
+            await store.AddProfileAsync(characterDirectory, "メインキャラ");
+
+            CharacterProfile snapshot = store.Profiles[0];
+            snapshot.DisplayName = "外部変更";
+            snapshot.IsSelected = false;
+
+            Assert.Equal("メインキャラ", store.Profiles[0].DisplayName);
+            Assert.True(store.Profiles[0].IsSelected);
+            Assert.Equal("メインキャラ", store.SelectedProfile!.DisplayName);
         }
         finally
         {
