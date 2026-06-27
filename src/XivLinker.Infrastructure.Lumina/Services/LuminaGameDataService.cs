@@ -1,4 +1,7 @@
 using Lumina;
+using Lumina.Data;
+using Lumina.Excel.Sheets;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO;
 
@@ -16,12 +19,14 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
 
     private readonly SemaphoreSlim initializationLock = new(1, 1);
     private readonly LuminaOptions options;
+    private readonly ILogger<LuminaGameDataService> logger;
     private GameData? gameData;
     private string? resolvedSqPackPath;
 
-    public LuminaGameDataService(IOptions<LuminaOptions> options)
+    public LuminaGameDataService(IOptions<LuminaOptions> options, ILogger<LuminaGameDataService> logger)
     {
         this.options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        this.logger = logger;
     }
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(SqPackPath);
@@ -91,6 +96,65 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         return status.IsAvailable ? gameData : null;
     }
 
+    public async Task<ResolvedMapLocation?> ResolveMapLocationAsync(
+        uint territoryTypeId,
+        float rawX,
+        float rawY,
+        float rawZ,
+        CancellationToken cancellationToken = default)
+    {
+        GameData? data = await GetGameDataAsync(cancellationToken);
+        if (data is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await Task.Run(() => ResolveMapLocationCore(data, territoryTypeId, rawX, rawY), cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Failed to resolve map location. TerritoryTypeId: {TerritoryTypeId}", territoryTypeId);
+            return new ResolvedMapLocation
+            {
+                MapId = 0,
+                MapName = "マップ情報を取得できません",
+                CoordinatesText = "座標を変換できません",
+                IssueMessage = "マップ情報の解決に失敗しました。",
+            };
+        }
+    }
+
+    public async Task<ResolvedClassJobInfo?> ResolveClassJobAsync(
+        uint classJobId,
+        int? level = null,
+        CancellationToken cancellationToken = default)
+    {
+        GameData? data = await GetGameDataAsync(cancellationToken);
+        if (data is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await Task.Run(() => ResolveClassJobCore(data, classJobId, level), cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Failed to resolve class job. ClassJobId: {ClassJobId}", classJobId);
+            return new ResolvedClassJobInfo
+            {
+                ClassJobId = classJobId,
+                ClassJobName = $"Job ID: {classJobId}",
+                Level = level,
+                DisplayText = level is > 0 ? $"Job ID: {classJobId} Lv.{level}" : $"Job ID: {classJobId}",
+                IssueMessage = "ジョブ情報の解決に失敗しました。",
+            };
+        }
+    }
+
     public void Dispose()
     {
         initializationLock.Dispose();
@@ -137,6 +201,85 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             IsAvailable = IsAvailable,
             SqPackPath = SqPackPath,
             ErrorMessage = ErrorMessage,
+        };
+    }
+
+    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint territoryTypeId, float rawX, float rawY)
+    {
+        var territorySheet = data.GetExcelSheet<TerritoryType>(Language.Japanese);
+        if (territorySheet is null)
+        {
+            return null;
+        }
+
+        TerritoryType territory = territorySheet.FirstOrDefault(row => row.RowId == territoryTypeId);
+        if (territory.RowId == 0)
+        {
+            return null;
+        }
+
+        Map? map = territory.Map.ValueNullable;
+        string? mapName = territory.PlaceNameZone.ValueNullable?.Name.ToString().Trim();
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            mapName = territory.PlaceName.ValueNullable?.Name.ToString().Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            mapName = map?.PlaceName.ValueNullable?.Name.ToString().Trim();
+        }
+
+        if (map is null)
+        {
+            return new ResolvedMapLocation
+            {
+                MapId = 0,
+                MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId}" : mapName,
+                CoordinatesText = "座標を変換できません",
+                IssueMessage = "TerritoryType に対応する Map が見つかりません。",
+            };
+        }
+
+        double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawX, map.Value.OffsetX, map.Value.SizeFactor);
+        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawY, map.Value.OffsetY, map.Value.SizeFactor);
+
+        return new ResolvedMapLocation
+        {
+            MapId = map.Value.RowId,
+            MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId}" : mapName,
+            MapX = mapX,
+            MapY = mapY,
+            CoordinatesText = MapCoordinateCalculator.FormatCoordinates(mapX, mapY),
+        };
+    }
+
+    private static ResolvedClassJobInfo? ResolveClassJobCore(GameData data, uint classJobId, int? level)
+    {
+        var classJobSheet = data.GetExcelSheet<ClassJob>(Language.Japanese);
+        if (classJobSheet is null)
+        {
+            return null;
+        }
+
+        ClassJob classJob = classJobSheet.FirstOrDefault(row => row.RowId == classJobId);
+        if (classJob.RowId == 0)
+        {
+            return null;
+        }
+
+        string jobName = classJob.Name.ToString().Trim();
+        if (string.IsNullOrWhiteSpace(jobName))
+        {
+            jobName = $"Job ID: {classJobId}";
+        }
+
+        return new ResolvedClassJobInfo
+        {
+            ClassJobId = classJobId,
+            ClassJobName = jobName,
+            Level = level,
+            DisplayText = level is > 0 ? $"{jobName} Lv.{level}" : jobName,
         };
     }
 }

@@ -74,26 +74,37 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="&#x30A8;&#x30EA;&#x30A2;"
+                        <TextBlock Text="&#x73FE;&#x5728;&#x30DE;&#x30C3;&#x30D7;"
                                    Style="{StaticResource LabelTextStyle}" />
                         <TextBlock Grid.Column="1"
-                                   Text="{Binding Status.CurrentArea}"
+                                   Text="{Binding Status.CurrentMap}"
                                    Style="{StaticResource ValueTextStyle}" />
 
                         <TextBlock Grid.Row="1"
                                    Margin="{StaticResource App.Thickness.TopGapM}"
-                                   Text="&#x30AD;&#x30E3;&#x30E9;&#x30AF;&#x30BF;&#x30FC;"
+                                   Text="&#x73FE;&#x5728;&#x5EA7;&#x6A19;"
                                    Style="{StaticResource LabelTextStyle}" />
                         <TextBlock Grid.Row="1"
                                    Grid.Column="1"
                                    Margin="{StaticResource App.Thickness.TopGapM}"
-                                   Text="{Binding Status.CurrentCharacter}"
+                                   Text="{Binding Status.CurrentCoordinates}"
+                                   Style="{StaticResource ValueTextStyle}" />
+
+                        <TextBlock Grid.Row="2"
+                                   Margin="{StaticResource App.Thickness.TopGapM}"
+                                   Text="&#x73FE;&#x5728;&#x30B8;&#x30E7;&#x30D6;"
+                                   Style="{StaticResource LabelTextStyle}" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="1"
+                                   Margin="{StaticResource App.Thickness.TopGapM}"
+                                   Text="{Binding Status.CurrentJob}"
                                    Style="{StaticResource ValueTextStyle}" />
                     </Grid>
                 </StackPanel>

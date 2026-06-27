@@ -7,6 +7,8 @@
 - SqPack パスの解決と Lumina `GameData` 初期化
 - クラフターアクション一覧の取得
 - アクションアイコンの取得
+- Territory / Map / ClassJob の名称解決
+- ワールド座標から FF14 マップ座標への変換
 - アイコン PNG のメモリキャッシュ
 - `%LOCALAPPDATA%\XivLinker\Cache\Icons` へのディスクキャッシュ
 

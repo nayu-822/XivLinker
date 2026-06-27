@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using XivLinker.Infrastructure.Lumina.Services;
 
 namespace XivLinker.Infrastructure.Overlay.Services;
@@ -9,15 +10,18 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
     private readonly IOverlayPluginWebSocketService webSocketService;
     private readonly IOverlayPluginWebSocketSessionService sessionService;
     private readonly IGameDataService gameDataService;
+    private readonly ILogger<OverlayPluginConnectionStateService> logger;
 
     public OverlayPluginConnectionStateService(
         IOverlayPluginWebSocketService webSocketService,
         IOverlayPluginWebSocketSessionService sessionService,
-        IGameDataService gameDataService)
+        IGameDataService gameDataService,
+        ILogger<OverlayPluginConnectionStateService> logger)
     {
         this.webSocketService = webSocketService;
         this.sessionService = sessionService;
         this.gameDataService = gameDataService;
+        this.logger = logger;
         this.sessionService.ConnectionStateChanged += OnSessionConnectionStateChanged;
         State = OverlayPluginConnectionState.Disconnected;
         Message = "ACT または OverlayPlugin の WebSocket サーバーに接続していません。";
@@ -62,6 +66,8 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
                 ? "Lumina 利用可能"
                 : "Lumina 未初期化";
 
+            logger.LogInformation("OverlayPlugin WebSocket connected. Version: {Version}", versionText ?? "unknown");
+
             SetState(
                 OverlayPluginConnectionState.Connected,
                 versionText is null
@@ -70,6 +76,7 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
         }
         catch (TimeoutException)
         {
+            logger.LogWarning("OverlayPlugin WebSocket timed out.");
             SetState(
                 OverlayPluginConnectionState.Unavailable,
                 "OverlayPlugin WebSocket から応答がありませんでした。");
@@ -81,6 +88,7 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
         }
         catch (Exception exception)
         {
+            logger.LogError(exception, "OverlayPlugin WebSocket connection failed.");
             SetState(OverlayPluginConnectionState.Error, exception.Message);
             throw;
         }
@@ -131,6 +139,7 @@ public sealed class OverlayPluginConnectionStateService : IDisposable
             return;
         }
 
+        logger.LogInformation("OverlayPlugin WebSocket disconnected.");
         SetState(
             OverlayPluginConnectionState.Disconnected,
             "OverlayPlugin WebSocket から切断されました。");

@@ -28,6 +28,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     }
 
     public event EventHandler? ConnectionStateChanged;
+    public event EventHandler<string>? EventReceived;
 
     public bool IsStarted => webSocket?.State == WebSocketState.Open;
 
@@ -231,15 +232,25 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
     private void DispatchMessage(string rawJson)
     {
-        using JsonDocument document = JsonDocument.Parse(rawJson);
-        JsonElement root = document.RootElement;
-
-        if (root.TryGetProperty("rseq", out JsonElement rseqElement)
-            && rseqElement.ValueKind == JsonValueKind.Number
-            && rseqElement.TryGetInt64(out long rseq)
-            && pendingRequests.TryRemove(rseq, out TaskCompletionSource<string>? completionSource))
+        try
         {
-            completionSource.TrySetResult(rawJson);
+            using JsonDocument document = JsonDocument.Parse(rawJson);
+            JsonElement root = document.RootElement;
+
+            if (root.TryGetProperty("rseq", out JsonElement rseqElement)
+                && rseqElement.ValueKind == JsonValueKind.Number
+                && rseqElement.TryGetInt64(out long rseq)
+                && pendingRequests.TryRemove(rseq, out TaskCompletionSource<string>? completionSource))
+            {
+                completionSource.TrySetResult(rawJson);
+                return;
+            }
+
+            EventReceived?.Invoke(this, rawJson);
+        }
+        catch (JsonException)
+        {
+            EventReceived?.Invoke(this, rawJson);
         }
     }
 

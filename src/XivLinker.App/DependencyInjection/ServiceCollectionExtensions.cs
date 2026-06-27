@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOverlayPluginWebSocketService, OverlayPluginWebSocketService>();
         services.AddSingleton<IOverlayPluginWebSocketSessionService, OverlayPluginWebSocketSessionService>();
         services.AddSingleton<OverlayPluginConnectionStateService>();
+        services.AddSingleton<IOverlayPluginCurrentPlayerStateService, OverlayPluginCurrentPlayerStateService>();
         services.AddSingleton<ICharacterConfigDataService, CharacterConfigDataService>();
         services.AddSingleton<ICharacterProfileStore, CharacterProfileStore>();
         services.AddSingleton<ICraftSequenceStore, CraftSequenceStore>();
