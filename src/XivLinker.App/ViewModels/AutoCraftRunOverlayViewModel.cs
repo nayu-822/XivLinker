@@ -5,6 +5,8 @@ namespace XivLinker.App.ViewModels;
 
 public sealed class AutoCraftRunOverlayViewModel : ObservableObject
 {
+    private string statusText = "自動クラフトを準備しています。";
+
     public AutoCraftRunOverlayViewModel(
         string sequenceName,
         Func<Task> stop)
@@ -15,7 +17,11 @@ public sealed class AutoCraftRunOverlayViewModel : ObservableObject
 
     public string SequenceName { get; }
 
-    public string StatusText => "自動クラフトを実行中です。";
+    public string StatusText
+    {
+        get => statusText;
+        set => SetProperty(ref statusText, value);
+    }
 
     public IAsyncRelayCommand StopCommand { get; }
 }

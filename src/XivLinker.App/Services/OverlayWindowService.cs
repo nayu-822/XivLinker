@@ -98,6 +98,11 @@ public sealed class OverlayWindowService
 
     public void ShowMainWindow()
     {
+        ShowMainWindow(activate: true);
+    }
+
+    public void ShowMainWindow(bool activate)
+    {
         Window? mainWindow = ResolveMainWindow();
         if (mainWindow is null)
         {
@@ -111,7 +116,10 @@ public sealed class OverlayWindowService
             mainWindow.WindowState = WindowState.Normal;
         }
 
-        mainWindow.Activate();
+        if (activate)
+        {
+            mainWindow.Activate();
+        }
     }
 
     private static Window? ResolveOwnerWindow()
