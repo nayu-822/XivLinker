@@ -33,10 +33,12 @@
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
                                    Text="OverlayPlugin WebSocket"
                                    Style="{StaticResource LabelTextStyle}" />
-                        <TextBox Margin="{StaticResource App.Thickness.TopGapS}"
-                                 Text="{Binding OverlayWebSocketUri}"
-                                 Style="{StaticResource InputTextBoxStyle}"
-                                 IsReadOnly="True" />
+                        <Border Margin="{StaticResource App.Thickness.TopGapS}"
+                                Style="{StaticResource ReadOnlyValueContainerStyle}">
+                            <TextBlock Text="{Binding OverlayWebSocketUri, Mode=OneWay}"
+                                       Style="{StaticResource BodyTextStyle}"
+                                       TextWrapping="Wrap" />
+                        </Border>
                         <Button Margin="{StaticResource App.Thickness.TopGapM}"
                                 HorizontalAlignment="Left"
                                 Command="{Binding ReconnectOverlayCommand}"
@@ -54,20 +56,22 @@
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
                                    Text="sqpack &#x30D1;&#x30B9;"
                                    Style="{StaticResource LabelTextStyle}" />
-                        <TextBox Margin="{StaticResource App.Thickness.TopGapS}"
-                                 Text="{Binding SqPackPath}"
-                                 Style="{StaticResource InputTextBoxStyle}"
-                                 IsReadOnly="True" />
+                        <Border Margin="{StaticResource App.Thickness.TopGapS}"
+                                Style="{StaticResource ReadOnlyValueContainerStyle}">
+                            <TextBlock Text="{Binding SqPackPath, Mode=OneWay}"
+                                       Style="{StaticResource BodyTextStyle}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                   Text="{Binding LuminaPathDescription}"
+                                   Style="{StaticResource CaptionTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                   TextWrapping="Wrap" />
                         <StackPanel Margin="{StaticResource App.Thickness.TopGapM}"
                                     Orientation="Horizontal">
                             <Button Command="{Binding RefreshLuminaCommand}"
                                     Style="{StaticResource SmallActionButtonStyle}">
                                 <TextBlock Text="&#x72B6;&#x614B;&#x3092;&#x78BA;&#x8A8D;" />
-                            </Button>
-                            <Button Margin="{StaticResource App.Thickness.PageHeaderActionSpacing}"
-                                    IsEnabled="False"
-                                    Style="{StaticResource SmallActionButtonStyle}">
-                                <TextBlock Text="&#x53C2;&#x7167; (&#x672A;&#x5B9F;&#x88C5;)" />
                             </Button>
                         </StackPanel>
                     </StackPanel>
@@ -81,12 +85,11 @@
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
                                    Text="{Binding CharacterConfigStatus}"
                                    Style="{StaticResource BodyTextStyle}" />
-                        <Button Margin="{StaticResource App.Thickness.TopGapM}"
-                                HorizontalAlignment="Left"
-                                IsEnabled="False"
-                                Style="{StaticResource SmallActionButtonStyle}">
-                            <TextBlock Text="&#x53C2;&#x7167; (&#x672A;&#x5B9F;&#x88C5;)" />
-                        </Button>
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                   Text="{Binding CharacterConfigDescription}"
+                                   Style="{StaticResource CaptionTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                   TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
 

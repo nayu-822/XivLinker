@@ -11,6 +11,9 @@ public sealed class LogViewModel
     {
         this.eventLog = eventLog;
         ClearLogCommand = new RelayCommand(ClearLog, CanClearLog);
+
+        // These page view models are singletons today. If their lifetime changes,
+        // move command-state updates into a shared log presenter/service.
         eventLog.Items.CollectionChanged += OnItemsChanged;
     }
 

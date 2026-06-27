@@ -23,6 +23,9 @@ public sealed class SettingsViewModel
         ReconnectOverlayCommand = dataSourceStatus.ConnectOverlayPluginCommand;
         RefreshLuminaCommand = dataSourceStatus.RefreshLuminaCommand;
         ClearLogCommand = new RelayCommand(ClearLog, CanClearLog);
+
+        // These page view models are singletons today. If their lifetime changes,
+        // move command-state updates into a shared log presenter/service.
         EventLog.Items.CollectionChanged += OnItemsChanged;
     }
 
@@ -47,6 +50,10 @@ public sealed class SettingsViewModel
     }
 
     public string CharacterConfigStatus => "未実装";
+
+    public string CharacterConfigDescription => "キャラクター設定ファイルの参照先指定は今後対応予定です。";
+
+    public string LuminaPathDescription => "パスの変更や参照ダイアログは今後対応予定です。";
 
     public string LogRetentionDescription => "未実装: 現在はメモリ上のログをそのまま表示しています。";
 
