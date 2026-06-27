@@ -4,11 +4,11 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
+            <RowDefinition Height="{StaticResource App.GridLength.ContentGap}" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource SectionSurfaceStyle}">
+        <Border Style="{StaticResource CompactCardStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -16,10 +16,10 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="クラフトシーケンス一覧"
+                    <TextBlock Text="&#x81EA;&#x52D5;&#x30AF;&#x30E9;&#x30D5;&#x30C8;"
                                Style="{StaticResource SectionTitleTextStyle}" />
                     <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
-                               Text="登録済みシーケンスを確認し、新規作成や編集をすばやく行えます。"
+                               Text="&#x767B;&#x9332;&#x6E08;&#x307F;&#x30B7;&#x30FC;&#x30B1;&#x30F3;&#x30B9;&#x306E;&#x78BA;&#x8A8D;&#x3068;&#x7DE8;&#x96C6;&#x3092;&#x884C;&#x3044;&#x307E;&#x3059;&#x3002;"
                                Style="{StaticResource BodyTextStyle}"
                                Foreground="{DynamicResource App.Brush.TextSecondary}"
                                TextWrapping="Wrap" />
@@ -29,20 +29,23 @@
                         VerticalAlignment="Top"
                         Command="{Binding CreateSequenceCommand}"
                         Style="{StaticResource ActionButtonStyle}">
-                    <TextBlock Text="新規作成" />
+                    <TextBlock Text="&#x65B0;&#x898F;&#x4F5C;&#x6210;" />
                 </Button>
             </Grid>
         </Border>
 
         <Border Grid.Row="2"
-                Style="{StaticResource SubtlePanelStyle}">
+                Style="{StaticResource DenseSubtlePanelStyle}">
             <Grid>
-                <TextBlock HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Text="{Binding EmptyMessage}"
-                           Foreground="{DynamicResource App.Brush.TextMuted}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                <Border Padding="{StaticResource App.Thickness.PanelPaddingDense}"
+                        Background="{DynamicResource App.Brush.Surface}"
+                        BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource App.CornerRadius.Control}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top">
+                    <Border.Style>
+                        <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Sequences.Count}" Value="0">
@@ -50,8 +53,21 @@
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Text="{Binding EmptyMessage}"
+                                   Style="{StaticResource BodyTextStyle}" />
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                   Text="&#x307E;&#x305A;&#x306F;&#x65B0;&#x3057;&#x3044;&#x30B7;&#x30FC;&#x30B1;&#x30F3;&#x30B9;&#x3092;&#x4F5C;&#x6210;&#x3057;&#x3066;&#x304F;&#x3060;&#x3055;&#x3044;&#x3002;"
+                                   Style="{StaticResource CaptionTextStyle}" />
+                        <Button Margin="{StaticResource App.Thickness.TopGapS}"
+                                HorizontalAlignment="Left"
+                                Command="{Binding CreateSequenceCommand}"
+                                Style="{StaticResource SmallActionButtonStyle}">
+                            <TextBlock Text="&#x65B0;&#x898F;&#x4F5C;&#x6210;" />
+                        </Button>
+                    </StackPanel>
+                </Border>
 
                 <ListBox ItemsSource="{Binding Sequences}"
                          ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
@@ -71,18 +87,13 @@
                     </ListBox.Style>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="0,0,0,8"
-                                    Padding="{StaticResource App.Thickness.ListItemPadding}"
+                            <Border Margin="0,0,0,6"
+                                    Padding="{StaticResource App.Thickness.ListItemDensePadding}"
                                     CornerRadius="{StaticResource App.CornerRadius.Control}"
                                     Background="{DynamicResource App.Brush.Surface}"
                                     BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                                     BorderThickness="1">
                                 <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="{StaticResource App.GridLength.ContentGap}" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -91,16 +102,17 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding Name}"
                                                    Style="{StaticResource CardTitleTextStyle}" />
-                                        <TextBlock Margin="0,4,0,0"
+                                        <TextBlock Margin="0,2,0,0"
                                                    Text="{Binding Summary}"
-                                                   Style="{StaticResource BodyTextStyle}"
+                                                   Style="{StaticResource CaptionTextStyle}"
                                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
-                                                   TextWrapping="Wrap" />
+                                                   TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="2"
-                                                Grid.ColumnSpan="2"
+                                    <StackPanel Grid.Column="1"
                                                 Orientation="Horizontal"
+                                                VerticalAlignment="Center"
                                                 HorizontalAlignment="Right">
                                         <TextBlock Margin="0,0,12,0"
                                                    VerticalAlignment="Center"
@@ -109,15 +121,15 @@
 
                                         <Button Command="{Binding DataContext.EditSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
-                                                Style="{StaticResource SmallActionButtonStyle}">
-                                            <TextBlock Text="編集" />
+                                                Style="{StaticResource TinyActionButtonStyle}">
+                                            <TextBlock Text="&#x7DE8;&#x96C6;" />
                                         </Button>
 
-                                        <Button Margin="8,0,0,0"
+                                        <Button Margin="6,0,0,0"
                                                 Command="{Binding DataContext.DeleteSequenceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
-                                                Style="{StaticResource DangerActionButtonStyle}">
-                                            <TextBlock Text="削除" />
+                                                Style="{StaticResource TinyDangerActionButtonStyle}">
+                                            <TextBlock Text="&#x524A;&#x9664;" />
                                         </Button>
                                     </StackPanel>
                                 </Grid>

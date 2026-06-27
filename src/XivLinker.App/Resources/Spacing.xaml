@@ -20,7 +20,9 @@
     <Thickness x:Key="App.Thickness.SectionPadding">16</Thickness>
     <Thickness x:Key="App.Thickness.SectionPaddingCompact">14</Thickness>
     <Thickness x:Key="App.Thickness.PanelPadding">12</Thickness>
+    <Thickness x:Key="App.Thickness.PanelPaddingDense">10</Thickness>
     <Thickness x:Key="App.Thickness.ListItemPadding">12</Thickness>
+    <Thickness x:Key="App.Thickness.ListItemDensePadding">10,8</Thickness>
     <sys:Double x:Key="App.Layout.GapS">8</sys:Double>
     <sys:Double x:Key="App.Layout.GapM">12</sys:Double>
     <sys:Double x:Key="App.Layout.GapL">16</sys:Double>
@@ -37,12 +39,18 @@
     <Thickness x:Key="App.Thickness.BottomGapL">0,0,0,16</Thickness>
     <Thickness x:Key="App.Thickness.ActionTilePadding">10,10</Thickness>
     <Thickness x:Key="App.Thickness.ActionTileMargin">0,0,6,6</Thickness>
+    <Thickness x:Key="App.Thickness.ActionTileCompactPadding">8,8</Thickness>
+    <Thickness x:Key="App.Thickness.ActionTileCompactMargin">0,0,4,4</Thickness>
     <Thickness x:Key="App.Thickness.ListItemCompactPadding">14</Thickness>
     <Thickness x:Key="App.Thickness.InputPadding">12,10</Thickness>
 
     <sys:Double x:Key="App.Size.ActionTileWidth">154</sys:Double>
     <sys:Double x:Key="App.Size.ActionTileHeight">80</sys:Double>
     <sys:Double x:Key="App.Size.ActionTileTextMaxWidth">130</sys:Double>
+    <sys:Double x:Key="App.Size.ActionTileCompactWidth">124</sys:Double>
+    <sys:Double x:Key="App.Size.ActionTileCompactHeight">68</sys:Double>
+    <sys:Double x:Key="App.Size.ActionTileCompactTextMaxWidth">100</sys:Double>
     <sys:Double x:Key="App.Size.IconM">24</sys:Double>
     <sys:Double x:Key="App.Size.ActionTileIcon">30</sys:Double>
+    <sys:Double x:Key="App.Size.ActionTileCompactIcon">30</sys:Double>
 </ResourceDictionary>
