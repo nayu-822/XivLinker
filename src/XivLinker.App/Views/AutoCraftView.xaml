@@ -6,10 +6,23 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="{StaticResource App.GridLength.PageContentSpacing}" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="{StaticResource App.GridLength.PageContentSpacing}" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Padding="16,12"
+        <views:PageHeaderView Title="{Binding Title}"
+                              Description="{Binding Description}">
+            <views:PageHeaderView.ActionContent>
+                <Button Command="{Binding SequenceList.CreateSequenceCommand}"
+                        Style="{StaticResource SmallActionButtonStyle}">
+                    <TextBlock Text="新規作成" />
+                </Button>
+            </views:PageHeaderView.ActionContent>
+        </views:PageHeaderView>
+
+        <Border Grid.Row="2"
+                Padding="16,12"
                 Background="{DynamicResource App.Brush.Surface}"
                 BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                 BorderThickness="1"
@@ -24,7 +37,7 @@
                           VerticalAlignment="Center"
                           DisplayMemberPath="DisplayName"
                           IsEnabled="{Binding CanChangeCrafterJob}"
-                          ItemsSource="{Binding CrafterJobs}"
+                          ItemsSource="{Binding DisplayedCrafterJobs}"
                           SelectedItem="{Binding SelectedCrafterJob}" />
 
                 <TextBlock Margin="12,0,0,0"
@@ -35,7 +48,7 @@
             </StackPanel>
         </Border>
 
-        <views:AutoCraftSequenceListView Grid.Row="2"
+        <views:AutoCraftSequenceListView Grid.Row="4"
                                          DataContext="{Binding SequenceList}" />
     </Grid>
 </UserControl>

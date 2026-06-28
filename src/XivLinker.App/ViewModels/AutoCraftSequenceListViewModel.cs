@@ -11,6 +11,7 @@ public sealed class AutoCraftSequenceListViewModel
     private readonly ICraftSequenceStore craftSequenceStore;
     private readonly Func<CraftSequence?, Task> openEditor;
     private readonly Func<CrafterJob?>? getSelectedCrafterJob;
+    private readonly Func<bool>? isCurrentJobNonCrafter;
     private readonly ICraftHotbarRegistrationValidator? hotbarRegistrationValidator;
     private readonly OverlayWindowService? overlayWindowService;
     private readonly AutoCraftExecutionService? autoCraftExecutionService;
@@ -19,6 +20,7 @@ public sealed class AutoCraftSequenceListViewModel
         ICraftSequenceStore craftSequenceStore,
         Func<CraftSequence?, Task> openEditor,
         Func<CrafterJob?>? getSelectedCrafterJob = null,
+        Func<bool>? isCurrentJobNonCrafter = null,
         ICraftHotbarRegistrationValidator? hotbarRegistrationValidator = null,
         OverlayWindowService? overlayWindowService = null,
         AutoCraftExecutionService? autoCraftExecutionService = null)
@@ -26,6 +28,7 @@ public sealed class AutoCraftSequenceListViewModel
         this.craftSequenceStore = craftSequenceStore;
         this.openEditor = openEditor;
         this.getSelectedCrafterJob = getSelectedCrafterJob;
+        this.isCurrentJobNonCrafter = isCurrentJobNonCrafter;
         this.hotbarRegistrationValidator = hotbarRegistrationValidator;
         this.overlayWindowService = overlayWindowService;
         this.autoCraftExecutionService = autoCraftExecutionService;
@@ -42,30 +45,15 @@ public sealed class AutoCraftSequenceListViewModel
         }
     }
 
-    public ObservableCollection<CraftSequenceSummaryViewModel> Sequences
-    {
-        get;
-    }
+    public ObservableCollection<CraftSequenceSummaryViewModel> Sequences { get; }
 
-    public IAsyncRelayCommand CreateSequenceCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand CreateSequenceCommand { get; }
 
-    public IAsyncRelayCommand<CraftSequenceSummaryViewModel> EditSequenceCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand<CraftSequenceSummaryViewModel> EditSequenceCommand { get; }
 
-    public IRelayCommand<CraftSequenceSummaryViewModel> DeleteSequenceCommand
-    {
-        get;
-    }
+    public IRelayCommand<CraftSequenceSummaryViewModel> DeleteSequenceCommand { get; }
 
-    public IAsyncRelayCommand<CraftSequenceSummaryViewModel> RunSequenceCommand
-    {
-        get;
-    }
+    public IAsyncRelayCommand<CraftSequenceSummaryViewModel> RunSequenceCommand { get; }
 
     public string EmptyMessage => "まだクラフトシーケンスは登録されていません。";
 
@@ -136,6 +124,14 @@ public sealed class AutoCraftSequenceListViewModel
         CraftSequence? fullSequence = craftSequenceStore.Find(sequence.SequenceId);
         if (fullSequence is null)
         {
+            return;
+        }
+
+        if (isCurrentJobNonCrafter?.Invoke() == true)
+        {
+            await overlayWindowService.ShowMessageAsync(
+                "自動クラフト",
+                "現在のジョブがクラフター以外のため、このシーケンスは実行できません。");
             return;
         }
 

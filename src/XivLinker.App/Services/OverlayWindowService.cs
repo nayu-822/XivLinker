@@ -6,12 +6,12 @@ using XivLinker.App.Views;
 
 namespace XivLinker.App.Services;
 
-public sealed class OverlayWindowService
+public class OverlayWindowService
 {
     private AutoCraftRunOptionsWindow? currentRunOptionsWindow;
     private AutoCraftRunOverlayWindow? currentRunOverlayWindow;
 
-    public Task<int?> ShowRunOptionsAsync(string sequenceName)
+    public virtual Task<int?> ShowRunOptionsAsync(string sequenceName)
     {
         if (currentRunOptionsWindow is not null)
         {
@@ -61,7 +61,7 @@ public sealed class OverlayWindowService
         return Task.FromResult(result == true ? confirmedRunCount : null);
     }
 
-    public Task ShowMissingHotbarActionsAsync(
+    public virtual Task ShowMissingHotbarActionsAsync(
         string sequenceName,
         string crafterJobName,
         IReadOnlyList<CraftActionRequirement> missingActions)
@@ -84,7 +84,7 @@ public sealed class OverlayWindowService
         return Task.CompletedTask;
     }
 
-    public Task ShowMessageAsync(string title, string message)
+    public virtual Task ShowMessageAsync(string title, string message)
     {
         MessageBox.Show(
             ResolveOwnerWindow(),

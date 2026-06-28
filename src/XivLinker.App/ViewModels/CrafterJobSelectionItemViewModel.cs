@@ -4,12 +4,21 @@ namespace XivLinker.App.ViewModels;
 
 public sealed class CrafterJobSelectionItemViewModel
 {
-    public CrafterJobSelectionItemViewModel(CrafterJob job)
+    private CrafterJobSelectionItemViewModel(CrafterJob? job, string displayName)
     {
         Job = job;
+        DisplayName = displayName;
     }
 
-    public CrafterJob Job { get; }
+    public CrafterJob? Job { get; }
 
-    public string DisplayName => $"{Job.Name} ({Job.ShortName})";
+    public string DisplayName { get; }
+
+    public static CrafterJobSelectionItemViewModel FromCrafterJob(CrafterJob job)
+    {
+        return new CrafterJobSelectionItemViewModel(job, $"{job.Name} ({job.ShortName})");
+    }
+
+    public static CrafterJobSelectionItemViewModel NonCrafter { get; } =
+        new(null, "クラフター以外");
 }

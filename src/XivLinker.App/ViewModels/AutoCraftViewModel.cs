@@ -20,19 +20,24 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
         IOverlayPluginCurrentPlayerStateService currentPlayerStateService)
     {
         this.currentPlayerStateService = currentPlayerStateService;
+
         CrafterJobs = new ObservableCollection<CrafterJobSelectionItemViewModel>(
-            Domain.Models.CrafterJobs.All.Select(static job => new CrafterJobSelectionItemViewModel(job)));
+            Domain.Models.CrafterJobs.All.Select(CrafterJobSelectionItemViewModel.FromCrafterJob));
+        DisplayedCrafterJobs = new ObservableCollection<CrafterJobSelectionItemViewModel>();
 
         SequenceList = new AutoCraftSequenceListViewModel(
             craftSequenceStore,
             sequence => sequenceEditorDialogService.ShowEditorAsync(sequence, SaveSequence),
             () => SelectedCrafterJob?.Job,
+            () => IsCurrentJobNonCrafter,
             craftHotbarRegistrationValidator,
             overlayWindowService,
             autoCraftExecutionService);
 
         this.currentPlayerStateService.StateChanged += OnCurrentPlayerStateChanged;
+
         UpdateCurrentCrafterJobFromState();
+        RefreshDisplayedCrafterJobs();
         SequenceList.Refresh();
     }
 
@@ -40,18 +45,27 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<CrafterJobSelectionItemViewModel> CrafterJobs { get; }
 
+    public ObservableCollection<CrafterJobSelectionItemViewModel> DisplayedCrafterJobs { get; }
+
     [ObservableProperty]
     private CrafterJobSelectionItemViewModel? selectedCrafterJob;
 
     [ObservableProperty]
-    private bool isCrafterJobAutoDetected;
+    private CrafterJobDetectionState detectionState;
 
-    public bool CanChangeCrafterJob => !IsCrafterJobAutoDetected;
+    public bool IsCrafterJobAutoDetected => DetectionState != CrafterJobDetectionState.Unknown;
+
+    public bool IsCurrentJobNonCrafter => DetectionState == CrafterJobDetectionState.NonCrafter;
+
+    public bool CanChangeCrafterJob => DetectionState == CrafterJobDetectionState.Unknown;
 
     public string CrafterJobStatusText =>
-        IsCrafterJobAutoDetected
-            ? "現在のジョブを自動検出しています。"
-            : "現在のジョブを自動検出できないため、手動で選択してください。";
+        DetectionState switch
+        {
+            CrafterJobDetectionState.Crafter => "現在のクラフター職を自動検出しています。",
+            CrafterJobDetectionState.NonCrafter => "現在のジョブがクラフター以外のため、自動クラフトは実行できません。",
+            _ => "現在のジョブを自動検出できないため、手動で選択してください。",
+        };
 
     public string Title => "自動クラフト";
 
@@ -62,10 +76,13 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
         currentPlayerStateService.StateChanged -= OnCurrentPlayerStateChanged;
     }
 
-    partial void OnIsCrafterJobAutoDetectedChanged(bool value)
+    partial void OnDetectionStateChanged(CrafterJobDetectionState value)
     {
+        OnPropertyChanged(nameof(IsCrafterJobAutoDetected));
+        OnPropertyChanged(nameof(IsCurrentJobNonCrafter));
         OnPropertyChanged(nameof(CanChangeCrafterJob));
         OnPropertyChanged(nameof(CrafterJobStatusText));
+        RefreshDisplayedCrafterJobs();
     }
 
     private void SaveSequence(CraftSequence sequence)
@@ -81,17 +98,39 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
     private void UpdateCurrentCrafterJobFromState()
     {
         uint? classJobId = currentPlayerStateService.CurrentState.ClassJobId;
-        CrafterJob? detectedJob = classJobId is not null
-            ? Domain.Models.CrafterJobs.FindByClassJobId(classJobId.Value)
-            : null;
 
-        if (detectedJob is null)
+        if (classJobId is null or 0)
         {
-            IsCrafterJobAutoDetected = false;
+            DetectionState = CrafterJobDetectionState.Unknown;
+            SelectedCrafterJob ??= CrafterJobs.FirstOrDefault();
             return;
         }
 
-        SelectedCrafterJob = CrafterJobs.FirstOrDefault(x => x.Job.ClassJobId == detectedJob.ClassJobId);
-        IsCrafterJobAutoDetected = true;
+        CrafterJob? detectedJob = Domain.Models.CrafterJobs.FindByClassJobId(classJobId.Value);
+        if (detectedJob is not null)
+        {
+            DetectionState = CrafterJobDetectionState.Crafter;
+            SelectedCrafterJob = CrafterJobs.FirstOrDefault(item => item.Job?.ClassJobId == detectedJob.ClassJobId);
+            return;
+        }
+
+        DetectionState = CrafterJobDetectionState.NonCrafter;
+        SelectedCrafterJob = CrafterJobSelectionItemViewModel.NonCrafter;
+    }
+
+    private void RefreshDisplayedCrafterJobs()
+    {
+        DisplayedCrafterJobs.Clear();
+
+        if (DetectionState == CrafterJobDetectionState.NonCrafter)
+        {
+            DisplayedCrafterJobs.Add(CrafterJobSelectionItemViewModel.NonCrafter);
+            return;
+        }
+
+        foreach (CrafterJobSelectionItemViewModel item in CrafterJobs)
+        {
+            DisplayedCrafterJobs.Add(item);
+        }
     }
 }
