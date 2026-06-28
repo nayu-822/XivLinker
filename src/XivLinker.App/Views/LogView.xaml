@@ -39,7 +39,8 @@
                                             BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
                                             BorderThickness="1"
                                             CornerRadius="{StaticResource App.CornerRadius.Control}">
-                                        <ContentPresenter HorizontalAlignment="Center"
+                                        <ContentPresenter ContentSource="Header"
+                                                          HorizontalAlignment="Center"
                                                           VerticalAlignment="Center" />
                                     </Border>
                                     <ControlTemplate.Triggers>
@@ -149,18 +150,12 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="72" />
-                                <ColumnDefinition Width="96" />
-                                <ColumnDefinition Width="140" />
-                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="84" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="&#x6642;&#x523B;" Style="{StaticResource LabelTextStyle}" />
                             <TextBlock Grid.Column="1" Text="&#x65B9;&#x5411;" Style="{StaticResource LabelTextStyle}" />
-                            <TextBlock Grid.Column="2" Text="&#x7A2E;&#x5225;" Style="{StaticResource LabelTextStyle}" />
-                            <TextBlock Grid.Column="3" Text="call / event" Style="{StaticResource LabelTextStyle}" />
-                            <TextBlock Grid.Column="4" Text="rseq" Style="{StaticResource LabelTextStyle}" />
-                            <TextBlock Grid.Column="5" Text="raw JSON" Style="{StaticResource LabelTextStyle}" />
+                            <TextBlock Grid.Column="2" Text="raw JSON" Style="{StaticResource LabelTextStyle}" />
                         </Grid>
 
                         <ListBox Grid.Row="2"
@@ -179,12 +174,6 @@
                                                 <ColumnDefinition Width="8" />
                                                 <ColumnDefinition Width="64" />
                                                 <ColumnDefinition Width="8" />
-                                                <ColumnDefinition Width="88" />
-                                                <ColumnDefinition Width="8" />
-                                                <ColumnDefinition Width="132" />
-                                                <ColumnDefinition Width="8" />
-                                                <ColumnDefinition Width="62" />
-                                                <ColumnDefinition Width="8" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
 
@@ -197,20 +186,6 @@
                                                        Text="{Binding Direction}"
                                                        Style="{StaticResource CaptionTextStyle}" />
                                             <TextBlock Grid.Column="4"
-                                                       VerticalAlignment="Top"
-                                                       Text="{Binding Kind}"
-                                                       Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Grid.Column="6"
-                                                       VerticalAlignment="Top"
-                                                       Text="{Binding Name}"
-                                                       Style="{StaticResource CaptionTextStyle}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding Name}" />
-                                            <TextBlock Grid.Column="8"
-                                                       VerticalAlignment="Top"
-                                                       Text="{Binding SequenceNumberText}"
-                                                       Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Grid.Column="10"
                                                        VerticalAlignment="Center"
                                                        Text="{Binding RawJson}"
                                                        Style="{StaticResource LogTextStyle}"
