@@ -71,6 +71,20 @@ public sealed class CraftSequenceExecutionPreparerTests
         Assert.Contains("null terminator", exception.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("HOTBAR_1_1", 0, 0)]
+    [InlineData("HOTBAR_1_12", 0, 11)]
+    [InlineData("HOTBAR_2_1", 1, 0)]
+    [InlineData("HOTBAR_0_0", 0, 0)]
+    public void TryResolveHotbarCommand_NormalizesToRawCoordinates(string command, byte expectedHotbarId, byte expectedSlotId)
+    {
+        bool resolved = KeybindDatReader.TryResolveHotbarCommand(command, out byte hotbarId, out byte slotId);
+
+        Assert.True(resolved);
+        Assert.Equal(expectedHotbarId, hotbarId);
+        Assert.Equal(expectedSlotId, slotId);
+    }
+
     [Fact]
     public void KeybindDisplayFormatter_FormatsHexKeyAndModifier()
     {
@@ -104,6 +118,62 @@ public sealed class CraftSequenceExecutionPreparerTests
             Assert.Equal("1", binding.KeyGestureText);
             Assert.Empty(result.MissingActions);
             Assert.Empty(result.UnboundActions);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReturnsBindings_WhenHotbarUsesRawZeroBasedCoordinates()
+    {
+        string rootPath = CreateTempDirectory();
+
+        try
+        {
+            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
+            WriteDatFiles(
+                rootPath,
+                CreateHotbarDatBytes(
+                    [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 0, 0, (byte)HotbarSlotKind.Action)]),
+                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
+
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
+
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+            Assert.True(result.CanRun);
+            Assert.Single(result.ActionKeyBindings);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReturnsBindings_WhenHotbarUsesOneBasedCoordinates()
+    {
+        string rootPath = CreateTempDirectory();
+
+        try
+        {
+            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
+            WriteDatFiles(
+                rootPath,
+                CreateHotbarDatBytes(
+                    [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
+                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
+
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
+
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+            Assert.True(result.CanRun);
+            Assert.Single(result.ActionKeyBindings);
         }
         finally
         {

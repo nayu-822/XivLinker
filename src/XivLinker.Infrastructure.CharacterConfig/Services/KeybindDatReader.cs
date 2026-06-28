@@ -13,18 +13,30 @@ public sealed partial class KeybindDatReader
     private static readonly IReadOnlyDictionary<string, (byte HotbarId, byte SlotId)> HotbarCommandMap =
         new Dictionary<string, (byte HotbarId, byte SlotId)>(StringComparer.OrdinalIgnoreCase)
         {
-            ["HOTBAR_1_1"] = (1, 1),
-            ["HOTBAR_1_2"] = (1, 2),
-            ["HOTBAR_1_3"] = (1, 3),
-            ["HOTBAR_1_4"] = (1, 4),
-            ["HOTBAR_1_5"] = (1, 5),
-            ["HOTBAR_1_6"] = (1, 6),
-            ["HOTBAR_1_7"] = (1, 7),
-            ["HOTBAR_1_8"] = (1, 8),
-            ["HOTBAR_1_9"] = (1, 9),
-            ["HOTBAR_1_10"] = (1, 10),
-            ["HOTBAR_1_11"] = (1, 11),
-            ["HOTBAR_1_12"] = (1, 12),
+            ["HOTBAR_0_0"] = (0, 0),
+            ["HOTBAR_0_1"] = (0, 1),
+            ["HOTBAR_0_2"] = (0, 2),
+            ["HOTBAR_0_3"] = (0, 3),
+            ["HOTBAR_0_4"] = (0, 4),
+            ["HOTBAR_0_5"] = (0, 5),
+            ["HOTBAR_0_6"] = (0, 6),
+            ["HOTBAR_0_7"] = (0, 7),
+            ["HOTBAR_0_8"] = (0, 8),
+            ["HOTBAR_0_9"] = (0, 9),
+            ["HOTBAR_0_10"] = (0, 10),
+            ["HOTBAR_0_11"] = (0, 11),
+            ["HOTBAR_1_1"] = (0, 0),
+            ["HOTBAR_1_2"] = (0, 1),
+            ["HOTBAR_1_3"] = (0, 2),
+            ["HOTBAR_1_4"] = (0, 3),
+            ["HOTBAR_1_5"] = (0, 4),
+            ["HOTBAR_1_6"] = (0, 5),
+            ["HOTBAR_1_7"] = (0, 6),
+            ["HOTBAR_1_8"] = (0, 7),
+            ["HOTBAR_1_9"] = (0, 8),
+            ["HOTBAR_1_10"] = (0, 9),
+            ["HOTBAR_1_11"] = (0, 10),
+            ["HOTBAR_1_12"] = (0, 11),
         };
 
     private readonly ILogger<KeybindDatReader> logger;
@@ -71,10 +83,13 @@ public sealed partial class KeybindDatReader
             entries.Add(entry);
 
             logger.LogInformation(
-                "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}",
+                "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}, RawBinding: {RawBinding}, CommandSectionType: {CommandSectionType}, BindingSectionType: {BindingSectionType}",
                 entry.Command,
                 KeybindDisplayFormatter.Format(entry.Primary),
-                KeybindDisplayFormatter.Format(entry.Secondary));
+                KeybindDisplayFormatter.Format(entry.Secondary),
+                entry.RawBindingText,
+                entry.CommandSectionType,
+                entry.BindingSectionType);
         }
 
         return entries;
@@ -120,14 +135,47 @@ public sealed partial class KeybindDatReader
                 continue;
             }
 
-            if (!byte.TryParse(match.Groups[1].Value, out hotbarId)
-                || !byte.TryParse(match.Groups[2].Value, out slotId))
+            if (!byte.TryParse(match.Groups[1].Value, out byte parsedHotbarId)
+                || !byte.TryParse(match.Groups[2].Value, out byte parsedSlotId))
             {
                 return false;
             }
 
-            return hotbarId is >= 1 and <= 10
-                && slotId is >= 1 and <= 12;
+            return TryNormalizeHotbarCoordinates(parsedHotbarId, parsedSlotId, out hotbarId, out slotId);
+        }
+
+        return false;
+    }
+
+    private static bool TryNormalizeHotbarCoordinates(
+        byte parsedHotbarId,
+        byte parsedSlotId,
+        out byte hotbarId,
+        out byte slotId)
+    {
+        hotbarId = 0;
+        slotId = 0;
+
+        if (parsedHotbarId <= 9 && parsedSlotId <= 11 && (parsedHotbarId == 0 || parsedSlotId == 0))
+        {
+            hotbarId = parsedHotbarId;
+            slotId = parsedSlotId;
+            return true;
+        }
+
+        if (parsedHotbarId is >= 1 and <= 10
+            && parsedSlotId is >= 1 and <= 12)
+        {
+            hotbarId = (byte)(parsedHotbarId - 1);
+            slotId = (byte)(parsedSlotId - 1);
+            return true;
+        }
+
+        if (parsedHotbarId <= 9 && parsedSlotId <= 11)
+        {
+            hotbarId = parsedHotbarId;
+            slotId = parsedSlotId;
+            return true;
         }
 
         return false;

@@ -105,6 +105,15 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 continue;
             }
 
+            logger.LogInformation(
+                "Craft action hotbar slot resolved. Action: {Action}, LuminaActionId: {LuminaActionId}, GroupId: {GroupId}, HotbarId: {HotbarId}, SlotId: {SlotId}, SlotTypeId: {SlotTypeId}",
+                requiredAction.ActionName,
+                requiredAction.LuminaActionId,
+                slot.GroupId,
+                slot.HotbarId,
+                slot.SlotId,
+                slot.SlotTypeId);
+
             KeybindEntry? keybind = ResolveKeybindForHotbarSlot(keybindEntries, slot.HotbarId, slot.SlotId);
             if (keybind is null)
             {
@@ -141,7 +150,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         return slot.GroupId == 0 || slot.GroupId == crafterJob.ClassJobId;
     }
 
-    private static KeybindEntry? ResolveKeybindForHotbarSlot(
+    private KeybindEntry? ResolveKeybindForHotbarSlot(
         IReadOnlyList<KeybindEntry> keybindEntries,
         byte hotbarId,
         byte slotId)
@@ -153,12 +162,42 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 continue;
             }
 
-            if (resolvedHotbarId == hotbarId && resolvedSlotId == slotId)
+            logger.LogInformation(
+                "KEYBIND hotbar command resolved. Command: {Command}, ResolvedHotbarId: {ResolvedHotbarId}, ResolvedSlotId: {ResolvedSlotId}, Primary: {Primary}, Secondary: {Secondary}",
+                entry.Command,
+                resolvedHotbarId,
+                resolvedSlotId,
+                KeybindDisplayFormatter.Format(entry.Primary),
+                KeybindDisplayFormatter.Format(entry.Secondary));
+
+            if (IsMatchingHotbarSlot(hotbarId, slotId, resolvedHotbarId, resolvedSlotId))
             {
                 return entry;
             }
         }
 
+        logger.LogWarning(
+            "No KEYBIND entry matched HOTBAR slot. HotbarId: {HotbarId}, SlotId: {SlotId}",
+            hotbarId,
+            slotId);
+
         return null;
+    }
+
+    private static bool IsMatchingHotbarSlot(
+        byte hotbarId,
+        byte slotId,
+        byte resolvedHotbarId,
+        byte resolvedSlotId)
+    {
+        if (resolvedHotbarId == hotbarId && resolvedSlotId == slotId)
+        {
+            return true;
+        }
+
+        return hotbarId > 0
+            && slotId > 0
+            && resolvedHotbarId == hotbarId - 1
+            && resolvedSlotId == slotId - 1;
     }
 }
