@@ -20,25 +20,30 @@ public sealed class MapCoordinateCalculatorTests
     }
 
     [Fact]
-    public void ConvertWorldToMapCoordinate_MatchesReferenceFormula()
+    public void ConvertWorldToMapCoordinate_UsesReferenceFormula()
     {
-        double position = 100d;
-        double offset = 0d;
-        double sizeFactor = 100d;
-        double scale = sizeFactor / 100d;
-        double expected = Math.Truncate((((((position + offset) * scale) + 1024d) / 2048d) * 41d / scale + 1d) * 10d) / 10d;
+        double position = 143.964;
+        double offset = -657.0;
+        double sizeFactor = 100.0;
 
-        double actual = MapCoordinateCalculator.ConvertWorldToMapCoordinate(position, offset, sizeFactor);
+        double scale = sizeFactor / 100d;
+        double expected = Math.Truncate(
+            (((((position + offset) * scale) + 1024d) / 2048d) * 41d / scale + 1d) * 10d) / 10d;
+
+        double actual = MapCoordinateCalculator.ConvertWorldToMapCoordinate(
+            position,
+            offset,
+            sizeFactor);
 
         Assert.Equal(expected, actual);
     }
 
     [Fact]
-    public void FormatCoordinates_FormatsWithSingleDecimal()
+    public void FormatCoordinates_UsesDashboardFormat()
     {
-        string actual = MapCoordinateCalculator.FormatCoordinates(12.34, 8.76);
+        string actual = MapCoordinateCalculator.FormatCoordinates(14.1, 14.1);
 
-        Assert.Equal("X: 12.3 / Y: 8.8", actual);
+        Assert.Equal("X: 14.1 / Y: 14.1", actual);
     }
 
     [Fact]

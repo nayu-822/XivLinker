@@ -143,46 +143,45 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
 
             logger.LogInformation(
                 "Map coordinate resolution detail: {ResolutionDetail}",
-                DescribeMapCoordinateResolutionAcrossLanguages(data, mapId, territoryTypeId, mapName, rawX, rawY));
+                DescribeMapCoordinateResolutionAcrossLanguages(data, mapId, territoryTypeId, mapName, rawX, rawY, rawZ));
 
             ResolvedMapLocation? location = await Task.Run(
-                () => ResolveMapLocationCore(data, territoryTypeId, mapId, mapName, rawX, rawY),
+                () => ResolveMapLocationCore(data, territoryTypeId, mapId, mapName, rawX, rawY, rawZ),
                 cancellationToken);
 
             if (location is null)
             {
                 logger.LogWarning(
-                    "Map resolve returned null. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawY: {RawY}",
-                    territoryTypeId,
-                    mapId,
-                    rawX,
-                    rawY);
-                return null;
-            }
-
-            if (string.IsNullOrWhiteSpace(location.IssueMessage))
-            {
-                logger.LogDebug(
-                    "Map resolved. Source: {Source}, TerritoryTypeFound: {TerritoryTypeFound}, TerritoryType.Map found: {TerritoryMapFound}, Map.RowId: {MapRowId}, MapName: {MapName}, OffsetX: {OffsetX}, OffsetY: {OffsetY}, SizeFactor: {SizeFactor}",
-                    location.ResolutionSource,
-                    location.TerritoryTypeFound,
-                    location.TerritoryMapFound,
-                    location.MapId,
-                    location.MapName,
-                    location.OffsetX,
-                    location.OffsetY,
-                    location.SizeFactor);
-            }
-            else
-            {
-                logger.LogWarning(
-                    "Map resolve failed. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawY: {RawY}, TerritoryTypeFound: {TerritoryTypeFound}, TerritoryType.Map found: {TerritoryMapFound}, Issue: {IssueMessage}",
+                    "Map resolve returned null. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}",
                     territoryTypeId,
                     mapId,
                     rawX,
                     rawY,
-                    location.TerritoryTypeFound,
-                    location.TerritoryMapFound,
+                    rawZ);
+                return null;
+            }
+
+            logger.LogInformation(
+                "Map coordinate conversion result. Source: {Source}, MapRowId: {MapRowId}, MapName: {MapName}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}, OffsetX: {OffsetX}, OffsetY: {OffsetY}, SizeFactor: {SizeFactor}, MapX: {MapX}, MapY: {MapY}, CoordinatesText: {CoordinatesText}",
+                location.ResolutionSource,
+                location.MapId,
+                location.MapName,
+                location.RawX,
+                location.RawY,
+                location.RawZ,
+                location.OffsetX,
+                location.OffsetY,
+                location.SizeFactor,
+                location.MapX,
+                location.MapY,
+                location.CoordinatesText);
+
+            if (!string.IsNullOrWhiteSpace(location.IssueMessage))
+            {
+                logger.LogWarning(
+                    "Map resolve issue. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, Issue: {IssueMessage}",
+                    territoryTypeId,
+                    mapId,
                     location.IssueMessage);
             }
 
@@ -197,6 +196,9 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 MapName = "マップ情報を取得できません",
                 CoordinatesText = MapCoordinateCalculator.CoordinateConversionFailedText,
                 IssueMessage = "マップ情報の解決に失敗しました。",
+                RawX = rawX,
+                RawY = rawY,
+                RawZ = rawZ,
             };
         }
     }
@@ -285,7 +287,8 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         uint? mapId,
         string? requestedMapName,
         float rawX,
-        float rawY)
+        float rawY,
+        float rawZ)
     {
         MapResolutionResult? failedResult = null;
 
@@ -301,13 +304,13 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             if (resolution.Map is not null)
             {
                 string? resolvedMapName = resolution.MapName ?? requestedMapName;
-
                 return CreateResolvedMapLocation(
                     resolution.Map.Value,
                     territoryTypeId,
                     resolvedMapName,
                     rawX,
                     rawY,
+                    rawZ,
                     $"{resolution.Source} ({language})",
                     resolution.TerritoryTypeFound,
                     resolution.TerritoryMapFound);
@@ -317,7 +320,6 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         }
 
         string? fallbackMapName = failedResult?.MapName ?? requestedMapName;
-
         return new ResolvedMapLocation
         {
             MapId = mapId ?? 0,
@@ -330,6 +332,9 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             CoordinatesText = MapCoordinateCalculator.CoordinateConversionFailedText,
             IssueMessage = failedResult?.Issue
                 ?? $"{MapResolveFailedText} TerritoryTypeId={territoryTypeId}, CurrentMapID={mapId}",
+            RawX = rawX,
+            RawY = rawY,
+            RawZ = rawZ,
         };
     }
 
@@ -340,35 +345,38 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         string? mapName,
         Language language)
     {
+        MapResolutionCandidate? mapIdCandidate = ResolveMapRowFromMapId(data, mapId, language);
+        if (mapIdCandidate?.Map is Map resolvedMapIdMap
+            && IsUsableMapForCoordinates(resolvedMapIdMap))
+        {
+            return MapResolutionResult.Success(
+                resolvedMapIdMap,
+                mapIdCandidate.Source,
+                mapIdCandidate.TerritoryTypeId,
+                mapIdCandidate.MapName,
+                territoryTypeFound: false,
+                territoryMapFound: false);
+        }
+
         MapResolutionCandidate? territoryCandidate = ResolveMapRowFromTerritoryType(data, territoryTypeId, language);
         bool territoryTypeFound = territoryCandidate is not null;
         bool territoryMapFound = territoryCandidate?.Map is Map territoryMap && territoryMap.RowId != 0;
 
-        if (territoryCandidate?.Map is Map resolvedTerritoryMap && IsUsableMapForCoordinates(resolvedTerritoryMap))
+        if (territoryCandidate?.Map is Map resolvedTerritoryMap
+            && IsUsableMapForCoordinates(resolvedTerritoryMap))
         {
             return MapResolutionResult.Success(
                 resolvedTerritoryMap,
                 territoryCandidate.Source,
                 territoryCandidate.TerritoryTypeId,
                 territoryCandidate.MapName,
-                territoryTypeFound: true,
-                territoryMapFound: true);
-        }
-
-        MapResolutionCandidate? mapIdCandidate = ResolveMapRowFromMapId(data, mapId, language);
-        if (mapIdCandidate?.Map is Map resolvedMapIdMap && IsUsableMapForCoordinates(resolvedMapIdMap))
-        {
-            return MapResolutionResult.Success(
-                resolvedMapIdMap,
-                mapIdCandidate.Source,
-                territoryCandidate?.TerritoryTypeId,
-                mapIdCandidate.MapName ?? territoryCandidate?.MapName,
                 territoryTypeFound,
                 territoryMapFound);
         }
 
         MapResolutionCandidate? mapNameCandidate = ResolveMapRowByMapName(data, mapName, language);
-        if (mapNameCandidate?.Map is Map resolvedMapNameMap && IsUsableMapForCoordinates(resolvedMapNameMap))
+        if (mapNameCandidate?.Map is Map resolvedMapNameMap
+            && IsUsableMapForCoordinates(resolvedMapNameMap))
         {
             return MapResolutionResult.Success(
                 resolvedMapNameMap,
@@ -534,13 +542,14 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         uint? mapId,
         uint? territoryTypeId,
         string? mapName,
-        double posX,
-        double posY)
+        double rawX,
+        double rawY,
+        double rawZ)
     {
         return string.Join(
             " || ",
             MapResolutionLanguages.Select(language =>
-                $"{language}: {DescribeMapCoordinateResolution(data, mapId, territoryTypeId, mapName, posX, posY, language)}"));
+                $"{language}: {DescribeMapCoordinateResolution(data, mapId, territoryTypeId, mapName, rawX, rawY, rawZ, language)}"));
     }
 
     private static string DescribeMapCoordinateResolution(
@@ -548,33 +557,42 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         uint? mapId,
         uint? territoryTypeId,
         string? mapName,
-        double posX,
-        double posY,
+        double rawX,
+        double rawY,
+        double rawZ,
         Language language)
     {
         string territoryMapDescription = DescribeResolvedMapRow(
             "territoryType.Map",
             ResolveMapRowFromTerritoryType(data, territoryTypeId, language)?.Map,
-            posX,
-            posY);
+            rawX,
+            rawY,
+            rawZ);
         string directMapDescription = DescribeResolvedMapRow(
             "mapId",
             ResolveMapRowFromMapId(data, mapId, language)?.Map,
-            posX,
-            posY);
+            rawX,
+            rawY,
+            rawZ);
         string nameMapDescription = DescribeResolvedMapRow(
             "mapName",
             ResolveMapRowByMapName(data, mapName, language)?.Map,
-            posX,
-            posY);
+            rawX,
+            rawY,
+            rawZ);
 
         MapResolutionResult final = ResolveMapRow(data, mapId, territoryTypeId, mapName, language);
-        string finalDescription = DescribeResolvedMapRow("final", final.Map, posX, posY);
+        string finalDescription = DescribeResolvedMapRow("selected", final.Map, rawX, rawY, rawZ);
 
         return $"input(mapId={mapId?.ToString() ?? "-"}, territoryTypeId={territoryTypeId?.ToString() ?? "-"}, mapName={mapName ?? "-"}) | {territoryMapDescription} | {directMapDescription} | {nameMapDescription} | {finalDescription}";
     }
 
-    private static string DescribeResolvedMapRow(string source, Map? map, double posX, double posY)
+    private static string DescribeResolvedMapRow(
+        string source,
+        Map? map,
+        double rawX,
+        double rawY,
+        double rawZ)
     {
         if (map is null)
         {
@@ -587,10 +605,20 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             return $"{source}=row:{map.Value.RowId} place:{placeName ?? "-"} size:{map.Value.SizeFactor} invalid-coordinates";
         }
 
-        double standardX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(posX, map.Value.OffsetX, map.Value.SizeFactor);
-        double standardY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(posY, map.Value.OffsetY, map.Value.SizeFactor);
+        double standardX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(
+            rawX,
+            map.Value.OffsetX,
+            map.Value.SizeFactor);
+        double standardY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(
+            rawY,
+            map.Value.OffsetY,
+            map.Value.SizeFactor);
+        double zBasedY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(
+            rawZ,
+            map.Value.OffsetY,
+            map.Value.SizeFactor);
 
-        return $"{source}=row:{map.Value.RowId} place:{placeName ?? "-"} size:{map.Value.SizeFactor} offsetX:{map.Value.OffsetX} offsetY:{map.Value.OffsetY} standard:X:{standardX:0.000}/Y:{standardY:0.000}";
+        return $"{source}=row:{map.Value.RowId} place:{placeName ?? "-"} size:{map.Value.SizeFactor} offsetX:{map.Value.OffsetX} offsetY:{map.Value.OffsetY} rawX:{rawX:0.###} rawY:{rawY:0.###} rawZ:{rawZ:0.###} standard:X:{standardX:0.000}/Y:{standardY:0.000} zBased:X:{standardX:0.000}/Y:{zBasedY:0.000}";
     }
 
     private static ResolvedClassJobInfo? ResolveClassJobCore(GameData data, uint classJobId, int? level)
@@ -637,23 +665,35 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         string? mapName,
         float rawX,
         float rawY,
+        float rawZ,
         string? resolutionSource,
         bool territoryTypeFound,
         bool territoryMapFound)
     {
-        double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawX, map.OffsetX, map.SizeFactor);
-        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawY, map.OffsetY, map.SizeFactor);
+        double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(
+            rawX,
+            map.OffsetX,
+            map.SizeFactor);
+        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(
+            rawY,
+            map.OffsetY,
+            map.SizeFactor);
 
         return new ResolvedMapLocation
         {
             MapId = map.RowId,
-            MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId ?? 0}" : mapName,
+            MapName = string.IsNullOrWhiteSpace(mapName)
+                ? $"Territory ID: {territoryTypeId ?? 0}"
+                : mapName,
             ResolutionSource = resolutionSource,
             TerritoryTypeFound = territoryTypeFound,
             TerritoryMapFound = territoryMapFound,
             OffsetX = map.OffsetX,
             OffsetY = map.OffsetY,
             SizeFactor = map.SizeFactor,
+            RawX = rawX,
+            RawY = rawY,
+            RawZ = rawZ,
             MapX = mapX,
             MapY = mapY,
             CoordinatesText = MapCoordinateCalculator.FormatCoordinates(mapX, mapY),

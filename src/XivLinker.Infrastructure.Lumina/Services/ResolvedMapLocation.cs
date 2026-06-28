@@ -12,11 +12,17 @@ public sealed class ResolvedMapLocation
 
     public bool TerritoryMapFound { get; init; }
 
-    public short OffsetX { get; init; }
+    public double OffsetX { get; init; }
 
-    public short OffsetY { get; init; }
+    public double OffsetY { get; init; }
 
-    public ushort SizeFactor { get; init; }
+    public double SizeFactor { get; init; }
+
+    public float RawX { get; init; }
+
+    public float RawY { get; init; }
+
+    public float RawZ { get; init; }
 
     public double MapX { get; init; }
 
