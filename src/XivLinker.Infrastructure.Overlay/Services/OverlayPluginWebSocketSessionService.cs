@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
+using XivLinker.Infrastructure.Overlay.Models;
 
 namespace XivLinker.Infrastructure.Overlay.Services;
 
@@ -13,6 +14,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly SemaphoreSlim sendGate = new(1, 1);
     private readonly ConcurrentDictionary<long, byte> ignoredResponses = new();
+    private readonly ConcurrentDictionary<long, string> requestNames = new();
     private readonly ConcurrentDictionary<long, TaskCompletionSource<string>> pendingRequests = new();
     private readonly TimeSpan requestTimeout;
     private readonly Uri webSocketUri;
@@ -29,6 +31,8 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     }
 
     public event EventHandler? ConnectionStateChanged;
+
+    public event EventHandler<OverlayWebSocketCommunicationLogEntry>? CommunicationLogged;
 
     public event EventHandler<string>? EventReceived;
 
@@ -102,15 +106,17 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
             sequence = CreateSequence();
             pendingRequests[sequence] = completionSource;
+            requestNames[sequence] = call;
 
             JsonObject payload = OverlayPluginRequestFactory.CreateRequestPayload(call, sequence, parameters);
-            await SendJsonAsync(payload.ToJsonString(), cancellationToken);
+            await SendJsonAsync(payload.ToJsonString(), call, cancellationToken);
         }
         catch
         {
             if (sequence > 0)
             {
                 pendingRequests.TryRemove(sequence, out _);
+                requestNames.TryRemove(sequence, out _);
             }
 
             throw;
@@ -130,6 +136,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         }
 
         pendingRequests.TryRemove(sequence, out _);
+        requestNames.TryRemove(sequence, out _);
 
         if (completedTask == cancellationTask)
         {
@@ -154,15 +161,17 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
             sequence = CreateSequence();
             ignoredResponses[sequence] = 0;
+            requestNames[sequence] = call;
 
             JsonObject payload = OverlayPluginRequestFactory.CreateRequestPayload(call, sequence, parameters);
-            await SendJsonAsync(payload.ToJsonString(), cancellationToken);
+            await SendJsonAsync(payload.ToJsonString(), call, cancellationToken);
         }
         catch
         {
             if (sequence > 0)
             {
                 ignoredResponses.TryRemove(sequence, out _);
+                requestNames.TryRemove(sequence, out _);
             }
 
             throw;
@@ -200,9 +209,10 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         webSocket?.Dispose();
     }
 
-    private async Task SendJsonAsync(string json, CancellationToken cancellationToken)
+    private async Task SendJsonAsync(string json, string? call, CancellationToken cancellationToken)
     {
         EnsureConnected();
+        LogCommunication("送信", json, call);
 
         byte[] bytes = Encoding.UTF8.GetBytes(json);
         using CancellationTokenSource timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -266,23 +276,29 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
     private void DispatchMessage(string rawJson)
     {
+        long? responseSequence = TryReadSequenceNumber(rawJson);
+        string? responseName = responseSequence is long sequence && requestNames.TryGetValue(sequence, out string? call)
+            ? call
+            : null;
+        LogCommunication("受信", rawJson, responseName);
+
         try
         {
             using JsonDocument document = JsonDocument.Parse(rawJson);
             JsonElement root = document.RootElement;
 
-            if (root.TryGetProperty("rseq", out JsonElement rseqElement)
-                && rseqElement.ValueKind == JsonValueKind.Number
-                && rseqElement.TryGetInt64(out long rseq))
+            if (TryReadSequenceNumber(root, out long rseq))
             {
                 if (pendingRequests.TryRemove(rseq, out TaskCompletionSource<string>? completionSource))
                 {
+                    requestNames.TryRemove(rseq, out _);
                     completionSource.TrySetResult(rawJson);
                     return;
                 }
 
                 if (ignoredResponses.TryRemove(rseq, out _))
                 {
+                    requestNames.TryRemove(rseq, out _);
                     return;
                 }
             }
@@ -345,6 +361,7 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     private void FailPendingRequests(string message)
     {
         ignoredResponses.Clear();
+        requestNames.Clear();
 
         foreach ((long sequence, TaskCompletionSource<string> completionSource) in pendingRequests.ToArray())
         {
@@ -366,5 +383,65 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         {
             throw new InvalidOperationException("OverlayPlugin WebSocket is not connected.");
         }
+    }
+
+    private void LogCommunication(string direction, string rawJson, string? fallbackName)
+    {
+        OverlayWebSocketCommunicationLogEntry entry = OverlayWebSocketCommunicationLogEntryFactory.Create(
+            direction,
+            rawJson,
+            fallbackName);
+        CommunicationLogged?.Invoke(this, entry);
+    }
+
+    private static long? TryReadSequenceNumber(string rawJson)
+    {
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(rawJson);
+            return TryReadSequenceNumber(document.RootElement, out long sequenceNumber)
+                ? sequenceNumber
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryReadSequenceNumber(JsonElement root, out long sequenceNumber)
+    {
+        if (root.TryGetProperty("rseq", out JsonElement property))
+        {
+            return TryConvertSequenceNumber(property, out sequenceNumber);
+        }
+
+        foreach (JsonProperty candidate in root.EnumerateObject())
+        {
+            if (string.Equals(candidate.Name, "rseq", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryConvertSequenceNumber(candidate.Value, out sequenceNumber);
+            }
+        }
+
+        sequenceNumber = 0;
+        return false;
+    }
+
+    private static bool TryConvertSequenceNumber(JsonElement property, out long sequenceNumber)
+    {
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetInt64(out sequenceNumber))
+        {
+            return true;
+        }
+
+        if (property.ValueKind == JsonValueKind.String
+            && long.TryParse(property.GetString(), out sequenceNumber))
+        {
+            return true;
+        }
+
+        sequenceNumber = 0;
+        return false;
     }
 }

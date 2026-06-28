@@ -1,8 +1,11 @@
+using XivLinker.Infrastructure.Overlay.Models;
+
 namespace XivLinker.Infrastructure.Overlay.Services;
 
 public interface IOverlayPluginWebSocketSessionService
 {
     event EventHandler? ConnectionStateChanged;
+    event EventHandler<OverlayWebSocketCommunicationLogEntry>? CommunicationLogged;
     event EventHandler<string>? EventReceived;
 
     bool IsStarted

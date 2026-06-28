@@ -42,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AutoCraftExecutionService>();
 
         services.AddSingleton<AppEventLogViewModel>();
+        services.AddSingleton<OverlayWebSocketLogViewModel>();
         services.AddSingleton<DashboardStatusViewModel>();
         services.AddSingleton<DataSourceStatusViewModel>();
         services.AddSingleton<DashboardViewModel>();
