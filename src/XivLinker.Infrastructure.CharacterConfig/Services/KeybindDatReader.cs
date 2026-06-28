@@ -26,26 +26,44 @@ public sealed partial class KeybindDatReader
             xorKey: XorKey,
             fileName: "KEYBIND.DAT");
 
+        logger.LogInformation(
+            "KEYBIND.DAT decoded. DecodedLength: {Length}, FirstBytes: {FirstBytes}",
+            content.Length,
+            ToHex(content, 64));
+
         var entries = new List<KeybindEntry>();
         int offset = 0;
 
         while (offset < content.Length)
         {
-            string command = ReadSectionString(content, ref offset, expectedType: 'T');
-            string keyString = ReadSectionString(content, ref offset, expectedType: 'C');
-
-            KeybindEntry entry = ParseKeybindEntry(command, keyString);
-            if (string.IsNullOrWhiteSpace(entry.Command))
+            try
             {
-                continue;
-            }
+                string command = ReadSectionString(content, ref offset, expectedType: 'T');
+                string keyString = ReadSectionString(content, ref offset, expectedType: 'C');
 
-            entries.Add(entry);
-            logger.LogDebug(
-                "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}",
-                entry.Command,
-                entry.Primary?.DisplayText,
-                entry.Secondary?.DisplayText);
+                KeybindEntry entry = ParseKeybindEntry(command, keyString);
+                if (string.IsNullOrWhiteSpace(entry.Command))
+                {
+                    continue;
+                }
+
+                entries.Add(entry);
+                logger.LogDebug(
+                    "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}",
+                    entry.Command,
+                    entry.Primary?.DisplayText,
+                    entry.Secondary?.DisplayText);
+            }
+            catch (InvalidDataException exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "KEYBIND.DAT section parse failed. Offset: {Offset}, Remaining: {Remaining}, NearBytes: {NearBytes}",
+                    offset,
+                    content.Length - offset,
+                    ToHex(content.AsSpan(offset, Math.Min(64, content.Length - offset)).ToArray(), 64));
+                throw;
+            }
         }
 
         return entries;
@@ -82,6 +100,13 @@ public sealed partial class KeybindDatReader
                 entry.Command,
                 gesture.DisplayText,
                 gesture.Keys));
+        }
+
+        if (result.Count == 0)
+        {
+            logger.LogWarning(
+                "No hotbar keybind commands were resolved from KEYBIND.DAT. Commands: {Commands}",
+                string.Join(", ", entries.Select(static entry => entry.Command)));
         }
 
         return result;
@@ -128,8 +153,13 @@ public sealed partial class KeybindDatReader
     {
         string[] parts = keyString.Split(',', StringSplitOptions.None);
 
-        KeybindGesture? primary = parts.Length > 0 ? ParseGesture(parts[0]) : null;
-        KeybindGesture? secondary = parts.Length > 1 ? ParseGesture(parts[1]) : null;
+        KeybindGesture? primary = parts.Length > 0
+            ? ParseGesture(parts[0])
+            : null;
+
+        KeybindGesture? secondary = parts.Length > 1
+            ? ParseGesture(parts[1])
+            : null;
 
         return new KeybindEntry(command.Trim(), primary, secondary);
     }
@@ -158,8 +188,8 @@ public sealed partial class KeybindDatReader
         }
 
         keys.Add(NormalizeKey(key));
-        string displayText = string.Join("+", keys);
 
+        string displayText = string.Join("+", keys);
         return new KeybindGesture(key, modifier, displayText, keys);
     }
 
@@ -210,6 +240,7 @@ public sealed partial class KeybindDatReader
         slotNumber = 0;
 
         string normalized = command.Trim();
+
         if (normalized.Contains("CROSS", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("XHB", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("CHOTBAR", StringComparison.OrdinalIgnoreCase))
@@ -217,26 +248,34 @@ public sealed partial class KeybindDatReader
             return false;
         }
 
-        if (!normalized.Contains("HOTBAR", StringComparison.OrdinalIgnoreCase)
-            && !normalized.Contains("HBAR", StringComparison.OrdinalIgnoreCase)
-            && !normalized.Contains("HOT", StringComparison.OrdinalIgnoreCase))
+        string[] patterns =
+        [
+            @"HOTBAR[_\s]*(\d+)[_\s]*(\d+)",
+            @"HBAR[_\s]*(\d+)[_\s]*(\d+)",
+            @"HOTBAR(\d+)[_\s]*(\d+)",
+            @"HOTBAR_SLOT[_\s]*(\d+)[_\s]*(\d+)",
+        ];
+
+        foreach (string pattern in patterns)
         {
-            return false;
+            Match match = Regex.Match(normalized, pattern, RegexOptions.IgnoreCase);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            hotbarNumber = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            slotNumber = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+
+            return hotbarNumber is >= 1 and <= 10
+                && slotNumber is >= 1 and <= 12;
         }
 
-        MatchCollection numbers = HotbarCommandNumberRegex().Matches(normalized);
-        if (numbers.Count < 2)
-        {
-            return false;
-        }
-
-        hotbarNumber = int.Parse(numbers[^2].Value, CultureInfo.InvariantCulture);
-        slotNumber = int.Parse(numbers[^1].Value, CultureInfo.InvariantCulture);
-
-        return hotbarNumber is >= 1 and <= 10
-            && slotNumber is >= 1 and <= 12;
+        return false;
     }
 
-    [GeneratedRegex(@"\d+")]
-    private static partial Regex HotbarCommandNumberRegex();
+    private static string ToHex(byte[] bytes, int maxLength)
+    {
+        return Convert.ToHexString(bytes.AsSpan(0, Math.Min(bytes.Length, maxLength)));
+    }
 }

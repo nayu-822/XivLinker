@@ -22,10 +22,19 @@ internal static class DatFileContentReader
         }
 
         uint headerMaxSize = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(0x04, 4));
-        uint headerContentSize = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(0x08, 4));
+        uint headerValidDataSize = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(0x08, 4));
 
-        int expectedFileSize = checked((int)headerMaxSize + MaxSizeOffset);
-        int contentSize = checked((int)headerContentSize + ContentSizeOffset);
+        int expectedFileSize;
+        int validDataEndOffset;
+        try
+        {
+            expectedFileSize = checked((int)headerMaxSize + MaxSizeOffset);
+            validDataEndOffset = checked((int)headerValidDataSize + ContentSizeOffset);
+        }
+        catch (OverflowException exception)
+        {
+            throw new InvalidDataException($"{fileName} のヘッダー値が不正です。", exception);
+        }
 
         if (expectedFileSize != fileBytes.Length)
         {
@@ -33,19 +42,25 @@ internal static class DatFileContentReader
                 $"{fileName} のファイルサイズがヘッダーと一致しません。expected={expectedFileSize}, actual={fileBytes.Length}");
         }
 
-        if (contentSize <= 0 || HeaderSize + contentSize > fileBytes.Length + 1)
+        if (validDataEndOffset <= HeaderSize || validDataEndOffset > fileBytes.Length)
         {
             throw new InvalidDataException(
-                $"{fileName} のcontent sizeが不正です。contentSize={contentSize}, fileSize={fileBytes.Length}");
+                $"{fileName} の有効データサイズが不正です。validDataEndOffset={validDataEndOffset}, fileSize={fileBytes.Length}");
         }
 
+        int decodedContentLength = validDataEndOffset - HeaderSize;
         byte[] content = fileBytes
-            .AsSpan(HeaderSize, contentSize - 1)
+            .AsSpan(HeaderSize, decodedContentLength)
             .ToArray();
 
         for (int index = 0; index < content.Length; index++)
         {
             content[index] ^= xorKey;
+        }
+
+        if (content.Length > 0 && content[^1] == 0)
+        {
+            Array.Resize(ref content, content.Length - 1);
         }
 
         return content;

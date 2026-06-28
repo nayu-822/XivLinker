@@ -30,6 +30,21 @@ public sealed class HotbarDatReader
             xorKey: XorKey,
             fileName: "HOTBAR.DAT");
 
+        logger.LogInformation(
+            "HOTBAR.DAT decoded. DecodedLength: {Length}, FirstBytes: {FirstBytes}",
+            content.Length,
+            ToHex(content, 128));
+
+        foreach (uint actionId in knownCraftActionIds)
+        {
+            IReadOnlyList<int> offsets = FindUInt32Offsets(content, actionId).Take(20).ToArray();
+
+            logger.LogDebug(
+                "HOTBAR.DAT action id occurrence diagnostic. ActionId: {ActionId}, Offsets: {Offsets}",
+                actionId,
+                string.Join(", ", offsets.Select(static offset => $"0x{offset:X}")));
+        }
+
         IReadOnlyList<HotbarSlotEntry> entries = TryReadKnownLayout(content, crafterJob, knownCraftActionIds);
         if (entries.Count > 0)
         {
@@ -50,7 +65,7 @@ public sealed class HotbarDatReader
         }
 
         throw new UnsupportedCharacterConfigFormatException(
-            "HOTBAR.DAT からホットバー登録情報を取得できませんでした。");
+            "HOTBAR.DAT からシーケンス用アクションの登録情報を取得できませんでした。");
     }
 
     private IReadOnlyList<HotbarSlotEntry> TryReadKnownLayout(
@@ -69,26 +84,49 @@ public sealed class HotbarDatReader
         List<HotbarSlotEntry> bestEntries = [];
         HotbarRecordLayout? bestLayout = null;
         int bestKnownMatchCount = -1;
+        int bestBaseOffset = 0;
 
         foreach (HotbarRecordLayout layout in layouts)
         {
-            List<HotbarSlotEntry> candidateEntries = TryReadLayout(content, layout, crafterJob, knownCraftActionIds);
-            int knownMatchCount = candidateEntries.Count(entry => knownCraftActionIds.Contains(entry.ActionOrCommandId));
-
-            if (knownMatchCount > bestKnownMatchCount
-                || (knownMatchCount == bestKnownMatchCount && candidateEntries.Count > bestEntries.Count))
+            for (int baseOffset = 0; baseOffset < layout.RecordSize; baseOffset++)
             {
-                bestEntries = candidateEntries;
-                bestLayout = layout;
-                bestKnownMatchCount = knownMatchCount;
+                List<HotbarSlotEntry> candidateEntries = TryReadLayout(content, baseOffset, layout, crafterJob);
+                int knownMatchCount = candidateEntries.Count(entry => knownCraftActionIds.Contains(entry.ActionOrCommandId));
+
+                logger.LogInformation(
+                    "HOTBAR.DAT layout candidate parsed. Layout: {Layout}, BaseOffset: {BaseOffset}, EntryCount: {EntryCount}, KnownActionMatches: {KnownActionMatches}",
+                    layout,
+                    baseOffset,
+                    candidateEntries.Count,
+                    knownMatchCount);
+
+                if (knownMatchCount > bestKnownMatchCount
+                    || (knownMatchCount == bestKnownMatchCount && candidateEntries.Count > bestEntries.Count))
+                {
+                    bestEntries = candidateEntries;
+                    bestLayout = layout;
+                    bestKnownMatchCount = knownMatchCount;
+                    bestBaseOffset = baseOffset;
+                }
             }
+        }
+
+        if (knownCraftActionIds.Count > 0 && bestKnownMatchCount == 0)
+        {
+            logger.LogWarning(
+                "HOTBAR.DAT could not locate any required craft action ids. RequiredActionIds: {RequiredActionIds}",
+                string.Join(", ", knownCraftActionIds));
+
+            throw new UnsupportedCharacterConfigFormatException(
+                "HOTBAR.DAT からシーケンス用アクションの登録情報を取得できませんでした。");
         }
 
         if (bestEntries.Count > 0 && bestLayout is not null)
         {
             logger.LogInformation(
-                "HOTBAR.DAT candidate parse matched. Layout: {Layout}, Entries: {Entries}",
+                "HOTBAR.DAT candidate parse matched. Layout: {Layout}, BaseOffset: {BaseOffset}, Entries: {Entries}",
                 bestLayout,
+                bestBaseOffset,
                 string.Join(
                     ", ",
                     bestEntries.Select(static entry =>
@@ -100,13 +138,13 @@ public sealed class HotbarDatReader
 
     private static List<HotbarSlotEntry> TryReadLayout(
         byte[] content,
+        int baseOffset,
         HotbarRecordLayout layout,
-        CrafterJob crafterJob,
-        IReadOnlySet<uint> knownCraftActionIds)
+        CrafterJob crafterJob)
     {
         var entries = new List<HotbarSlotEntry>();
 
-        for (int offset = 0; offset + layout.RecordSize <= content.Length; offset += layout.RecordSize)
+        for (int offset = baseOffset; offset + layout.RecordSize <= content.Length; offset += layout.RecordSize)
         {
             byte hotbarNumber = content[offset + layout.HotbarOffset];
             byte slotNumber = content[offset + layout.SlotOffset];
@@ -136,13 +174,13 @@ public sealed class HotbarDatReader
             {
                 uint rawClassJobId = BinaryPrimitives.ReadUInt32LittleEndian(content.AsSpan(offset + layout.ClassJobOffset, 4));
                 classJobId = rawClassJobId == 0 ? null : rawClassJobId;
-                isShared = classJobId is null || classJobId == crafterJob.ClassJobId;
+                isShared = classJobId is null || classJobId == 0 || classJobId == crafterJob.ClassJobId;
             }
 
             entries.Add(new HotbarSlotEntry(
                 hotbarNumber,
                 slotNumber,
-                HotbarSlotKind.Action,
+                kind,
                 actionId,
                 classJobId,
                 isShared));
@@ -152,6 +190,17 @@ public sealed class HotbarDatReader
             .GroupBy(static entry => new { entry.HotbarNumber, entry.SlotNumber, entry.ActionOrCommandId })
             .Select(static group => group.First())
             .ToList();
+    }
+
+    private static IEnumerable<int> FindUInt32Offsets(byte[] content, uint value)
+    {
+        for (int offset = 0; offset + 4 <= content.Length; offset++)
+        {
+            if (BinaryPrimitives.ReadUInt32LittleEndian(content.AsSpan(offset, 4)) == value)
+            {
+                yield return offset;
+            }
+        }
     }
 
     private static HotbarSlotKind ResolveKind(byte value)
@@ -165,6 +214,11 @@ public sealed class HotbarDatReader
             4 => HotbarSlotKind.Macro,
             _ => HotbarSlotKind.Unknown,
         };
+    }
+
+    private static string ToHex(byte[] bytes, int maxLength)
+    {
+        return Convert.ToHexString(bytes.AsSpan(0, Math.Min(bytes.Length, maxLength)));
     }
 
     private sealed record HotbarRecordLayout(

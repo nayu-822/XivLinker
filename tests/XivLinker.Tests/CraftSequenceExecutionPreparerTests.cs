@@ -16,8 +16,7 @@ public sealed class CraftSequenceExecutionPreparerTests
     {
         byte[] datBytes = CreateDatFileBytes(
             xorKey: 0x73,
-            content: CreateKeybindContent(
-                ("HOTBAR_1_1", "1.0,0.0,")));
+            payload: CreateKeybindContent(("HOTBAR_1_1", "1.0,0.0,")));
 
         var reader = new KeybindDatReader();
 
@@ -59,7 +58,7 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
-    public async Task PrepareAsync_ReturnsMissingActions_WhenHotbarDoesNotContainAction()
+    public async Task PrepareAsync_ReturnsError_WhenHotbarDoesNotContainRequiredAction()
     {
         string rootPath = CreateTempDirectory();
 
@@ -77,8 +76,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Single(result.MissingActions);
-            Assert.Empty(result.UnboundActions);
+            Assert.Equal("HOTBAR.DAT を解析できないため、シーケンスを準備できません。", result.ErrorMessage);
         }
         finally
         {
@@ -105,8 +103,9 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Empty(result.MissingActions);
-            Assert.Single(result.UnboundActions);
+            Assert.Equal(
+                "ホットバーのキーバインドを取得できませんでした。KEYBIND.DAT のcommand解析ログを確認してください。",
+                result.ErrorMessage);
         }
         finally
         {
@@ -155,7 +154,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Equal("HOTBAR.DAT からホットバー登録情報を取得できませんでした。", result.ErrorMessage);
+            Assert.Equal("HOTBAR.DAT を解析できないため、シーケンスを準備できません。", result.ErrorMessage);
         }
         finally
         {
@@ -199,8 +198,8 @@ public sealed class CraftSequenceExecutionPreparerTests
 
     private static byte[] CreateHotbarDatBytes(IReadOnlyList<byte[]> records)
     {
-        byte[] content = records.SelectMany(static record => record).ToArray();
-        return CreateDatFileBytes(0x31, content);
+        byte[] payload = records.SelectMany(static record => record).ToArray();
+        return CreateDatFileBytes(0x31, payload);
     }
 
     private static byte[] CreateHotbarRecord(
@@ -227,6 +226,7 @@ public sealed class CraftSequenceExecutionPreparerTests
     private static byte[] CreateKeybindContent(params (string Command, string KeyString)[] entries)
     {
         using var stream = new MemoryStream();
+
         foreach ((string command, string keyString) in entries)
         {
             WriteSection(stream, 'T', command);
@@ -247,26 +247,22 @@ public sealed class CraftSequenceExecutionPreparerTests
         stream.Write(data);
     }
 
-    private static byte[] CreateDatFileBytes(byte xorKey, byte[] content)
+    private static byte[] CreateDatFileBytes(byte xorKey, byte[] payload)
     {
-        if (content.Length < 15)
+        byte[] fileBytes = new byte[0x11 + payload.Length + 1];
+
+        uint headerMaxSize = (uint)(fileBytes.Length - 32);
+        uint headerValidDataSize = (uint)((0x11 + payload.Length + 1) - 16);
+
+        BinaryPrimitives.WriteUInt32LittleEndian(fileBytes.AsSpan(0x04, 4), headerMaxSize);
+        BinaryPrimitives.WriteUInt32LittleEndian(fileBytes.AsSpan(0x08, 4), headerValidDataSize);
+
+        for (int index = 0; index < payload.Length; index++)
         {
-            byte[] paddedContent = new byte[15];
-            content.CopyTo(paddedContent, 0);
-            content = paddedContent;
+            fileBytes[0x11 + index] = (byte)(payload[index] ^ xorKey);
         }
 
-        byte[] fileBytes = new byte[0x11 + content.Length];
-
-        int headerValue = content.Length - 15;
-        BinaryPrimitives.WriteUInt32LittleEndian(fileBytes.AsSpan(0x04, 4), (uint)headerValue);
-        BinaryPrimitives.WriteUInt32LittleEndian(fileBytes.AsSpan(0x08, 4), (uint)headerValue);
-
-        for (int index = 0; index < content.Length; index++)
-        {
-            fileBytes[0x11 + index] = (byte)(content[index] ^ xorKey);
-        }
-
+        fileBytes[0x11 + payload.Length] = (byte)(0 ^ xorKey);
         return fileBytes;
     }
 

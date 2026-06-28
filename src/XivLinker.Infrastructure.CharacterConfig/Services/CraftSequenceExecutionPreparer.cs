@@ -68,23 +68,33 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             .ToHashSet();
 
         IReadOnlyList<HotbarSlotEntry> hotbarSlots;
-        IReadOnlyList<HotbarSlotKeyBinding> keyBindings;
-
         try
         {
             hotbarSlots = hotbarDatReader.Read(files.HotbarBytes, crafterJob, knownActionIds);
+        }
+        catch (Exception exception) when (exception is UnsupportedCharacterConfigFormatException or InvalidDataException)
+        {
+            logger.LogWarning(exception, "Failed to parse HOTBAR.DAT.");
+            return CraftSequenceExecutionPreparationResult.Failed(
+                "HOTBAR.DAT を解析できないため、シーケンスを準備できません。");
+        }
+
+        IReadOnlyList<HotbarSlotKeyBinding> keyBindings;
+        try
+        {
             keyBindings = keybindDatReader.ReadHotbarKeyBindings(files.KeybindBytes);
         }
-        catch (UnsupportedCharacterConfigFormatException exception)
+        catch (Exception exception) when (exception is UnsupportedCharacterConfigFormatException or InvalidDataException)
         {
-            logger.LogWarning(exception, "Unsupported character config format.");
-            return CraftSequenceExecutionPreparationResult.Failed(exception.Message);
-        }
-        catch (InvalidDataException exception)
-        {
-            logger.LogWarning(exception, "Failed to parse HOTBAR.DAT / KEYBIND.DAT for craft execution preparation.");
+            logger.LogWarning(exception, "Failed to parse KEYBIND.DAT.");
             return CraftSequenceExecutionPreparationResult.Failed(
-                "HOTBAR.DAT または KEYBIND.DAT を解析できないため、シーケンスを準備できません。");
+                "KEYBIND.DAT を解析できないため、シーケンスを準備できません。");
+        }
+
+        if (keyBindings.Count == 0)
+        {
+            return CraftSequenceExecutionPreparationResult.Failed(
+                "ホットバーのキーバインドを取得できませんでした。KEYBIND.DAT のcommand解析ログを確認してください。");
         }
 
         var missingActions = new List<CraftActionRequirement>();
