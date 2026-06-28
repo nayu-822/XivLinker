@@ -12,11 +12,27 @@ namespace XivLinker.Tests;
 public sealed class CraftSequenceExecutionPreparerTests
 {
     [Fact]
+    public void HotbarDatReader_Read_ParsesEightByteRecords()
+    {
+        uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
+        byte[] datBytes = CreateHotbarDatBytes(
+            [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]);
+
+        var reader = new HotbarDatReader();
+
+        HotbarSlotEntry entry = Assert.Single(reader.Read(datBytes, CrafterJobs.Carpenter, new HashSet<uint> { actionRowId }));
+
+        Assert.Equal(actionRowId, entry.CommandId);
+        Assert.Equal((byte)CrafterJobs.Carpenter.ClassJobId, entry.GroupId);
+        Assert.Equal(1, entry.HotbarId);
+        Assert.Equal(1, entry.SlotId);
+        Assert.Equal((byte)HotbarSlotKind.Action, entry.SlotTypeId);
+    }
+
+    [Fact]
     public void KeybindDatReader_Read_ParsesSections()
     {
-        byte[] datBytes = CreateDatFileBytes(
-            xorKey: 0x73,
-            payload: CreateKeybindContent(("HOTBAR_1_1", "1.0,0.0,")));
+        byte[] datBytes = CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]);
 
         var reader = new KeybindDatReader();
 
@@ -37,7 +53,8 @@ public sealed class CraftSequenceExecutionPreparerTests
             uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
             WriteDatFiles(
                 rootPath,
-                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, actionRowId, CrafterJobs.Carpenter.ClassJobId)]),
+                CreateHotbarDatBytes(
+                    [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
                 CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
@@ -67,7 +84,8 @@ public sealed class CraftSequenceExecutionPreparerTests
             uint otherActionRowId = GetLuminaActionId(CraftActionId.BasicTouch, CrafterJobs.Carpenter);
             WriteDatFiles(
                 rootPath,
-                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, otherActionRowId, CrafterJobs.Carpenter.ClassJobId)]),
+                CreateHotbarDatBytes(
+                    [CreateHotbarRecord(otherActionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
                 CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
@@ -94,7 +112,8 @@ public sealed class CraftSequenceExecutionPreparerTests
             uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
             WriteDatFiles(
                 rootPath,
-                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, actionRowId, CrafterJobs.Carpenter.ClassJobId)]),
+                CreateHotbarDatBytes(
+                    [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
                 CreateKeybindDatBytes([("OTHER_COMMAND", "1.0,0.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
@@ -103,9 +122,9 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Equal(
-                "ホットバーのキーバインドを取得できませんでした。KEYBIND.DAT のcommand解析ログを確認してください。",
-                result.ErrorMessage);
+            Assert.Null(result.ErrorMessage);
+            CraftActionRequirement unboundAction = Assert.Single(result.UnboundActions);
+            Assert.Equal(CraftActionId.BasicSynthesis, unboundAction.ActionId);
         }
         finally
         {
@@ -145,7 +164,7 @@ public sealed class CraftSequenceExecutionPreparerTests
         {
             WriteDatFiles(
                 rootPath,
-                CreateDatFileBytes(0x31, [0xAA, 0xBB, 0xCC]),
+                [0xAA, 0xBB, 0xCC],
                 CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
@@ -192,42 +211,14 @@ public sealed class CraftSequenceExecutionPreparerTests
             uint blacksmithActionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Blacksmith);
             WriteDatFiles(
                 rootPath,
-                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, blacksmithActionRowId, CrafterJobs.Blacksmith.ClassJobId)]),
+                CreateHotbarDatBytes(
+                    [CreateHotbarRecord(blacksmithActionRowId, (byte)CrafterJobs.Blacksmith.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
                 CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
             CraftSequenceExecutionPreparationResult result =
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Blacksmith);
-
-            Assert.True(result.CanRun);
-            CraftActionKeyBinding binding = Assert.Single(result.ActionKeyBindings);
-            Assert.Equal(CraftActionId.BasicSynthesis, binding.ActionId);
-            Assert.Equal("1", binding.KeyGestureText);
-        }
-        finally
-        {
-            Directory.Delete(rootPath, recursive: true);
-        }
-    }
-
-    [Fact]
-    public async Task PrepareAsync_ReturnsBindings_WhenHotbarUsesActionIdAnchorLayout()
-    {
-        string rootPath = CreateTempDirectory();
-
-        try
-        {
-            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
-            WriteDatFiles(
-                rootPath,
-                CreateDatFileBytes(0x31, CreateAnchoredHotbarPayload(1, 1, HotbarSlotKind.Action, actionRowId, CrafterJobs.Carpenter.ClassJobId)),
-                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
-
-            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
-
-            CraftSequenceExecutionPreparationResult result =
-                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.True(result.CanRun);
             CraftActionKeyBinding binding = Assert.Single(result.ActionKeyBindings);
@@ -298,44 +289,35 @@ public sealed class CraftSequenceExecutionPreparerTests
     private static byte[] CreateHotbarDatBytes(IReadOnlyList<byte[]> records)
     {
         byte[] payload = records.SelectMany(static record => record).ToArray();
-        return CreateDatFileBytes(0x31, payload);
+        byte[] fileBytes = new byte[16 + payload.Length];
+
+        for (int index = 0; index < payload.Length; index++)
+        {
+            fileBytes[16 + index] = (byte)(payload[index] ^ 0x31);
+        }
+
+        return fileBytes;
     }
 
     private static byte[] CreateHotbarRecord(
-        byte hotbarNumber,
-        byte slotNumber,
-        HotbarSlotKind kind,
-        uint actionId,
-        uint classJobId)
+        uint commandId,
+        byte groupId,
+        byte hotbarId,
+        byte slotId,
+        byte slotTypeId)
     {
-        byte[] record = new byte[16];
-        record[0] = hotbarNumber;
-        record[1] = slotNumber;
-        record[2] = (byte)kind;
-        BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(4, 4), actionId);
-        BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(8, 4), classJobId);
+        byte[] record = new byte[8];
+        BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(0, 4), commandId);
+        record[4] = groupId;
+        record[5] = hotbarId;
+        record[6] = slotId;
+        record[7] = slotTypeId;
         return record;
     }
 
     private static byte[] CreateKeybindDatBytes(IReadOnlyList<(string Command, string KeyString)> entries)
     {
-        return CreateDatFileBytes(0x73, CreateKeybindContent(entries.ToArray()));
-    }
-
-    private static byte[] CreateAnchoredHotbarPayload(
-        byte hotbarNumber,
-        byte slotNumber,
-        HotbarSlotKind kind,
-        uint actionId,
-        uint classJobId)
-    {
-        byte[] payload = new byte[15];
-        payload[0] = hotbarNumber;
-        payload[1] = slotNumber;
-        payload[2] = (byte)kind;
-        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(4, 4), actionId);
-        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(8, 4), classJobId);
-        return payload;
+        return CreateKeybindDatFileBytes(CreateKeybindContent(entries.ToArray()));
     }
 
     private static byte[] CreateKeybindContent(params (string Command, string KeyString)[] entries)
@@ -362,7 +344,7 @@ public sealed class CraftSequenceExecutionPreparerTests
         stream.Write(data);
     }
 
-    private static byte[] CreateDatFileBytes(byte xorKey, byte[] payload)
+    private static byte[] CreateKeybindDatFileBytes(byte[] payload)
     {
         byte[] fileBytes = new byte[0x11 + payload.Length + 1];
 
@@ -374,10 +356,10 @@ public sealed class CraftSequenceExecutionPreparerTests
 
         for (int index = 0; index < payload.Length; index++)
         {
-            fileBytes[0x11 + index] = (byte)(payload[index] ^ xorKey);
+            fileBytes[0x11 + index] = (byte)(payload[index] ^ 0x73);
         }
 
-        fileBytes[0x11 + payload.Length] = (byte)(0 ^ xorKey);
+        fileBytes[0x11 + payload.Length] = 0x73;
         return fileBytes;
     }
 

@@ -112,6 +112,14 @@ public sealed partial class KeybindDatReader
         return result;
     }
 
+    public static bool TryResolveHotbarCommand(
+        string command,
+        out int hotbarNumber,
+        out int slotNumber)
+    {
+        return TryParseHotbarCommand(command, out hotbarNumber, out slotNumber);
+    }
+
     private static string ReadSectionString(
         byte[] content,
         ref int offset,

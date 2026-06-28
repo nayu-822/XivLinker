@@ -1,9 +1,8 @@
 namespace XivLinker.Infrastructure.CharacterConfig.Models;
 
 public sealed record HotbarSlotEntry(
-    int HotbarNumber,
-    int SlotNumber,
-    HotbarSlotKind Kind,
-    uint ActionOrCommandId,
-    uint? ClassJobId,
-    bool IsShared);
+    uint CommandId,
+    byte GroupId,
+    byte HotbarId,
+    byte SlotId,
+    byte SlotTypeId);

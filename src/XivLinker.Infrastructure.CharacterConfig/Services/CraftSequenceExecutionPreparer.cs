@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using XivLinker.Application.Abstractions;
 using XivLinker.Application.Models;
 using XivLinker.Domain.Models;
-using XivLinker.Domain.Models.Crafting;
 using XivLinker.Infrastructure.CharacterConfig.Models;
 
 namespace XivLinker.Infrastructure.CharacterConfig.Services;
@@ -38,10 +37,11 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             sequence,
             crafterJob,
             cancellationToken);
+
         if (requiredActions.Count == 0)
         {
             return CraftSequenceExecutionPreparationResult.Failed(
-                "シーケンスに準備対象のクラフターアクションが含まれていないため、実行できません。");
+                "シーケンスに実行対象のクラフトアクションが含まれていないため、準備できません。");
         }
 
         logger.LogInformation(
@@ -86,10 +86,10 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 "HOTBAR.DAT を解析できないため、シーケンスを準備できません。");
         }
 
-        IReadOnlyList<HotbarSlotKeyBinding> keyBindings;
+        IReadOnlyList<KeybindEntry> keybindEntries;
         try
         {
-            keyBindings = keybindDatReader.ReadHotbarKeyBindings(files.KeybindBytes);
+            keybindEntries = keybindDatReader.Read(files.KeybindBytes);
         }
         catch (Exception exception) when (exception is UnsupportedCharacterConfigFormatException or InvalidDataException)
         {
@@ -98,7 +98,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 "KEYBIND.DAT を解析できないため、シーケンスを準備できません。");
         }
 
-        if (keyBindings.Count == 0)
+        if (!keybindEntries.Any(static entry => entry.HasPrimaryOrSecondary))
         {
             return CraftSequenceExecutionPreparationResult.Failed(
                 "ホットバーのキーバインドを取得できませんでした。KEYBIND.DAT のcommand解析ログを確認してください。");
@@ -111,61 +111,51 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         foreach (CraftActionRequirement requiredAction in requiredActions)
         {
             HotbarSlotEntry? slot = hotbarSlots.FirstOrDefault(slot =>
-                slot.Kind == HotbarSlotKind.Action
-                && slot.ActionOrCommandId == requiredAction.LuminaActionId
-                && IsSlotAvailableForJob(slot, crafterJob));
+                slot.CommandId == requiredAction.LuminaActionId
+                && IsAvailableForCrafterJob(slot, crafterJob));
 
             if (slot is null)
             {
                 missingActions.Add(requiredAction);
+                logger.LogInformation(
+                    "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
+                    requiredAction.ActionName,
+                    requiredAction.LuminaActionId,
+                    "-",
+                    "-");
                 continue;
             }
 
-            HotbarSlotKeyBinding? keyBinding = keyBindings.FirstOrDefault(binding =>
-                binding.HotbarNumber == slot.HotbarNumber
-                && binding.SlotNumber == slot.SlotNumber);
-
-            if (keyBinding is null || keyBinding.Keys.Count == 0)
+            KeybindEntry? keybind = ResolveKeybindForHotbarSlot(keybindEntries, slot.HotbarId, slot.SlotId);
+            if (keybind is null || !keybind.HasPrimaryOrSecondary)
             {
                 unboundActions.Add(requiredAction);
                 logger.LogInformation(
                     "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
                     requiredAction.ActionName,
                     requiredAction.LuminaActionId,
-                    slot is null ? "-" : $"Hotbar {slot.HotbarNumber} Slot {slot.SlotNumber}",
+                    $"Hotbar {slot.HotbarId} Slot {slot.SlotId}",
                     "-");
                 continue;
             }
+
+            KeybindGesture gesture = keybind.Primary ?? keybind.Secondary
+                ?? throw new InvalidOperationException("KEYBIND.DAT のバインド解決結果が不正です。");
 
             logger.LogInformation(
                 "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
                 requiredAction.ActionName,
                 requiredAction.LuminaActionId,
-                slot is null ? "-" : $"Hotbar {slot.HotbarNumber} Slot {slot.SlotNumber}",
-                keyBinding.KeyGestureText);
-
-            HotbarSlotEntry resolvedSlot = slot!;
-            HotbarSlotKeyBinding resolvedKeyBinding = keyBinding!;
+                $"Hotbar {slot.HotbarId} Slot {slot.SlotId}",
+                KeybindDisplayFormatter.Format(gesture));
 
             actionKeyBindings.Add(new CraftActionKeyBinding(
                 requiredAction.ActionId,
                 requiredAction.ActionName,
-                resolvedSlot.HotbarNumber,
-                resolvedSlot.SlotNumber,
-                resolvedKeyBinding.KeyGestureText,
-                resolvedKeyBinding.Keys));
-
-            continue;
-        }
-
-        foreach (CraftActionRequirement missingAction in missingActions)
-        {
-            logger.LogInformation(
-                "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
-                missingAction.ActionName,
-                missingAction.LuminaActionId,
-                "-",
-                "-");
+                slot.HotbarId,
+                slot.SlotId,
+                KeybindDisplayFormatter.Format(gesture),
+                KeybindDisplayFormatter.ToKeys(gesture)));
         }
 
         logger.LogInformation(
@@ -183,17 +173,29 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         };
     }
 
-    private static bool IsSlotAvailableForJob(
-        HotbarSlotEntry slot,
-        CrafterJob crafterJob)
+    private static bool IsAvailableForCrafterJob(HotbarSlotEntry slot, CrafterJob crafterJob)
     {
-        if (slot.IsShared)
+        return slot.GroupId == 0 || slot.GroupId == crafterJob.ClassJobId;
+    }
+
+    private static KeybindEntry? ResolveKeybindForHotbarSlot(
+        IReadOnlyList<KeybindEntry> keybindEntries,
+        byte hotbarId,
+        byte slotId)
+    {
+        foreach (KeybindEntry entry in keybindEntries)
         {
-            return true;
+            if (!KeybindDatReader.TryResolveHotbarCommand(entry.Command, out int resolvedHotbarId, out int resolvedSlotId))
+            {
+                continue;
+            }
+
+            if (resolvedHotbarId == hotbarId && resolvedSlotId == slotId)
+            {
+                return entry;
+            }
         }
 
-        return slot.ClassJobId is null
-            || slot.ClassJobId == 0
-            || slot.ClassJobId == crafterJob.ClassJobId;
+        return null;
     }
 }
