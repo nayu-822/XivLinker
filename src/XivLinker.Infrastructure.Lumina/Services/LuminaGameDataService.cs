@@ -112,7 +112,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
 
         try
         {
-            return await Task.Run(() => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawY), cancellationToken);
+            return await Task.Run(() => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawZ), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -205,7 +205,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         };
     }
 
-    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint? territoryTypeId, uint? mapId, float rawX, float rawY)
+    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint? territoryTypeId, uint? mapId, float rawX, float rawZ)
     {
         Map? map = null;
         string? mapName = null;
@@ -261,7 +261,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         }
 
         double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawX, map.Value.OffsetX, map.Value.SizeFactor);
-        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawY, map.Value.OffsetY, map.Value.SizeFactor);
+        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawZ, map.Value.OffsetY, map.Value.SizeFactor);
 
         return new ResolvedMapLocation
         {

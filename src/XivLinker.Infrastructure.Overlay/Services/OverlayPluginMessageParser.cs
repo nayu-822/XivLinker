@@ -14,23 +14,32 @@ public static class OverlayPluginMessageParser
             using JsonDocument document = JsonDocument.Parse(rawJson);
             JsonElement root = document.RootElement;
 
-            string? type = ReadString(root, "type");
-            if (!string.IsNullOrWhiteSpace(type)
-                && !string.Equals(type, "broadcast", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(type, "event", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            string? messageType = ReadString(root, "msgtype")
-                ?? ReadString(root, "event")
-                ?? ReadString(root, "name");
-            if (string.IsNullOrWhiteSpace(messageType))
+            string? rootType = ReadString(root, "type");
+            if (!string.IsNullOrWhiteSpace(rootType)
+                && !string.Equals(rootType, "broadcast", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(rootType, "event", StringComparison.OrdinalIgnoreCase)
+                && HasSequenceNumber(root))
             {
                 return false;
             }
 
             JsonElement payload = GetPayload(root);
+            string? messageType = ReadEventName(root, allowType: false)
+                ?? ReadEventName(payload, allowType: true);
+
+            if (string.IsNullOrWhiteSpace(messageType)
+                && !string.IsNullOrWhiteSpace(rootType)
+                && !string.Equals(rootType, "broadcast", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(rootType, "event", StringComparison.OrdinalIgnoreCase)
+                && !HasSequenceNumber(root))
+            {
+                messageType = rootType;
+            }
+
+            if (string.IsNullOrWhiteSpace(messageType))
+            {
+                return false;
+            }
 
             message = new OverlayPluginEventMessage
             {
@@ -59,8 +68,15 @@ public static class OverlayPluginMessageParser
 
         territoryTypeId = ReadUInt32(message.Payload, "zoneID")
             ?? ReadUInt32(message.Payload, "zoneId")
+            ?? ReadUInt32(message.Payload, "ZoneID")
             ?? ReadUInt32(message.Payload, "territoryType")
             ?? ReadUInt32(message.Payload, "territoryTypeId")
+            ?? ReadUInt32(message.Payload, "territoryTypeID")
+            ?? ReadUInt32(message.Payload, "territoryId")
+            ?? ReadUInt32(message.Payload, "territoryID")
+            ?? ReadUInt32(message.Payload, "TerritoryType")
+            ?? ReadUInt32(message.Payload, "TerritoryTypeId")
+            ?? ReadUInt32(message.Payload, "TerritoryTypeID")
             ?? 0;
         zoneName = ReadString(message.Payload, "zoneName")
             ?? ReadString(message.Payload, "ZoneName")
@@ -80,6 +96,9 @@ public static class OverlayPluginMessageParser
         playerName = ReadString(message.Payload, "charName")
             ?? ReadString(message.Payload, "charname")
             ?? ReadString(message.Payload, "name")
+            ?? ReadString(message.Payload, "Name")
+            ?? ReadString(message.Payload, "playerName")
+            ?? ReadString(message.Payload, "PlayerName")
             ?? string.Empty;
 
         return !string.IsNullOrWhiteSpace(playerName);
@@ -230,6 +249,39 @@ public static class OverlayPluginMessageParser
         }
 
         return root.Clone();
+    }
+
+    private static string? ReadEventName(JsonElement element, bool allowType)
+    {
+        string? value = ReadString(element, "msgtype")
+            ?? ReadString(element, "event")
+            ?? ReadString(element, "name");
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        if (!allowType)
+        {
+            return null;
+        }
+
+        string? type = ReadString(element, "type");
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return null;
+        }
+
+        return string.Equals(type, "broadcast", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, "event", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : type;
+    }
+
+    private static bool HasSequenceNumber(JsonElement element)
+    {
+        return TryGetPropertyIgnoreCase(element, "rseq", out _);
     }
 
     private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement property)

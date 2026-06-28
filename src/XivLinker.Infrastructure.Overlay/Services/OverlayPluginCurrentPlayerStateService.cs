@@ -68,6 +68,8 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             return;
         }
 
+        logger.LogDebug("OverlayPlugin event parsed: {MessageType}", message.MessageType);
+
         if (OverlayPluginMessageParser.TryParsePrimaryPlayer(message, out string playerName))
         {
             primaryPlayerName = playerName;
@@ -77,6 +79,11 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
         if (OverlayPluginMessageParser.TryParseChangeZone(message, out uint territoryTypeId, out string zoneName))
         {
+            logger.LogDebug(
+                "ChangeZone parsed. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}",
+                territoryTypeId,
+                zoneName);
+
             if (!hasLoggedZoneEventPayload)
             {
                 hasLoggedZoneEventPayload = true;

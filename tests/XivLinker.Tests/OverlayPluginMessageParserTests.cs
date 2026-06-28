@@ -70,6 +70,52 @@ public sealed class OverlayPluginMessageParserTests
     }
 
     [Fact]
+    public void TryParseEventMessage_ParsesChangeZoneFromMsgTypePayload()
+    {
+        const string json = """
+            {
+              "type": "broadcast",
+              "msg": {
+                "type": "ChangeZone",
+                "zoneID": 123,
+                "zoneName": "テストエリア"
+              }
+            }
+            """;
+
+        bool parsed = OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message);
+        bool zoneParsed = OverlayPluginMessageParser.TryParseChangeZone(message!, out uint territoryTypeId, out string zoneName);
+
+        Assert.True(parsed);
+        Assert.Equal("ChangeZone", message!.MessageType);
+        Assert.True(zoneParsed);
+        Assert.Equal((uint)123, territoryTypeId);
+        Assert.Equal("テストエリア", zoneName);
+    }
+
+    [Fact]
+    public void TryParseEventMessage_ParsesPrimaryPlayerFromMsgTypePayload()
+    {
+        const string json = """
+            {
+              "type": "broadcast",
+              "msg": {
+                "type": "ChangePrimaryPlayer",
+                "charName": "Test Player"
+              }
+            }
+            """;
+
+        bool parsed = OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message);
+        bool playerParsed = OverlayPluginMessageParser.TryParsePrimaryPlayer(message!, out string playerName);
+
+        Assert.True(parsed);
+        Assert.Equal("ChangePrimaryPlayer", message!.MessageType);
+        Assert.True(playerParsed);
+        Assert.Equal("Test Player", playerName);
+    }
+
+    [Fact]
     public void TryParseEventMessage_ParsesEventPayloadShape()
     {
         const string json = """
@@ -109,6 +155,22 @@ public sealed class OverlayPluginMessageParserTests
         Assert.True(parsed);
         Assert.True(playerParsed);
         Assert.Equal("Example Crafter", playerName);
+    }
+
+    [Fact]
+    public void TryParseEventMessage_ResponseWithSequence_IsNotEvent()
+    {
+        const string json = """
+            {
+              "rseq": 1,
+              "combatants": []
+            }
+            """;
+
+        bool parsed = OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message);
+
+        Assert.False(parsed);
+        Assert.Null(message);
     }
 
     [Fact]
