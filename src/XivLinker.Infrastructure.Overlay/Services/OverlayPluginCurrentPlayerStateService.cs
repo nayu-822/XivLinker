@@ -235,8 +235,14 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
                 if (location is not null)
                 {
-                    mapName = string.IsNullOrWhiteSpace(location.MapName) ? mapName : location.MapName;
-                    mapId = location.MapId;
+                    if (!string.IsNullOrWhiteSpace(location.MapName)
+                        && !location.MapName.StartsWith("Territory ID:", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(location.MapName, "未取得", StringComparison.Ordinal))
+                    {
+                        mapName = location.MapName;
+                    }
+
+                    mapId = location.MapId > 0 ? location.MapId : mapId;
                     mapX = location.MapX;
                     mapY = location.MapY;
                     coordinatesText = location.CoordinatesText;

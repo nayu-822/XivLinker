@@ -3,12 +3,16 @@ using Lumina.Data;
 using Lumina.Excel.Sheets;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using LuminaGameDataOptions = Lumina.LuminaOptions;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Reflection;
 
 namespace XivLinker.Infrastructure.Lumina.Services;
 
 public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataProvider, IDisposable
 {
+    private static readonly ConcurrentDictionary<Type, MethodInfo?> ExtractTextMethodCache = new();
     private static readonly string[] KnownSqPackPaths =
     [
         @"C:\Program Files (x86)\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack",
@@ -69,7 +73,14 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 return CreateStatus(GameDataAvailabilityState.Ready);
             }
 
-            gameData = await Task.Run(() => new GameData(SqPackPath!), cancellationToken);
+            gameData = await Task.Run(
+                () => new GameData(
+                    SqPackPath!,
+                    new LuminaGameDataOptions
+                    {
+                        LoadMultithreaded = false,
+                    }),
+                cancellationToken);
             ErrorMessage = null;
             return CreateStatus(GameDataAvailabilityState.Ready);
         }
@@ -112,7 +123,56 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
 
         try
         {
-            return await Task.Run(() => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawZ), cancellationToken);
+            logger.LogDebug(
+                "Resolving map location. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}",
+                territoryTypeId,
+                mapId,
+                rawX,
+                rawY,
+                rawZ);
+
+            ResolvedMapLocation? location = await Task.Run(
+                () => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawZ),
+                cancellationToken);
+
+            if (location is null)
+            {
+                logger.LogWarning(
+                    "Map resolve returned null. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawZ: {RawZ}",
+                    territoryTypeId,
+                    mapId,
+                    rawX,
+                    rawZ);
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(location.IssueMessage))
+            {
+                logger.LogDebug(
+                    "Map resolved. Source: {Source}, TerritoryTypeFound: {TerritoryTypeFound}, TerritoryType.Map found: {TerritoryMapFound}, Map.RowId: {MapRowId}, MapName: {MapName}, OffsetX: {OffsetX}, OffsetY: {OffsetY}, SizeFactor: {SizeFactor}",
+                    location.ResolutionSource,
+                    location.TerritoryTypeFound,
+                    location.TerritoryMapFound,
+                    location.MapId,
+                    location.MapName,
+                    location.OffsetX,
+                    location.OffsetY,
+                    location.SizeFactor);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Map resolve failed. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawZ: {RawZ}, TerritoryTypeFound: {TerritoryTypeFound}, TerritoryType.Map found: {TerritoryMapFound}, Issue: {IssueMessage}",
+                    territoryTypeId,
+                    mapId,
+                    rawX,
+                    rawZ,
+                    location.TerritoryTypeFound,
+                    location.TerritoryMapFound,
+                    location.IssueMessage);
+            }
+
+            return location;
         }
         catch (Exception exception)
         {
@@ -209,6 +269,9 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
     {
         Map? map = null;
         string? mapName = null;
+        string? resolutionSource = null;
+        bool territoryTypeFound = false;
+        bool territoryMapFound = false;
 
         if (territoryTypeId is not null and > 0)
         {
@@ -218,11 +281,14 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 TerritoryType territory = territorySheet.FirstOrDefault(row => row.RowId == territoryTypeId.Value);
                 if (territory.RowId != 0)
                 {
+                    territoryTypeFound = true;
                     map = territory.Map.ValueNullable;
-                    mapName = territory.PlaceNameZone.ValueNullable?.Name.ToString().Trim();
+                    territoryMapFound = map is not null && map.Value.RowId != 0;
+                    resolutionSource = territoryMapFound ? "TerritoryType.Map" : null;
+                    mapName = ExtractPlaceName(territory.PlaceNameZone.ValueNullable);
                     if (string.IsNullOrWhiteSpace(mapName))
                     {
-                        mapName = territory.PlaceName.ValueNullable?.Name.ToString().Trim();
+                        mapName = ExtractPlaceName(territory.PlaceName.ValueNullable);
                     }
                 }
             }
@@ -237,14 +303,15 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 if (mapRow.RowId != 0)
                 {
                     map = mapRow;
-                    mapName ??= mapRow.PlaceName.ValueNullable?.Name.ToString().Trim();
+                    resolutionSource ??= "CurrentMapID fallback";
+                    mapName ??= ExtractPlaceName(mapRow.PlaceName.ValueNullable);
                 }
             }
         }
 
         if (string.IsNullOrWhiteSpace(mapName))
         {
-            mapName = map?.PlaceName.ValueNullable?.Name.ToString().Trim();
+            mapName = map is not null ? ExtractPlaceName(map.Value.PlaceName.ValueNullable) : null;
         }
 
         if (map is null)
@@ -253,24 +320,23 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             {
                 MapId = mapId ?? 0,
                 MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId ?? 0}" : mapName,
+                ResolutionSource = resolutionSource,
+                TerritoryTypeFound = territoryTypeFound,
+                TerritoryMapFound = territoryMapFound,
                 CoordinatesText = "座標を変換できません",
-                IssueMessage = territoryTypeId is not null and > 0
-                    ? "TerritoryType に対応する Map が見つかりません。"
-                    : "MapId に対応する Map が見つかりません。",
+                IssueMessage = $"Lumina の Map を解決できませんでした。TerritoryTypeId={territoryTypeId}, CurrentMapID={mapId}",
             };
         }
 
-        double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawX, map.Value.OffsetX, map.Value.SizeFactor);
-        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawZ, map.Value.OffsetY, map.Value.SizeFactor);
-
-        return new ResolvedMapLocation
-        {
-            MapId = map.Value.RowId,
-            MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId ?? 0}" : mapName,
-            MapX = mapX,
-            MapY = mapY,
-            CoordinatesText = MapCoordinateCalculator.FormatCoordinates(mapX, mapY),
-        };
+        return CreateResolvedMapLocation(
+            map.Value,
+            territoryTypeId,
+            mapName,
+            rawX,
+            rawZ,
+            resolutionSource,
+            territoryTypeFound,
+            territoryMapFound);
     }
 
     private static ResolvedClassJobInfo? ResolveClassJobCore(GameData data, uint classJobId, int? level)
@@ -287,7 +353,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             return null;
         }
 
-        string jobName = classJob.Name.ToString().Trim();
+        string jobName = ExtractTextSafely(classJob.Name) ?? string.Empty;
         if (string.IsNullOrWhiteSpace(jobName))
         {
             jobName = $"Job ID: {classJobId}";
@@ -300,5 +366,110 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             Level = level,
             DisplayText = level is > 0 ? $"{jobName} Lv.{level}" : jobName,
         };
+    }
+
+    private static ResolvedMapLocation CreateResolvedMapLocation(
+        Map map,
+        uint? territoryTypeId,
+        string? mapName,
+        float rawX,
+        float rawZ,
+        string? resolutionSource,
+        bool territoryTypeFound,
+        bool territoryMapFound)
+    {
+        double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawX, map.OffsetX, map.SizeFactor);
+        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawZ, map.OffsetY, map.SizeFactor);
+
+        return new ResolvedMapLocation
+        {
+            MapId = map.RowId,
+            MapName = string.IsNullOrWhiteSpace(mapName) ? $"Territory ID: {territoryTypeId ?? 0}" : mapName,
+            ResolutionSource = resolutionSource,
+            TerritoryTypeFound = territoryTypeFound,
+            TerritoryMapFound = territoryMapFound,
+            OffsetX = map.OffsetX,
+            OffsetY = map.OffsetY,
+            SizeFactor = map.SizeFactor,
+            MapX = mapX,
+            MapY = mapY,
+            CoordinatesText = MapCoordinateCalculator.FormatCoordinates(mapX, mapY),
+        };
+    }
+
+    private static string? ExtractPlaceName(PlaceName? placeName)
+    {
+        return placeName is null ? null : ExtractTextSafely(placeName.Value.Name);
+    }
+
+    private static string? ExtractTextSafely<T>(T? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        object boxedValue = value;
+        Type type = boxedValue.GetType();
+        MethodInfo? extractTextMethod = ExtractTextMethodCache.GetOrAdd(type, static currentType =>
+        {
+            MethodInfo? instanceMethod = currentType.GetMethod(
+                "ExtractText",
+                BindingFlags.Public | BindingFlags.Instance,
+                binder: null,
+                Type.EmptyTypes,
+                modifiers: null);
+            if (instanceMethod is not null && instanceMethod.ReturnType == typeof(string))
+            {
+                return instanceMethod;
+            }
+
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException exception)
+                {
+                    types = exception.Types.Where(static x => x is not null).Cast<Type>().ToArray();
+                }
+
+                foreach (Type candidateType in types)
+                {
+                    if (!candidateType.IsSealed || !candidateType.IsAbstract)
+                    {
+                        continue;
+                    }
+
+                    foreach (MethodInfo method in candidateType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                    {
+                        if (!string.Equals(method.Name, "ExtractText", StringComparison.Ordinal)
+                            || method.ReturnType != typeof(string))
+                        {
+                            continue;
+                        }
+
+                        ParameterInfo[] parameters = method.GetParameters();
+                        if (parameters.Length == 1 && parameters[0].ParameterType.IsAssignableFrom(currentType))
+                        {
+                            return method;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        });
+
+        string? text = extractTextMethod switch
+        {
+            not null when extractTextMethod.IsStatic => extractTextMethod.Invoke(null, [boxedValue]) as string,
+            not null => extractTextMethod.Invoke(boxedValue, null) as string,
+            _ => boxedValue.ToString(),
+        };
+
+        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
     }
 }
