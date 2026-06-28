@@ -63,10 +63,17 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             files.KeybindPath,
             files.KeybindBytes.Length);
 
+        IReadOnlySet<uint> knownActionIds = requiredActions
+            .Select(static action => action.LuminaActionId)
+            .ToHashSet();
+
+        IReadOnlyList<HotbarSlotEntry> hotbarSlots;
+        IReadOnlyList<HotbarSlotKeyBinding> keyBindings;
+
         try
         {
-            _ = hotbarDatReader.Read(files.HotbarBytes, crafterJob);
-            _ = keybindDatReader.Read(files.KeybindBytes);
+            hotbarSlots = hotbarDatReader.Read(files.HotbarBytes, crafterJob, knownActionIds);
+            keyBindings = keybindDatReader.ReadHotbarKeyBindings(files.KeybindBytes);
         }
         catch (UnsupportedCharacterConfigFormatException exception)
         {
@@ -80,8 +87,69 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 "HOTBAR.DAT または KEYBIND.DAT を解析できないため、シーケンスを準備できません。");
         }
 
-        return CraftSequenceExecutionPreparationResult.Failed(
-            "HOTBAR.DAT または KEYBIND.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。");
+        var missingActions = new List<CraftActionRequirement>();
+        var unboundActions = new List<CraftActionRequirement>();
+        var actionKeyBindings = new List<CraftActionKeyBinding>();
+
+        foreach (CraftActionRequirement requiredAction in requiredActions)
+        {
+            HotbarSlotEntry? slot = hotbarSlots.FirstOrDefault(slot =>
+                slot.Kind == HotbarSlotKind.Action
+                && slot.ActionOrCommandId == requiredAction.LuminaActionId
+                && IsSlotAvailableForJob(slot, crafterJob));
+
+            if (slot is null)
+            {
+                missingActions.Add(requiredAction);
+                continue;
+            }
+
+            HotbarSlotKeyBinding? keyBinding = keyBindings.FirstOrDefault(binding =>
+                binding.HotbarNumber == slot.HotbarNumber
+                && binding.SlotNumber == slot.SlotNumber);
+
+            if (keyBinding is null || keyBinding.Keys.Count == 0)
+            {
+                unboundActions.Add(requiredAction);
+                continue;
+            }
+
+            actionKeyBindings.Add(new CraftActionKeyBinding(
+                requiredAction.ActionId,
+                requiredAction.ActionName,
+                slot.HotbarNumber,
+                slot.SlotNumber,
+                keyBinding.KeyGestureText,
+                keyBinding.Keys));
+        }
+
+        logger.LogInformation(
+            "Craft execution preparation completed. Sequence: {SequenceName}, ResolvedBindings: {ResolvedBindings}, MissingActions: {MissingActions}, UnboundActions: {UnboundActions}",
+            sequence.Name,
+            string.Join(", ", actionKeyBindings.Select(static binding => $"{binding.ActionName} -> Hotbar {binding.HotbarNumber} Slot {binding.SlotNumber} -> {binding.KeyGestureText}")),
+            string.Join(", ", missingActions.Select(static action => action.ActionName)),
+            string.Join(", ", unboundActions.Select(static action => action.ActionName)));
+
+        return new CraftSequenceExecutionPreparationResult
+        {
+            MissingActions = missingActions,
+            UnboundActions = unboundActions,
+            ActionKeyBindings = actionKeyBindings,
+        };
+    }
+
+    private static bool IsSlotAvailableForJob(
+        HotbarSlotEntry slot,
+        CrafterJob crafterJob)
+    {
+        if (slot.IsShared)
+        {
+            return true;
+        }
+
+        return slot.ClassJobId is null
+            || slot.ClassJobId == 0
+            || slot.ClassJobId == crafterJob.ClassJobId;
     }
 
     private static IReadOnlyList<CraftActionRequirement> ResolveRequiredActions(CraftSequence sequence, CrafterJob crafterJob)

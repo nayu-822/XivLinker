@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Application.Models;
 using XivLinker.Domain.Models;
@@ -10,14 +12,64 @@ namespace XivLinker.Tests;
 public sealed class CraftSequenceExecutionPreparerTests
 {
     [Fact]
-    public async Task PrepareAsync_ReturnsUnsupportedFormatError_WhenHotbarAndKeybindFilesExist()
+    public void KeybindDatReader_Read_ParsesSections()
+    {
+        byte[] datBytes = CreateDatFileBytes(
+            xorKey: 0x73,
+            content: CreateKeybindContent(
+                ("HOTBAR_1_1", "1.0,0.0,")));
+
+        var reader = new KeybindDatReader();
+
+        KeybindEntry entry = Assert.Single(reader.Read(datBytes));
+
+        Assert.Equal("HOTBAR_1_1", entry.Command);
+        Assert.NotNull(entry.Primary);
+        Assert.Equal("1", entry.Primary!.DisplayText);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReturnsBindings_WhenHotbarAndKeybindMatch()
     {
         string rootPath = CreateTempDirectory();
 
         try
         {
-            File.WriteAllBytes(Path.Combine(rootPath, "HOTBAR.DAT"), [0x01, 0x02, 0x03, 0x04]);
-            File.WriteAllBytes(Path.Combine(rootPath, "KEYBIND.DAT"), [0x11, 0x12, 0x13, 0x14]);
+            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
+            WriteDatFiles(
+                rootPath,
+                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, actionRowId, CrafterJobs.Carpenter.ClassJobId)]),
+                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
+
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
+
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+            Assert.True(result.CanRun);
+            CraftActionKeyBinding binding = Assert.Single(result.ActionKeyBindings);
+            Assert.Equal("1", binding.KeyGestureText);
+            Assert.Empty(result.MissingActions);
+            Assert.Empty(result.UnboundActions);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReturnsMissingActions_WhenHotbarDoesNotContainAction()
+    {
+        string rootPath = CreateTempDirectory();
+
+        try
+        {
+            uint otherActionRowId = GetLuminaActionId(CraftActionId.BasicTouch, CrafterJobs.Carpenter);
+            WriteDatFiles(
+                rootPath,
+                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, otherActionRowId, CrafterJobs.Carpenter.ClassJobId)]),
+                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
@@ -25,10 +77,36 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Equal(
-                "HOTBAR.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。",
-                result.ErrorMessage);
-            Assert.Empty(result.ActionKeyBindings);
+            Assert.Single(result.MissingActions);
+            Assert.Empty(result.UnboundActions);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReturnsUnboundActions_WhenKeybindIsMissing()
+    {
+        string rootPath = CreateTempDirectory();
+
+        try
+        {
+            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
+            WriteDatFiles(
+                rootPath,
+                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, actionRowId, CrafterJobs.Carpenter.ClassJobId)]),
+                CreateKeybindDatBytes([("OTHER_COMMAND", "1.0,0.0,")]));
+
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
+
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+            Assert.False(result.CanRun);
+            Assert.Empty(result.MissingActions);
+            Assert.Single(result.UnboundActions);
         }
         finally
         {
@@ -60,29 +138,29 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
-    public void HotbarDatReader_ThrowsUnsupportedFormatException_ForAnyCurrentDatPayload()
+    public async Task PrepareAsync_ReturnsError_WhenHotbarFormatIsUnsupported()
     {
-        var reader = new HotbarDatReader();
+        string rootPath = CreateTempDirectory();
 
-        UnsupportedCharacterConfigFormatException exception = Assert.Throws<UnsupportedCharacterConfigFormatException>(
-            () => reader.Read([0x10, 0x20, 0x30], CrafterJobs.Carpenter));
+        try
+        {
+            WriteDatFiles(
+                rootPath,
+                CreateDatFileBytes(0x31, [0xAA, 0xBB, 0xCC]),
+                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
 
-        Assert.Equal(
-            "HOTBAR.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。",
-            exception.Message);
-    }
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
-    [Fact]
-    public void KeybindDatReader_ThrowsUnsupportedFormatException_ForAnyCurrentDatPayload()
-    {
-        var reader = new KeybindDatReader();
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
-        UnsupportedCharacterConfigFormatException exception = Assert.Throws<UnsupportedCharacterConfigFormatException>(
-            () => reader.Read([0x10, 0x20, 0x30]));
-
-        Assert.Equal(
-            "KEYBIND.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。",
-            exception.Message);
+            Assert.False(result.CanRun);
+            Assert.Equal("HOTBAR.DAT からホットバー登録情報を取得できませんでした。", result.ErrorMessage);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
     }
 
     private static CraftSequence CreateSequence(CraftActionId actionId)
@@ -110,6 +188,92 @@ public sealed class CraftSequenceExecutionPreparerTests
             new HotbarDatReader(),
             new KeybindDatReader(),
             NullLogger<CraftSequenceExecutionPreparer>.Instance);
+    }
+
+    private static uint GetLuminaActionId(CraftActionId actionId, CrafterJob crafterJob)
+    {
+        CraftActionDefinition definition = CraftActionCatalog.Get(actionId);
+        CrafterActionVariant variant = definition.Variants.First(item => item.ClassJobRowId == crafterJob.ClassJobId);
+        return variant.LuminaRowId;
+    }
+
+    private static byte[] CreateHotbarDatBytes(IReadOnlyList<byte[]> records)
+    {
+        byte[] content = records.SelectMany(static record => record).ToArray();
+        return CreateDatFileBytes(0x31, content);
+    }
+
+    private static byte[] CreateHotbarRecord(
+        byte hotbarNumber,
+        byte slotNumber,
+        HotbarSlotKind kind,
+        uint actionId,
+        uint classJobId)
+    {
+        byte[] record = new byte[16];
+        record[0] = hotbarNumber;
+        record[1] = slotNumber;
+        record[2] = (byte)kind;
+        BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(4, 4), actionId);
+        BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(8, 4), classJobId);
+        return record;
+    }
+
+    private static byte[] CreateKeybindDatBytes(IReadOnlyList<(string Command, string KeyString)> entries)
+    {
+        return CreateDatFileBytes(0x73, CreateKeybindContent(entries.ToArray()));
+    }
+
+    private static byte[] CreateKeybindContent(params (string Command, string KeyString)[] entries)
+    {
+        using var stream = new MemoryStream();
+        foreach ((string command, string keyString) in entries)
+        {
+            WriteSection(stream, 'T', command);
+            WriteSection(stream, 'C', keyString);
+        }
+
+        return stream.ToArray();
+    }
+
+    private static void WriteSection(Stream stream, char type, string text)
+    {
+        byte[] data = Encoding.UTF8.GetBytes(text + "\0");
+        stream.WriteByte((byte)type);
+
+        Span<byte> sizeBytes = stackalloc byte[2];
+        BinaryPrimitives.WriteUInt16LittleEndian(sizeBytes, checked((ushort)data.Length));
+        stream.Write(sizeBytes);
+        stream.Write(data);
+    }
+
+    private static byte[] CreateDatFileBytes(byte xorKey, byte[] content)
+    {
+        if (content.Length < 15)
+        {
+            byte[] paddedContent = new byte[15];
+            content.CopyTo(paddedContent, 0);
+            content = paddedContent;
+        }
+
+        byte[] fileBytes = new byte[0x11 + content.Length];
+
+        int headerValue = content.Length - 15;
+        BinaryPrimitives.WriteUInt32LittleEndian(fileBytes.AsSpan(0x04, 4), (uint)headerValue);
+        BinaryPrimitives.WriteUInt32LittleEndian(fileBytes.AsSpan(0x08, 4), (uint)headerValue);
+
+        for (int index = 0; index < content.Length; index++)
+        {
+            fileBytes[0x11 + index] = (byte)(content[index] ^ xorKey);
+        }
+
+        return fileBytes;
+    }
+
+    private static void WriteDatFiles(string rootPath, byte[] hotbarBytes, byte[] keybindBytes)
+    {
+        File.WriteAllBytes(Path.Combine(rootPath, "HOTBAR.DAT"), hotbarBytes);
+        File.WriteAllBytes(Path.Combine(rootPath, "KEYBIND.DAT"), keybindBytes);
     }
 
     private static string CreateTempDirectory()
