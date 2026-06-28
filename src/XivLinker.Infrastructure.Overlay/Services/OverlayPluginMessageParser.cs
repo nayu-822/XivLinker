@@ -151,6 +151,7 @@ public static class OverlayPluginMessageParser
             return new OverlayCurrentPlayerSnapshot
             {
                 PlayerName = resolvedName,
+                RawCombatantJson = current.GetRawText(),
                 TerritoryTypeId = ReadUInt32(current, "CurrentZoneID")
                     ?? ReadUInt32(current, "CurrentZoneId")
                     ?? ReadUInt32(current, "TerritoryType")

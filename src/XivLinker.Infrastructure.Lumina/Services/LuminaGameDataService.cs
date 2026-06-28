@@ -132,17 +132,17 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 rawZ);
 
             ResolvedMapLocation? location = await Task.Run(
-                () => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawZ),
+                () => ResolveMapLocationCore(data, territoryTypeId, mapId, rawX, rawY),
                 cancellationToken);
 
             if (location is null)
             {
                 logger.LogWarning(
-                    "Map resolve returned null. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawZ: {RawZ}",
+                    "Map resolve returned null. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawY: {RawY}",
                     territoryTypeId,
                     mapId,
                     rawX,
-                    rawZ);
+                    rawY);
                 return null;
             }
 
@@ -162,11 +162,11 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             else
             {
                 logger.LogWarning(
-                    "Map resolve failed. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawZ: {RawZ}, TerritoryTypeFound: {TerritoryTypeFound}, TerritoryType.Map found: {TerritoryMapFound}, Issue: {IssueMessage}",
+                    "Map resolve failed. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, RawX: {RawX}, RawY: {RawY}, TerritoryTypeFound: {TerritoryTypeFound}, TerritoryType.Map found: {TerritoryMapFound}, Issue: {IssueMessage}",
                     territoryTypeId,
                     mapId,
                     rawX,
-                    rawZ,
+                    rawY,
                     location.TerritoryTypeFound,
                     location.TerritoryMapFound,
                     location.IssueMessage);
@@ -265,7 +265,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         };
     }
 
-    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint? territoryTypeId, uint? mapId, float rawX, float rawZ)
+    private static ResolvedMapLocation? ResolveMapLocationCore(GameData data, uint? territoryTypeId, uint? mapId, float rawX, float rawY)
     {
         Map? map = null;
         string? mapName = null;
@@ -333,7 +333,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             territoryTypeId,
             mapName,
             rawX,
-            rawZ,
+            rawY,
             resolutionSource,
             territoryTypeFound,
             territoryMapFound);
@@ -373,13 +373,13 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         uint? territoryTypeId,
         string? mapName,
         float rawX,
-        float rawZ,
+        float rawY,
         string? resolutionSource,
         bool territoryTypeFound,
         bool territoryMapFound)
     {
         double mapX = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawX, map.OffsetX, map.SizeFactor);
-        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawZ, map.OffsetY, map.SizeFactor);
+        double mapY = MapCoordinateCalculator.ConvertWorldToMapCoordinate(rawY, map.OffsetY, map.SizeFactor);
 
         return new ResolvedMapLocation
         {

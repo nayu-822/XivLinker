@@ -6,26 +6,6 @@ namespace XivLinker.Infrastructure.Overlay.Services;
 
 public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurrentPlayerStateService, IDisposable
 {
-    private static readonly string[] CurrentPlayerCombatantProps =
-    [
-        "Name",
-        "ID",
-        "OwnerID",
-        "BNpcID",
-        "Type",
-        "Job",
-        "ClassJob",
-        "Level",
-        "CurrentZoneID",
-        "CurrentMapID",
-        "MapID",
-        "MapId",
-        "PosX",
-        "PosY",
-        "PosZ",
-        "Heading",
-    ];
-
     private readonly IOverlayPluginWebSocketSessionService sessionService;
     private readonly ILuminaGameDataProvider luminaGameDataProvider;
     private readonly ILogger<OverlayPluginCurrentPlayerStateService> logger;
@@ -210,20 +190,9 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
         try
         {
-            Dictionary<string, object?> parameters = new()
-            {
-                ["props"] = CurrentPlayerCombatantProps,
-            };
-
-            if (!string.IsNullOrWhiteSpace(primaryPlayerName))
-            {
-                parameters["names"] = new[] { primaryPlayerName };
-            }
-
             string response = await sessionService.SendRequestAsync(
                 "getCombatants",
-                parameters,
-                cancellationToken);
+                cancellationToken: cancellationToken);
             OverlayCurrentPlayerSnapshot? snapshot = OverlayPluginMessageParser.TryParseCurrentPlayerSnapshot(response, primaryPlayerName);
             if (snapshot is null)
             {
@@ -241,6 +210,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                 snapshot.RawZ,
                 snapshot.ClassJobId,
                 snapshot.Level);
+            logger.LogDebug("Selected current player combatant raw JSON: {CombatantJson}", snapshot.RawCombatantJson);
 
             primaryPlayerName = snapshot.PlayerName;
             currentTerritoryTypeId = snapshot.TerritoryTypeId > 0 ? snapshot.TerritoryTypeId : currentTerritoryTypeId;
@@ -272,7 +242,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             if ((territoryTypeId is not null and > 0) || (mapId is not null and > 0))
             {
                 logger.LogDebug(
-                    "Before map coordinate conversion. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}",
+                    "Before map coordinate conversion. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, MapSourceX: {RawX}, MapSourceY: {RawY}, RawZ: {RawZ}",
                     territoryTypeId,
                     mapId,
                     snapshot.RawX,
@@ -318,6 +288,13 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                         ? "Lumina 解決に必要な TerritoryTypeId が未取得です。"
                         : "Lumina から TerritoryType / Map を解決できませんでした。";
                 }
+            }
+
+            if (string.IsNullOrWhiteSpace(coordinatesText)
+                || string.Equals(coordinatesText, "未取得", StringComparison.Ordinal)
+                || string.Equals(coordinatesText, "座標を変換できません", StringComparison.Ordinal))
+            {
+                coordinatesText = $"Raw X: {snapshot.RawX:0.000}, Y: {snapshot.RawY:0.000}, Z: {snapshot.RawZ:0.000}";
             }
 
             if (snapshot.ClassJobId is not null and > 0)

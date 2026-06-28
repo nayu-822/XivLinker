@@ -4,6 +4,8 @@ public sealed class OverlayCurrentPlayerSnapshot
 {
     public string PlayerName { get; init; } = string.Empty;
 
+    public string RawCombatantJson { get; init; } = string.Empty;
+
     public uint? TerritoryTypeId { get; init; }
 
     public uint? MapId { get; init; }
