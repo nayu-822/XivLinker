@@ -6,9 +6,9 @@ public sealed class OverlayCurrentPlayerSnapshot
 
     public string RawCombatantJson { get; init; } = string.Empty;
 
-    public uint? TerritoryTypeId { get; init; }
+    public uint? CombatantTerritoryTypeId { get; init; }
 
-    public uint? MapId { get; init; }
+    public uint? CombatantMapId { get; init; }
 
     public float RawX { get; init; }
 

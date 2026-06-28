@@ -78,9 +78,14 @@ public static class OverlayPluginMessageParser
             ?? ReadUInt32(message.Payload, "TerritoryType")
             ?? ReadUInt32(message.Payload, "TerritoryTypeId")
             ?? ReadUInt32(message.Payload, "TerritoryTypeID")
+            ?? ReadUInt32(message.Payload, "Territory")
             ?? 0;
         zoneName = ReadString(message.Payload, "zoneName")
             ?? ReadString(message.Payload, "ZoneName")
+            ?? ReadString(message.Payload, "placeName")
+            ?? ReadString(message.Payload, "PlaceName")
+            ?? ReadString(message.Payload, "name")
+            ?? ReadString(message.Payload, "Name")
             ?? string.Empty;
         return territoryTypeId > 0 || !string.IsNullOrWhiteSpace(zoneName);
     }
@@ -152,12 +157,12 @@ public static class OverlayPluginMessageParser
             {
                 PlayerName = resolvedName,
                 RawCombatantJson = current.GetRawText(),
-                TerritoryTypeId = ReadUInt32(current, "CurrentZoneID")
+                CombatantTerritoryTypeId = ReadUInt32(current, "CurrentZoneID")
                     ?? ReadUInt32(current, "CurrentZoneId")
                     ?? ReadUInt32(current, "TerritoryType")
                     ?? ReadUInt32(current, "territoryType")
                     ?? ReadUInt32(current, "territoryTypeId"),
-                MapId = ReadUInt32(current, "CurrentMapID")
+                CombatantMapId = ReadUInt32(current, "CurrentMapID")
                     ?? ReadUInt32(current, "CurrentMapId")
                     ?? ReadUInt32(current, "MapID")
                     ?? ReadUInt32(current, "MapId")

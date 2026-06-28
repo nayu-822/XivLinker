@@ -206,8 +206,8 @@ public sealed class OverlayPluginMessageParserTests
         Assert.Equal("Example Crafter", snapshot!.PlayerName);
         Assert.Equal((uint)11, snapshot.ClassJobId);
         Assert.Equal(90, snapshot.Level);
-        Assert.Equal((uint)148, snapshot.TerritoryTypeId);
-        Assert.Null(snapshot.MapId);
+        Assert.Equal((uint)148, snapshot.CombatantTerritoryTypeId);
+        Assert.Null(snapshot.CombatantMapId);
         Assert.Equal(120.5f, snapshot.RawX);
         Assert.Equal(-30.2f, snapshot.RawY);
     }
@@ -234,8 +234,8 @@ public sealed class OverlayPluginMessageParserTests
         OverlayCurrentPlayerSnapshot? snapshot = OverlayPluginMessageParser.TryParseCurrentPlayerSnapshot(json, "Example Crafter");
 
         Assert.NotNull(snapshot);
-        Assert.Null(snapshot!.TerritoryTypeId);
-        Assert.Equal((uint)584, snapshot.MapId);
+        Assert.Null(snapshot!.CombatantTerritoryTypeId);
+        Assert.Equal((uint)584, snapshot.CombatantMapId);
     }
 
     [Fact]
@@ -258,8 +258,8 @@ public sealed class OverlayPluginMessageParserTests
         Assert.NotNull(snapshot);
         Assert.Equal((uint)11, snapshot!.ClassJobId);
         Assert.Equal(90, snapshot.Level);
-        Assert.Null(snapshot.TerritoryTypeId);
-        Assert.Null(snapshot.MapId);
+        Assert.Null(snapshot.CombatantTerritoryTypeId);
+        Assert.Null(snapshot.CombatantMapId);
         Assert.Equal(0, snapshot.RawX);
         Assert.Equal(0, snapshot.RawY);
     }

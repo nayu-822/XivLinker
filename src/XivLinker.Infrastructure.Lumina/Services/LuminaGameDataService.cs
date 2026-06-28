@@ -179,9 +179,13 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             if (!string.IsNullOrWhiteSpace(location.IssueMessage))
             {
                 logger.LogWarning(
-                    "Map resolve issue. TerritoryTypeId: {TerritoryTypeId}, CurrentMapID: {MapId}, Issue: {IssueMessage}",
+                    "Map resolve issue. InputTerritoryTypeId: {TerritoryTypeId}, InputMapId: {MapId}, InputMapName: {MapName}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}, Issue: {IssueMessage}",
                     territoryTypeId,
                     mapId,
+                    mapName,
+                    rawX,
+                    rawY,
+                    rawZ,
                     location.IssueMessage);
             }
 
@@ -345,19 +349,6 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         string? mapName,
         Language language)
     {
-        MapResolutionCandidate? mapIdCandidate = ResolveMapRowFromMapId(data, mapId, language);
-        if (mapIdCandidate?.Map is Map resolvedMapIdMap
-            && IsUsableMapForCoordinates(resolvedMapIdMap))
-        {
-            return MapResolutionResult.Success(
-                resolvedMapIdMap,
-                mapIdCandidate.Source,
-                mapIdCandidate.TerritoryTypeId,
-                mapIdCandidate.MapName,
-                territoryTypeFound: false,
-                territoryMapFound: false);
-        }
-
         MapResolutionCandidate? territoryCandidate = ResolveMapRowFromTerritoryType(data, territoryTypeId, language);
         bool territoryTypeFound = territoryCandidate is not null;
         bool territoryMapFound = territoryCandidate?.Map is Map territoryMap && territoryMap.RowId != 0;
@@ -370,6 +361,19 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 territoryCandidate.Source,
                 territoryCandidate.TerritoryTypeId,
                 territoryCandidate.MapName,
+                territoryTypeFound,
+                territoryMapFound);
+        }
+
+        MapResolutionCandidate? mapIdCandidate = ResolveMapRowFromMapId(data, mapId, language);
+        if (mapIdCandidate?.Map is Map resolvedMapIdMap
+            && IsUsableMapForCoordinates(resolvedMapIdMap))
+        {
+            return MapResolutionResult.Success(
+                resolvedMapIdMap,
+                mapIdCandidate.Source,
+                mapIdCandidate.TerritoryTypeId,
+                mapIdCandidate.MapName,
                 territoryTypeFound,
                 territoryMapFound);
         }
@@ -388,6 +392,9 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         }
 
         return MapResolutionResult.Failed(
+            territoryTypeId,
+            mapId,
+            mapName,
             territoryCandidate,
             mapIdCandidate,
             mapNameCandidate,
@@ -823,13 +830,22 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         }
 
         public static MapResolutionResult Failed(
+            uint? inputTerritoryTypeId,
+            uint? inputMapId,
+            string? inputMapName,
             MapResolutionCandidate? territoryCandidate,
             MapResolutionCandidate? mapIdCandidate,
             MapResolutionCandidate? mapNameCandidate,
             bool territoryTypeFound,
             bool territoryMapFound)
         {
-            string issue = $"Map resolution failed. territoryType.Map={DescribeCandidate(territoryCandidate)}; mapId={DescribeCandidate(mapIdCandidate)}; mapName={DescribeCandidate(mapNameCandidate)}";
+            string issue =
+                $"Map resolution failed. inputTerritoryTypeId={inputTerritoryTypeId?.ToString() ?? "null"}; " +
+                $"inputMapId={inputMapId?.ToString() ?? "null"}; " +
+                $"inputMapName={inputMapName ?? "null"}; " +
+                $"territoryType.Map={DescribeCandidate(territoryCandidate)}; " +
+                $"mapId={DescribeCandidate(mapIdCandidate)}; " +
+                $"mapName={DescribeCandidate(mapNameCandidate)}";
 
             return new MapResolutionResult
             {

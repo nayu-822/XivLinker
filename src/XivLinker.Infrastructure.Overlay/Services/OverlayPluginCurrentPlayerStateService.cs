@@ -58,6 +58,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
         currentTerritoryTypeId = null;
         currentMapId = null;
         currentZoneName = null;
+        hasLoggedZoneEventPayload = false;
         UpdateState(CreateUnavailableState("切断中"));
     }
 
@@ -77,23 +78,31 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             return;
         }
 
-        if (OverlayPluginMessageParser.TryParseChangeZone(message, out uint territoryTypeId, out string zoneName))
+        if (!OverlayPluginMessageParser.TryParseChangeZone(message, out uint territoryTypeId, out string zoneName))
         {
-            logger.LogDebug(
-                "ChangeZone parsed. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}",
-                territoryTypeId,
-                zoneName);
-
-            if (!hasLoggedZoneEventPayload)
-            {
-                hasLoggedZoneEventPayload = true;
-                logger.LogInformation("Received ChangeZone payload: {Payload}", message.RawJson);
-            }
-
-            currentTerritoryTypeId = territoryTypeId > 0 ? territoryTypeId : currentTerritoryTypeId;
-            currentZoneName = string.IsNullOrWhiteSpace(zoneName) ? currentZoneName : zoneName;
-            _ = RefreshCurrentPlayerStateAsync();
+            return;
         }
+
+        logger.LogInformation(
+            "ChangeZone parsed. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}, Payload: {Payload}",
+            territoryTypeId,
+            zoneName,
+            message.RawJson);
+
+        currentTerritoryTypeId = territoryTypeId > 0 ? territoryTypeId : currentTerritoryTypeId;
+        currentZoneName = string.IsNullOrWhiteSpace(zoneName) ? currentZoneName : zoneName;
+
+        if (!hasLoggedZoneEventPayload)
+        {
+            hasLoggedZoneEventPayload = true;
+        }
+
+        logger.LogInformation(
+            "Current zone updated from ChangeZone. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}",
+            currentTerritoryTypeId,
+            currentZoneName);
+
+        _ = RefreshCurrentPlayerStateAsync();
     }
 
     private async Task InitializeSubscriptionsAsync()
@@ -138,7 +147,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
     private async Task PollCurrentPlayerStateAsync(CancellationToken cancellationToken)
     {
-        UpdateState(CreateUnavailableState("現在状態を取得中"));
+        UpdateState(CreateUnavailableState("現在地を取得中"));
 
         while (!cancellationToken.IsCancellationRequested && sessionService.IsStarted)
         {
@@ -171,7 +180,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                     MapName = currentState.MapName,
                     CoordinatesText = currentState.CoordinatesText,
                     UpdatedAt = currentState.UpdatedAt,
-                    IssueMessage = "現在状態の取得に失敗しました。",
+                    IssueMessage = "現在地更新に失敗しました。",
                 });
                 await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
             }
@@ -182,7 +191,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
     {
         if (!sessionService.IsStarted)
         {
-            UpdateState(CreateUnavailableState("接続待ち"));
+            UpdateState(CreateUnavailableState("未接続"));
             return;
         }
 
@@ -196,15 +205,15 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             OverlayCurrentPlayerSnapshot? snapshot = OverlayPluginMessageParser.TryParseCurrentPlayerSnapshot(response, primaryPlayerName);
             if (snapshot is null)
             {
-                UpdateState(CreateUnavailableState("現在プレイヤーを未取得"));
+                UpdateState(CreateUnavailableState("現在プレイヤーを取得できません"));
                 return;
             }
 
             logger.LogDebug(
-                "Current combatant snapshot. Name: {Name}, TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}, Job: {Job}, Level: {Level}",
+                "Current combatant snapshot. Name: {Name}, CombatantTerritoryTypeId: {CombatantTerritoryTypeId}, CombatantMapId: {CombatantMapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}, Job: {Job}, Level: {Level}",
                 snapshot.PlayerName,
-                snapshot.TerritoryTypeId,
-                snapshot.MapId,
+                snapshot.CombatantTerritoryTypeId,
+                snapshot.CombatantMapId,
                 snapshot.RawX,
                 snapshot.RawY,
                 snapshot.RawZ,
@@ -213,23 +222,21 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             logger.LogDebug("Selected current player combatant raw JSON: {CombatantJson}", snapshot.RawCombatantJson);
 
             primaryPlayerName = snapshot.PlayerName;
-            currentTerritoryTypeId = snapshot.TerritoryTypeId > 0 ? snapshot.TerritoryTypeId : currentTerritoryTypeId;
-            currentMapId = snapshot.MapId > 0 ? snapshot.MapId : currentMapId;
+
             uint? territoryTypeId = currentTerritoryTypeId;
             uint? mapId = currentMapId;
+            string? zoneName = currentZoneName;
 
-            string mapName = !string.IsNullOrWhiteSpace(currentZoneName) ? currentZoneName! : "未取得";
+            string mapName = !string.IsNullOrWhiteSpace(zoneName) ? zoneName! : "未取得";
             double? mapX = null;
             double? mapY = null;
             string coordinatesText = "未取得";
             string classJobName = "未取得";
             string? issueMessage = null;
-
-            if (territoryTypeId is null or 0)
-            {
-                issueMessage = "ChangeZone を受信していないため TerritoryTypeId が未取得です。";
-                logger.LogDebug("TerritoryTypeId is not available yet.");
-            }
+            bool hasMapResolutionKey =
+                territoryTypeId is > 0
+                || mapId is > 0
+                || !string.IsNullOrWhiteSpace(zoneName);
 
             if (snapshot.RawX == 0 && snapshot.RawY == 0 && snapshot.RawZ == 0)
             {
@@ -239,12 +246,24 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                     response.Length > 4000 ? response[..4000] : response);
             }
 
-            if ((territoryTypeId is not null and > 0) || (mapId is not null and > 0))
+            if (!hasMapResolutionKey)
+            {
+                coordinatesText = "ChangeZone 待ち";
+                issueMessage = "ChangeZone をまだ受信していないため、マップ座標を解決できません。";
+                logger.LogInformation(
+                    "Skipping map coordinate conversion because zone context is not available. Player: {PlayerName}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}",
+                    snapshot.PlayerName,
+                    snapshot.RawX,
+                    snapshot.RawY,
+                    snapshot.RawZ);
+            }
+            else
             {
                 logger.LogDebug(
-                    "Before map coordinate conversion. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, MapSourceX: {RawX}, MapSourceY: {RawY}, RawZ: {RawZ}",
+                    "Before map coordinate conversion. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, MapName: {MapName}, MapSourceX: {RawX}, MapSourceY: {RawY}, RawZ: {RawZ}",
                     territoryTypeId,
                     mapId,
+                    mapName,
                     snapshot.RawX,
                     snapshot.RawY,
                     snapshot.RawZ);
@@ -285,9 +304,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                 else
                 {
                     coordinatesText = "マップ情報を取得できません";
-                    issueMessage = territoryTypeId is null or 0
-                        ? "Lumina 解決に必要な TerritoryTypeId が未取得です。"
-                        : "Lumina から TerritoryType / Map を解決できませんでした。";
+                    issueMessage = "Lumina から TerritoryType / Map を解決できませんでした。";
                 }
             }
 
