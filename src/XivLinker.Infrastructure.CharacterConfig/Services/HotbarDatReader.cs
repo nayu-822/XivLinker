@@ -1,5 +1,5 @@
-using System.Buffers.Binary;
-using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Domain.Models;
 using XivLinker.Infrastructure.CharacterConfig.Models;
 
@@ -8,58 +8,28 @@ namespace XivLinker.Infrastructure.CharacterConfig.Services;
 public sealed class HotbarDatReader
 {
     private const byte XorKey = 0x31;
-    private const string Magic = "XHB1";
+    private readonly ILogger<HotbarDatReader> logger;
+
+    public HotbarDatReader(ILogger<HotbarDatReader>? logger = null)
+    {
+        this.logger = logger ?? NullLogger<HotbarDatReader>.Instance;
+    }
 
     public IReadOnlyList<HotbarSlotEntry> Read(byte[] encodedBytes, CrafterJob crafterJob)
     {
-        byte[] bytes = DecodeWithXor(encodedBytes, XorKey);
-        if (bytes.Length < 8 || Encoding.ASCII.GetString(bytes, 0, 4) != Magic)
-        {
-            throw new InvalidDataException("HOTBAR.DAT のフォーマットを解釈できません。");
-        }
+        ArgumentNullException.ThrowIfNull(encodedBytes);
+        ArgumentNullException.ThrowIfNull(crafterJob);
 
-        int count = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4, 4));
-        int offset = 8;
-        var entries = new List<HotbarSlotEntry>(count);
+        byte[] xorDecodedBytes = DecodeWithXor(encodedBytes, XorKey);
 
-        for (int index = 0; index < count; index++)
-        {
-            if (offset + 24 > bytes.Length)
-            {
-                throw new InvalidDataException("HOTBAR.DAT のスロット情報が途中で終了しています。");
-            }
+        logger.LogWarning(
+            "HOTBAR.DAT format is not supported. Length: {Length}, FirstBytes: {FirstBytes}, Xor31FirstBytes: {DecodedFirstBytes}",
+            encodedBytes.Length,
+            ToHex(encodedBytes, 32),
+            ToHex(xorDecodedBytes, 32));
 
-            int hotbarNumber = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset, 4));
-            int slotNumber = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset + 4, 4));
-            int kindValue = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset + 8, 4));
-            uint actionOrCommandId = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(offset + 12, 4));
-            uint classJobId = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(offset + 16, 4));
-            bool isShared = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset + 20, 4)) != 0;
-            offset += 24;
-
-            uint? scopedClassJobId = classJobId == 0 ? null : classJobId;
-            if (!isShared && scopedClassJobId is not null && scopedClassJobId != crafterJob.ClassJobId)
-            {
-                continue;
-            }
-
-            entries.Add(new HotbarSlotEntry(
-                hotbarNumber,
-                slotNumber,
-                ResolveKind(kindValue),
-                actionOrCommandId,
-                scopedClassJobId,
-                isShared));
-        }
-
-        return entries;
-    }
-
-    private static HotbarSlotKind ResolveKind(int value)
-    {
-        return Enum.IsDefined(typeof(HotbarSlotKind), value)
-            ? (HotbarSlotKind)value
-            : HotbarSlotKind.Unknown;
+        throw new UnsupportedCharacterConfigFormatException(
+            "HOTBAR.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。");
     }
 
     private static byte[] DecodeWithXor(byte[] source, byte key)
@@ -72,5 +42,10 @@ public sealed class HotbarDatReader
         }
 
         return decoded;
+    }
+
+    private static string ToHex(byte[] bytes, int maxLength)
+    {
+        return Convert.ToHexString(bytes.AsSpan(0, Math.Min(bytes.Length, maxLength)));
     }
 }

@@ -35,7 +35,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         if (requiredActions.Count == 0)
         {
             return CraftSequenceExecutionPreparationResult.Failed(
-                "シーケンスに実行可能なクラフターアクションが含まれていません。");
+                "シーケンスに準備対象のクラフターアクションが含まれていないため、実行できません。");
         }
 
         logger.LogInformation(
@@ -53,82 +53,35 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         {
             logger.LogWarning(exception, "Failed to load HOTBAR.DAT / KEYBIND.DAT for craft execution preparation.");
             return CraftSequenceExecutionPreparationResult.Failed(
-                "HOTBAR.DAT または KEYBIND.DAT を読み込めないため、シーケンスを実行できません。");
-        }
-
-        IReadOnlyList<HotbarSlotEntry> hotbarSlots;
-        IReadOnlyList<HotbarSlotKeyBinding> keyBindings;
-
-        try
-        {
-            hotbarSlots = hotbarDatReader.Read(files.HotbarBytes, crafterJob);
-        }
-        catch (InvalidDataException exception)
-        {
-            logger.LogWarning(exception, "Failed to parse HOTBAR.DAT for craft execution preparation.");
-            return CraftSequenceExecutionPreparationResult.Failed(
-                "HOTBAR.DAT を解釈できないため、シーケンスを実行できません。");
-        }
-
-        try
-        {
-            keyBindings = keybindDatReader.Read(files.KeybindBytes);
-        }
-        catch (InvalidDataException exception)
-        {
-            logger.LogWarning(exception, "Failed to parse KEYBIND.DAT for craft execution preparation.");
-            return CraftSequenceExecutionPreparationResult.Failed(
-                "KEYBIND.DAT を解釈できないため、シーケンスを実行できません。");
-        }
-
-        var actionKeyBindings = new List<CraftActionKeyBinding>();
-        var missingActions = new List<CraftActionRequirement>();
-        var unboundActions = new List<CraftActionRequirement>();
-
-        foreach (CraftActionRequirement requiredAction in requiredActions)
-        {
-            HotbarSlotEntry? slot = hotbarSlots.FirstOrDefault(candidate =>
-                candidate.Kind == HotbarSlotKind.Action
-                && candidate.ActionOrCommandId == requiredAction.LuminaActionId);
-
-            if (slot is null)
-            {
-                missingActions.Add(requiredAction);
-                continue;
-            }
-
-            HotbarSlotKeyBinding? keyBinding = keyBindings.FirstOrDefault(candidate =>
-                candidate.HotbarNumber == slot.HotbarNumber
-                && candidate.SlotNumber == slot.SlotNumber);
-
-            if (keyBinding is null || keyBinding.Keys.Count == 0)
-            {
-                unboundActions.Add(requiredAction);
-                continue;
-            }
-
-            actionKeyBindings.Add(new CraftActionKeyBinding(
-                requiredAction.ActionId,
-                requiredAction.ActionName,
-                slot.HotbarNumber,
-                slot.SlotNumber,
-                keyBinding.KeyGestureText,
-                keyBinding.Keys));
+                "HOTBAR.DAT または KEYBIND.DAT を読み込めないため、シーケンスを準備できません。");
         }
 
         logger.LogInformation(
-            "Craft execution preparation completed. Sequence: {SequenceName}, ResolvedBindings: {ResolvedBindings}, MissingActions: {MissingActions}, UnboundActions: {UnboundActions}",
-            sequence.Name,
-            string.Join(", ", actionKeyBindings.Select(static binding => $"{binding.ActionName} -> Hotbar {binding.HotbarNumber} Slot {binding.SlotNumber} -> {binding.KeyGestureText}")),
-            string.Join(", ", missingActions.Select(static action => action.ActionName)),
-            string.Join(", ", unboundActions.Select(static action => action.ActionName)));
+            "Character config files loaded. HotbarPath: {HotbarPath}, HotbarBytes: {HotbarLength}, KeybindPath: {KeybindPath}, KeybindBytes: {KeybindLength}",
+            files.HotbarPath,
+            files.HotbarBytes.Length,
+            files.KeybindPath,
+            files.KeybindBytes.Length);
 
-        return new CraftSequenceExecutionPreparationResult
+        try
         {
-            MissingActions = missingActions,
-            UnboundActions = unboundActions,
-            ActionKeyBindings = actionKeyBindings,
-        };
+            _ = hotbarDatReader.Read(files.HotbarBytes, crafterJob);
+            _ = keybindDatReader.Read(files.KeybindBytes);
+        }
+        catch (UnsupportedCharacterConfigFormatException exception)
+        {
+            logger.LogWarning(exception, "Unsupported character config format.");
+            return CraftSequenceExecutionPreparationResult.Failed(exception.Message);
+        }
+        catch (InvalidDataException exception)
+        {
+            logger.LogWarning(exception, "Failed to parse HOTBAR.DAT / KEYBIND.DAT for craft execution preparation.");
+            return CraftSequenceExecutionPreparationResult.Failed(
+                "HOTBAR.DAT または KEYBIND.DAT を解析できないため、シーケンスを準備できません。");
+        }
+
+        return CraftSequenceExecutionPreparationResult.Failed(
+            "HOTBAR.DAT または KEYBIND.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。");
     }
 
     private static IReadOnlyList<CraftActionRequirement> ResolveRequiredActions(CraftSequence sequence, CrafterJob crafterJob)

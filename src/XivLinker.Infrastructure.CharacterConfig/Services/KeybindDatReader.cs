@@ -1,5 +1,5 @@
-using System.Buffers.Binary;
-using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Infrastructure.CharacterConfig.Models;
 
 namespace XivLinker.Infrastructure.CharacterConfig.Services;
@@ -7,66 +7,27 @@ namespace XivLinker.Infrastructure.CharacterConfig.Services;
 public sealed class KeybindDatReader
 {
     private const byte XorKey = 0x73;
-    private const string Magic = "XKB1";
+    private readonly ILogger<KeybindDatReader> logger;
+
+    public KeybindDatReader(ILogger<KeybindDatReader>? logger = null)
+    {
+        this.logger = logger ?? NullLogger<KeybindDatReader>.Instance;
+    }
 
     public IReadOnlyList<HotbarSlotKeyBinding> Read(byte[] encodedBytes)
     {
-        byte[] bytes = DecodeWithXor(encodedBytes, XorKey);
-        if (bytes.Length < 8 || Encoding.ASCII.GetString(bytes, 0, 4) != Magic)
-        {
-            throw new InvalidDataException("KEYBIND.DAT のフォーマットを解釈できません。");
-        }
+        ArgumentNullException.ThrowIfNull(encodedBytes);
 
-        int count = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4, 4));
-        int offset = 8;
-        var bindings = new List<HotbarSlotKeyBinding>(count);
+        byte[] xorDecodedBytes = DecodeWithXor(encodedBytes, XorKey);
 
-        for (int index = 0; index < count; index++)
-        {
-            int hotbarNumber = ReadInt32(bytes, ref offset);
-            int slotNumber = ReadInt32(bytes, ref offset);
-            string keyGestureText = ReadString(bytes, ref offset);
-            int keyCount = ReadInt32(bytes, ref offset);
-            var keys = new List<string>(keyCount);
+        logger.LogWarning(
+            "KEYBIND.DAT format is not supported. Length: {Length}, FirstBytes: {FirstBytes}, Xor73FirstBytes: {DecodedFirstBytes}",
+            encodedBytes.Length,
+            ToHex(encodedBytes, 32),
+            ToHex(xorDecodedBytes, 32));
 
-            for (int keyIndex = 0; keyIndex < keyCount; keyIndex++)
-            {
-                keys.Add(ReadString(bytes, ref offset));
-            }
-
-            bindings.Add(new HotbarSlotKeyBinding(
-                hotbarNumber,
-                slotNumber,
-                keyGestureText,
-                keys));
-        }
-
-        return bindings;
-    }
-
-    private static int ReadInt32(byte[] bytes, ref int offset)
-    {
-        if (offset + 4 > bytes.Length)
-        {
-            throw new InvalidDataException("KEYBIND.DAT の整数データが不足しています。");
-        }
-
-        int value = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset, 4));
-        offset += 4;
-        return value;
-    }
-
-    private static string ReadString(byte[] bytes, ref int offset)
-    {
-        int length = ReadInt32(bytes, ref offset);
-        if (length < 0 || offset + length > bytes.Length)
-        {
-            throw new InvalidDataException("KEYBIND.DAT の文字列データが壊れています。");
-        }
-
-        string value = Encoding.UTF8.GetString(bytes, offset, length);
-        offset += length;
-        return value;
+        throw new UnsupportedCharacterConfigFormatException(
+            "KEYBIND.DAT の実ファイル形式にまだ対応できていないため、シーケンスを準備できません。");
     }
 
     private static byte[] DecodeWithXor(byte[] source, byte key)
@@ -79,5 +40,10 @@ public sealed class KeybindDatReader
         }
 
         return decoded;
+    }
+
+    private static string ToHex(byte[] bytes, int maxLength)
+    {
+        return Convert.ToHexString(bytes.AsSpan(0, Math.Min(bytes.Length, maxLength)));
     }
 }
