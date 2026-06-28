@@ -81,7 +81,10 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         }
         catch (Exception exception) when (exception is InvalidDataException or IOException)
         {
-            logger.LogWarning(exception, "Failed to parse KEYBIND.DAT.");
+            logger.LogWarning(
+                exception,
+                "Failed to parse KEYBIND.DAT. Message: {Message}",
+                exception.Message);
             return CraftSequenceExecutionPreparationResult.Failed(
                 "KEYBIND.DAT を読み込めませんでした。");
         }

@@ -141,6 +141,11 @@ public sealed partial class KeybindDatReader
 
         while (offset < decodedBody.Length)
         {
+            if (offset == decodedBody.Length - 1 && decodedBody[offset] == 0)
+            {
+                break;
+            }
+
             sections.Add(ReadSection(decodedBody, index, ref offset));
             index++;
         }

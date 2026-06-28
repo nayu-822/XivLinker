@@ -47,6 +47,31 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
+    public void KeybindDatReader_Read_AllowsTrailingNullByteInDecodedBody()
+    {
+        byte[] datBytes = CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]);
+
+        var reader = new KeybindDatReader();
+
+        KeybindEntry entry = Assert.Single(reader.Read(datBytes));
+
+        Assert.Equal("HOTBAR_1_1", entry.Command);
+        Assert.Equal("31.0,", entry.RawBindingText);
+    }
+
+    [Fact]
+    public void KeybindDatReader_Read_ThrowsWhenSectionNullTerminatorIsMissing()
+    {
+        byte[] datBytes = CreateKeybindDatBytesWithoutSectionNullTerminator([('T', "HOTBAR_1_1", 'C', "31.0,")]);
+
+        var reader = new KeybindDatReader();
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() => reader.Read(datBytes));
+
+        Assert.Contains("null terminator", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void KeybindDisplayFormatter_FormatsHexKeyAndModifier()
     {
         var gesture = new KeybindGesture("31", "04");
@@ -312,9 +337,33 @@ public sealed class CraftSequenceExecutionPreparerTests
         return CreateKeybindDatFileBytes(stream.ToArray());
     }
 
+    private static byte[] CreateKeybindDatBytesWithoutSectionNullTerminator(IReadOnlyList<(char CommandTag, string Command, char BindingTag, string Binding)> entries)
+    {
+        using var stream = new MemoryStream();
+
+        foreach ((char commandTag, string command, char bindingTag, string binding) in entries)
+        {
+            WriteSection(stream, commandTag, command);
+            WriteSectionWithoutNullTerminator(stream, bindingTag, binding);
+        }
+
+        return CreateKeybindDatFileBytes(stream.ToArray());
+    }
+
     private static void WriteSection(Stream stream, char type, string text)
     {
         byte[] data = Encoding.UTF8.GetBytes(text + "\0");
+        stream.WriteByte((byte)type);
+
+        Span<byte> sizeBytes = stackalloc byte[2];
+        BinaryPrimitives.WriteUInt16LittleEndian(sizeBytes, checked((ushort)data.Length));
+        stream.Write(sizeBytes);
+        stream.Write(data);
+    }
+
+    private static void WriteSectionWithoutNullTerminator(Stream stream, char type, string text)
+    {
+        byte[] data = Encoding.UTF8.GetBytes(text);
         stream.WriteByte((byte)type);
 
         Span<byte> sizeBytes = stackalloc byte[2];

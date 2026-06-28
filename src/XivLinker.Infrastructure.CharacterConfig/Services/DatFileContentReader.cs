@@ -58,11 +58,6 @@ internal static class DatFileContentReader
             content[index] ^= xorKey;
         }
 
-        if (content.Length > 0 && content[^1] == 0)
-        {
-            Array.Resize(ref content, content.Length - 1);
-        }
-
         return content;
     }
 }
