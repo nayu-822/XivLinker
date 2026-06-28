@@ -252,6 +252,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                 ResolvedMapLocation? location = await luminaGameDataProvider.ResolveMapLocationAsync(
                     territoryTypeId,
                     mapId,
+                    mapName,
                     snapshot.RawX,
                     snapshot.RawY,
                     snapshot.RawZ,
@@ -288,13 +289,6 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
                         ? "Lumina 解決に必要な TerritoryTypeId が未取得です。"
                         : "Lumina から TerritoryType / Map を解決できませんでした。";
                 }
-            }
-
-            if (string.IsNullOrWhiteSpace(coordinatesText)
-                || string.Equals(coordinatesText, "未取得", StringComparison.Ordinal)
-                || string.Equals(coordinatesText, "座標を変換できません", StringComparison.Ordinal))
-            {
-                coordinatesText = $"Raw X: {snapshot.RawX:0.000}, Y: {snapshot.RawY:0.000}, Z: {snapshot.RawZ:0.000}";
             }
 
             if (snapshot.ClassJobId is not null and > 0)

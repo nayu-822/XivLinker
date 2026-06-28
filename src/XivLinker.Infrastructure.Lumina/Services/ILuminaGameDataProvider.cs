@@ -9,6 +9,7 @@ public interface ILuminaGameDataProvider
     Task<ResolvedMapLocation?> ResolveMapLocationAsync(
         uint? territoryTypeId,
         uint? mapId,
+        string? mapName,
         float rawX,
         float rawY,
         float rawZ,
