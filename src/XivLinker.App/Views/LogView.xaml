@@ -21,30 +21,37 @@
 
         <Border Grid.Row="2"
                 Style="{StaticResource CompactCardStyle}">
-                <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+            <TabControl SelectedIndex="{Binding SelectedTabIndex}"
                         Background="Transparent"
                         BorderThickness="0">
                 <TabControl.Resources>
                     <Style TargetType="TabControl">
+                        <Setter Property="Padding" Value="0" />
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="TabControl">
                                     <Grid KeyboardNavigation.TabNavigation="Local">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="12" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
 
-                                        <TabPanel Grid.Row="0"
-                                                  Margin="0"
-                                                  Background="Transparent"
-                                                  IsItemsHost="True"
-                                                  Panel.ZIndex="1" />
+                                        <Border Grid.Row="0"
+                                                HorizontalAlignment="Left"
+                                                Padding="2"
+                                                Background="{DynamicResource App.Brush.SurfaceAlt}"
+                                                BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
+                                                BorderThickness="1"
+                                                CornerRadius="{StaticResource App.CornerRadius.Control}">
+                                            <TabPanel Margin="0"
+                                                      Background="Transparent"
+                                                      IsItemsHost="True"
+                                                      Panel.ZIndex="1" />
+                                        </Border>
 
-                                        <ContentPresenter Grid.Row="2"
+                                        <ContentPresenter Grid.Row="1"
                                                           ContentSource="SelectedContent"
-                                                          Margin="0" />
+                                                          Margin="0,16,0,0" />
                                     </Grid>
                                 </ControlTemplate>
                             </Setter.Value>
@@ -53,27 +60,38 @@
 
                     <Style TargetType="TabItem">
                         <Setter Property="Foreground" Value="{DynamicResource App.Brush.TextSecondary}" />
-                        <Setter Property="Background" Value="{DynamicResource App.Brush.SurfaceAlt}" />
-                        <Setter Property="Margin" Value="0,0,8,0" />
-                        <Setter Property="Padding" Value="12,8" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Padding" Value="12,7" />
+                        <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="TabItem">
                                     <Border x:Name="TabBorder"
                                             Padding="{TemplateBinding Padding}"
                                             Background="{TemplateBinding Background}"
-                                            BorderBrush="{DynamicResource App.Brush.BorderSubtle}"
-                                            BorderThickness="1"
                                             CornerRadius="{StaticResource App.CornerRadius.Control}">
                                         <ContentPresenter ContentSource="Header"
                                                           HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center" />
+                                                          VerticalAlignment="Center"
+                                                          RecognizesAccessKey="True" />
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource App.Brush.Accent}" />
                                             <Setter Property="Foreground" Value="{DynamicResource App.Brush.OnAccent}" />
                                         </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource App.Brush.NavigationHover}" />
+                                        </Trigger>
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsSelected" Value="True" />
+                                                <Condition Property="IsMouseOver" Value="True" />
+                                            </MultiTrigger.Conditions>
+                                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource App.Brush.Accent}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource App.Brush.OnAccent}" />
+                                        </MultiTrigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Setter.Value>
