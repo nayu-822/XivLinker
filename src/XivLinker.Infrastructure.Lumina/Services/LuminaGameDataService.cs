@@ -1,5 +1,6 @@
 using Lumina;
 using Lumina.Data;
+using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -391,6 +392,19 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 territoryMapFound);
         }
 
+        MapResolutionCandidate? mapPlaceNameCandidate = ResolveMapRowByMapPlaceName(data, mapName, language);
+        if (mapPlaceNameCandidate?.Map is Map resolvedMapPlaceNameMap
+            && IsUsableMapForCoordinates(resolvedMapPlaceNameMap))
+        {
+            return MapResolutionResult.Success(
+                resolvedMapPlaceNameMap,
+                mapPlaceNameCandidate.Source,
+                mapPlaceNameCandidate.TerritoryTypeId ?? territoryCandidate?.TerritoryTypeId,
+                mapPlaceNameCandidate.MapName,
+                territoryTypeFound,
+                territoryMapFound);
+        }
+
         return MapResolutionResult.Failed(
             territoryTypeId,
             mapId,
@@ -398,6 +412,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             territoryCandidate,
             mapIdCandidate,
             mapNameCandidate,
+            mapPlaceNameCandidate,
             territoryTypeFound,
             territoryMapFound);
     }
@@ -409,21 +424,13 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             return null;
         }
 
-        IEnumerable<TerritoryType>? territorySheet = data.GetExcelSheet<TerritoryType>(language);
+        ExcelSheet<TerritoryType>? territorySheet = data.GetExcelSheet<TerritoryType>(language, null);
         if (territorySheet is null)
         {
             return null;
         }
 
-        TerritoryType? territory = null;
-        foreach (TerritoryType row in territorySheet)
-        {
-            if (row.RowId == territoryTypeId.Value)
-            {
-                territory = row;
-                break;
-            }
-        }
+        TerritoryType? territory = territorySheet.GetRowOrDefault(territoryTypeId.Value);
 
         if (territory is null || territory.Value.RowId == 0)
         {
@@ -432,13 +439,18 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
 
         string? placeName = ExtractPlaceName(territory.Value.PlaceNameZone.ValueNullable)
             ?? ExtractPlaceName(territory.Value.PlaceName.ValueNullable);
+        Map? resolvedMap = ResolveMapFromReference(data, territory.Value.Map, language);
 
         return new MapResolutionCandidate
         {
             Source = "territoryType.Map",
-            Map = territory.Value.Map.ValueNullable,
+            Map = resolvedMap,
             TerritoryTypeId = territory.Value.RowId,
             MapName = placeName,
+            TerritoryRowFound = true,
+            MapReferenceType = territory.Value.Map.GetType().FullName,
+            MapReferenceRowId = ReadReferenceRowId(territory.Value.Map),
+            MapReferenceValueFound = resolvedMap is not null,
         };
     }
 
@@ -449,21 +461,13 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             return null;
         }
 
-        IEnumerable<Map>? mapSheet = data.GetExcelSheet<Map>(language);
+        ExcelSheet<Map>? mapSheet = data.GetExcelSheet<Map>(language, null);
         if (mapSheet is null)
         {
             return null;
         }
 
-        Map? map = null;
-        foreach (Map row in mapSheet)
-        {
-            if (row.RowId == mapId.Value)
-            {
-                map = row;
-                break;
-            }
-        }
+        Map? map = mapSheet.GetRowOrDefault(mapId.Value);
 
         if (map is null || map.Value.RowId == 0)
         {
@@ -486,7 +490,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         }
 
         string normalizedTargetName = NormalizeComparisonText(mapName);
-        IEnumerable<TerritoryType>? territorySheet = data.GetExcelSheet<TerritoryType>(language);
+        ExcelSheet<TerritoryType>? territorySheet = data.GetExcelSheet<TerritoryType>(language, null);
         if (territorySheet is null)
         {
             return null;
@@ -512,7 +516,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 continue;
             }
 
-            Map? map = territoryType.Map.ValueNullable;
+            Map? map = ResolveMapFromReference(data, territoryType.Map, language);
             if (map is not null && map.Value.RowId != 0)
             {
                 string? resolvedName = !string.IsNullOrWhiteSpace(placeNameZone)
@@ -525,8 +529,53 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                     Map = map.Value,
                     TerritoryTypeId = territoryType.RowId,
                     MapName = resolvedName,
+                    TerritoryRowFound = true,
+                    MapReferenceType = territoryType.Map.GetType().FullName,
+                    MapReferenceRowId = ReadReferenceRowId(territoryType.Map),
+                    MapReferenceValueFound = map is not null,
                 };
             }
+        }
+
+        return null;
+    }
+
+    private static MapResolutionCandidate? ResolveMapRowByMapPlaceName(GameData data, string? mapName, Language language)
+    {
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            return null;
+        }
+
+        string normalizedTargetName = NormalizeComparisonText(mapName);
+        ExcelSheet<Map>? mapSheet = data.GetExcelSheet<Map>(language, null);
+        if (mapSheet is null)
+        {
+            return null;
+        }
+
+        foreach (Map map in mapSheet)
+        {
+            string? placeName = ExtractPlaceName(map.PlaceName.ValueNullable);
+            if (!string.Equals(
+                NormalizeComparisonText(placeName),
+                normalizedTargetName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (map.RowId == 0)
+            {
+                continue;
+            }
+
+            return new MapResolutionCandidate
+            {
+                Source = "map.PlaceName",
+                Map = map,
+                MapName = placeName,
+            };
         }
 
         return null;
@@ -587,11 +636,17 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             rawX,
             rawY,
             rawZ);
+        string mapPlaceNameDescription = DescribeResolvedMapRow(
+            "map.PlaceName",
+            ResolveMapRowByMapPlaceName(data, mapName, language)?.Map,
+            rawX,
+            rawY,
+            rawZ);
 
         MapResolutionResult final = ResolveMapRow(data, mapId, territoryTypeId, mapName, language);
         string finalDescription = DescribeResolvedMapRow("selected", final.Map, rawX, rawY, rawZ);
 
-        return $"input(mapId={mapId?.ToString() ?? "-"}, territoryTypeId={territoryTypeId?.ToString() ?? "-"}, mapName={mapName ?? "-"}) | {territoryMapDescription} | {directMapDescription} | {nameMapDescription} | {finalDescription}";
+        return $"input(mapId={mapId?.ToString() ?? "-"}, territoryTypeId={territoryTypeId?.ToString() ?? "-"}, mapName={mapName ?? "-"}) | {territoryMapDescription} | {directMapDescription} | {nameMapDescription} | {mapPlaceNameDescription} | {finalDescription}";
     }
 
     private static string DescribeResolvedMapRow(
@@ -712,6 +767,76 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         return placeName is null ? null : ExtractTextSafely(placeName.Value.Name);
     }
 
+    private static Map? ResolveMapFromReference(GameData data, object? mapReference, Language language)
+    {
+        if (mapReference is null)
+        {
+            return null;
+        }
+
+        if (mapReference is Map directMap && directMap.RowId != 0)
+        {
+            return directMap;
+        }
+
+        object? value = mapReference.GetType().GetProperty("Value")?.GetValue(mapReference);
+        if (value is Map valueMap && valueMap.RowId != 0)
+        {
+            return valueMap;
+        }
+
+        object? valueNullable = mapReference.GetType().GetProperty("ValueNullable")?.GetValue(mapReference);
+        if (valueNullable is Map nullableMap && nullableMap.RowId != 0)
+        {
+            return nullableMap;
+        }
+
+        uint? rowId = ReadReferenceRowId(mapReference);
+        if (rowId is null or 0)
+        {
+            return null;
+        }
+
+        ExcelSheet<Map>? mapSheet = data.GetExcelSheet<Map>(language, null);
+        return mapSheet?.GetRowOrDefault(rowId.Value);
+    }
+
+    private static uint? ReadReferenceRowId(object? mapReference)
+    {
+        if (mapReference is null)
+        {
+            return null;
+        }
+
+        object? rowId = mapReference.GetType().GetProperty("RowId")?.GetValue(mapReference);
+        return TryConvertToUInt(rowId, out uint result) ? result : null;
+    }
+
+    private static bool TryConvertToUInt(object? value, out uint result)
+    {
+        switch (value)
+        {
+            case byte byteValue:
+                result = byteValue;
+                return true;
+            case ushort ushortValue:
+                result = ushortValue;
+                return true;
+            case uint uintValue:
+                result = uintValue;
+                return true;
+            case int intValue when intValue >= 0:
+                result = (uint)intValue;
+                return true;
+            case long longValue when longValue >= 0 && longValue <= uint.MaxValue:
+                result = (uint)longValue;
+                return true;
+            default:
+                result = 0;
+                return false;
+        }
+    }
+
     private static string? ExtractTextSafely<T>(T? value)
     {
         if (value is null)
@@ -792,6 +917,14 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
         public uint? TerritoryTypeId { get; init; }
 
         public string? MapName { get; init; }
+
+        public bool TerritoryRowFound { get; init; }
+
+        public string? MapReferenceType { get; init; }
+
+        public uint? MapReferenceRowId { get; init; }
+
+        public bool MapReferenceValueFound { get; init; }
     }
 
     private sealed class MapResolutionResult
@@ -836,6 +969,7 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
             MapResolutionCandidate? territoryCandidate,
             MapResolutionCandidate? mapIdCandidate,
             MapResolutionCandidate? mapNameCandidate,
+            MapResolutionCandidate? mapPlaceNameCandidate,
             bool territoryTypeFound,
             bool territoryMapFound)
         {
@@ -843,9 +977,19 @@ public sealed class LuminaGameDataService : IGameDataService, ILuminaGameDataPro
                 $"Map resolution failed. inputTerritoryTypeId={inputTerritoryTypeId?.ToString() ?? "null"}; " +
                 $"inputMapId={inputMapId?.ToString() ?? "null"}; " +
                 $"inputMapName={inputMapName ?? "null"}; " +
+                $"territoryRowFound={territoryCandidate?.TerritoryRowFound.ToString() ?? "false"}; " +
+                $"territoryMapReferenceType={territoryCandidate?.MapReferenceType ?? "null"}; " +
+                $"territoryMapValueFound={territoryCandidate?.MapReferenceValueFound.ToString() ?? "false"}; " +
+                $"territoryMapRowId={territoryCandidate?.MapReferenceRowId?.ToString() ?? "null"}; " +
+                $"territoryMapRowResolved={(territoryCandidate?.Map is not null).ToString()}; " +
+                $"mapNameCandidateFound={(mapNameCandidate is not null).ToString()}; " +
+                $"mapPlaceNameCandidateFound={(mapPlaceNameCandidate is not null).ToString()}; " +
+                $"selectedSource=null; " +
+                $"selectedMapRowId=null; " +
                 $"territoryType.Map={DescribeCandidate(territoryCandidate)}; " +
                 $"mapId={DescribeCandidate(mapIdCandidate)}; " +
-                $"mapName={DescribeCandidate(mapNameCandidate)}";
+                $"mapName={DescribeCandidate(mapNameCandidate)}; " +
+                $"map.PlaceName={DescribeCandidate(mapPlaceNameCandidate)}";
 
             return new MapResolutionResult
             {
