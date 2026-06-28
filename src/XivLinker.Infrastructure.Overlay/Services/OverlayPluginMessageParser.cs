@@ -16,12 +16,24 @@ public static class OverlayPluginMessageParser
             JsonElement root = document.RootElement;
 
             string? rootType = ReadString(root, "type");
+            if (HasSequenceNumber(root))
+            {
+                return false;
+            }
+
             if (!string.IsNullOrWhiteSpace(rootType)
                 && !string.Equals(rootType, "broadcast", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(rootType, "event", StringComparison.OrdinalIgnoreCase)
-                && HasSequenceNumber(root))
+                && LooksLikeOverlayEventType(rootType))
             {
-                return false;
+                message = new OverlayPluginEventMessage
+                {
+                    MessageType = rootType,
+                    Payload = root.Clone(),
+                    RawJson = rawJson,
+                };
+
+                return true;
             }
 
             JsonElement payload = GetPayload(root);
@@ -67,26 +79,66 @@ public static class OverlayPluginMessageParser
             return false;
         }
 
-        territoryTypeId = ReadUInt32(message.Payload, "zoneID")
-            ?? ReadUInt32(message.Payload, "zoneId")
-            ?? ReadUInt32(message.Payload, "ZoneID")
-            ?? ReadUInt32(message.Payload, "territoryType")
-            ?? ReadUInt32(message.Payload, "territoryTypeId")
-            ?? ReadUInt32(message.Payload, "territoryTypeID")
-            ?? ReadUInt32(message.Payload, "territoryId")
-            ?? ReadUInt32(message.Payload, "territoryID")
-            ?? ReadUInt32(message.Payload, "TerritoryType")
-            ?? ReadUInt32(message.Payload, "TerritoryTypeId")
-            ?? ReadUInt32(message.Payload, "TerritoryTypeID")
-            ?? ReadUInt32(message.Payload, "Territory")
+        if (TryReadChangeZonePayload(message.Payload, out territoryTypeId, out zoneName))
+        {
+            return true;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(message.RawJson);
+            JsonElement root = document.RootElement;
+
+            if (TryReadChangeZonePayload(root, out territoryTypeId, out zoneName))
+            {
+                return true;
+            }
+
+            if (TryGetPropertyIgnoreCase(root, "msg", out JsonElement msg)
+                && msg.ValueKind == JsonValueKind.Object
+                && TryReadChangeZonePayload(msg, out territoryTypeId, out zoneName))
+            {
+                return true;
+            }
+
+            if (TryGetPropertyIgnoreCase(root, "payload", out JsonElement payload)
+                && payload.ValueKind == JsonValueKind.Object
+                && TryReadChangeZonePayload(payload, out territoryTypeId, out zoneName))
+            {
+                return true;
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadChangeZonePayload(JsonElement payload, out uint territoryTypeId, out string zoneName)
+    {
+        territoryTypeId = ReadUInt32(payload, "zoneID")
+            ?? ReadUInt32(payload, "zoneId")
+            ?? ReadUInt32(payload, "ZoneID")
+            ?? ReadUInt32(payload, "territoryType")
+            ?? ReadUInt32(payload, "territoryTypeId")
+            ?? ReadUInt32(payload, "territoryTypeID")
+            ?? ReadUInt32(payload, "territoryId")
+            ?? ReadUInt32(payload, "territoryID")
+            ?? ReadUInt32(payload, "TerritoryType")
+            ?? ReadUInt32(payload, "TerritoryTypeId")
+            ?? ReadUInt32(payload, "TerritoryTypeID")
+            ?? ReadUInt32(payload, "Territory")
             ?? 0;
-        zoneName = ReadString(message.Payload, "zoneName")
-            ?? ReadString(message.Payload, "ZoneName")
-            ?? ReadString(message.Payload, "placeName")
-            ?? ReadString(message.Payload, "PlaceName")
-            ?? ReadString(message.Payload, "name")
-            ?? ReadString(message.Payload, "Name")
+        zoneName = ReadString(payload, "zoneName")
+            ?? ReadString(payload, "ZoneName")
+            ?? ReadString(payload, "placeName")
+            ?? ReadString(payload, "PlaceName")
+            ?? ReadString(payload, "name")
+            ?? ReadString(payload, "Name")
             ?? string.Empty;
+
         return territoryTypeId > 0 || !string.IsNullOrWhiteSpace(zoneName);
     }
 
@@ -317,6 +369,14 @@ public static class OverlayPluginMessageParser
     private static bool HasSequenceNumber(JsonElement element)
     {
         return TryGetPropertyIgnoreCase(element, "rseq", out _);
+    }
+
+    private static bool LooksLikeOverlayEventType(string type)
+    {
+        return string.Equals(type, "ChangeZone", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, "ChangePrimaryPlayer", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, "LogLine", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, "ChangeMap", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement property)

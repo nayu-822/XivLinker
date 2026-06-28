@@ -64,12 +64,23 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
     private void OnSessionEventReceived(object? sender, string rawJson)
     {
+        logger.LogInformation(
+            "CurrentPlayerStateService received OverlayPlugin event raw JSON: {RawJson}",
+            rawJson);
+
         if (!OverlayPluginMessageParser.TryParseEventMessage(rawJson, out OverlayPluginEventMessage? message) || message is null)
         {
+            logger.LogWarning(
+                "CurrentPlayerStateService could not parse OverlayPlugin event. RawJson: {RawJson}",
+                rawJson);
             return;
         }
 
-        logger.LogDebug("OverlayPlugin event parsed: {MessageType}", message.MessageType);
+        logger.LogInformation(
+            "CurrentPlayerStateService parsed OverlayPlugin event. MessageType: {MessageType}, Payload: {Payload}, RawJson: {RawJson}",
+            message.MessageType,
+            message.Payload.GetRawText(),
+            message.RawJson);
 
         if (OverlayPluginMessageParser.TryParsePrimaryPlayer(message, out string playerName))
         {
@@ -80,11 +91,16 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
         if (!OverlayPluginMessageParser.TryParseChangeZone(message, out uint territoryTypeId, out string zoneName))
         {
+            logger.LogWarning(
+                "ChangeZone event received but payload could not be parsed. MessageType: {MessageType}, Payload: {Payload}, RawJson: {RawJson}",
+                message.MessageType,
+                message.Payload.GetRawText(),
+                message.RawJson);
             return;
         }
 
         logger.LogInformation(
-            "ChangeZone parsed. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}, Payload: {Payload}",
+            "ChangeZone parsed successfully. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}, RawJson: {RawJson}",
             territoryTypeId,
             zoneName,
             message.RawJson);
@@ -98,7 +114,7 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
         }
 
         logger.LogInformation(
-            "Current zone updated from ChangeZone. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}",
+            "Current zone state updated. CurrentTerritoryTypeId: {CurrentTerritoryTypeId}, CurrentZoneName: {CurrentZoneName}",
             currentTerritoryTypeId,
             currentZoneName);
 
@@ -259,6 +275,15 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             }
             else
             {
+                logger.LogInformation(
+                    "Map conversion input. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, ZoneName: {ZoneName}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}",
+                    territoryTypeId,
+                    mapId,
+                    zoneName,
+                    snapshot.RawX,
+                    snapshot.RawY,
+                    snapshot.RawZ);
+
                 logger.LogDebug(
                     "Before map coordinate conversion. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, MapName: {MapName}, MapSourceX: {RawX}, MapSourceY: {RawY}, RawZ: {RawZ}",
                     territoryTypeId,

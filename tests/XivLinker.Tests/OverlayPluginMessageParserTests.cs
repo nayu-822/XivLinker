@@ -158,6 +158,41 @@ public sealed class OverlayPluginMessageParserTests
     }
 
     [Fact]
+    public void TryParseChangeZone_ParsesRootChangeZonePayload()
+    {
+        const string json = """
+            {"type":"ChangeZone","zoneID":979,"zoneName":"Empyreum"}
+            """;
+
+        Assert.True(OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message));
+        Assert.NotNull(message);
+        Assert.Equal("ChangeZone", message!.MessageType);
+
+        Assert.True(OverlayPluginMessageParser.TryParseChangeZone(
+            message,
+            out uint territoryTypeId,
+            out string zoneName));
+
+        Assert.Equal<uint>(979, territoryTypeId);
+        Assert.Equal("Empyreum", zoneName);
+    }
+
+    [Fact]
+    public void TryParseEventMessage_UsesRootAsPayload_ForRootChangeZone()
+    {
+        const string json = """
+            {"type":"ChangeZone","zoneID":979,"zoneName":"Empyreum"}
+            """;
+
+        Assert.True(OverlayPluginMessageParser.TryParseEventMessage(json, out OverlayPluginEventMessage? message));
+        Assert.NotNull(message);
+
+        Assert.Equal("ChangeZone", message!.MessageType);
+        Assert.Equal(979u, message.Payload.GetProperty("zoneID").GetUInt32());
+        Assert.Equal("Empyreum", message.Payload.GetProperty("zoneName").GetString());
+    }
+
+    [Fact]
     public void TryParseEventMessage_ResponseWithSequence_IsNotEvent()
     {
         const string json = """
