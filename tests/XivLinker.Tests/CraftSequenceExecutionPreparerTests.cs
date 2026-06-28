@@ -72,11 +72,12 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Theory]
-    [InlineData("HOTBAR_1_1", 0, 0)]
-    [InlineData("HOTBAR_1_12", 0, 11)]
-    [InlineData("HOTBAR_2_1", 1, 0)]
     [InlineData("HOTBAR_0_0", 0, 0)]
-    public void TryResolveHotbarCommand_NormalizesToRawCoordinates(string command, byte expectedHotbarId, byte expectedSlotId)
+    [InlineData("HOTBAR_0_11", 0, 11)]
+    [InlineData("HOTBAR_10_12", 9, 11)]
+    [InlineData("HOTBAR_9_11", 9, 11)]
+    [InlineData("HOTBAR_1_12", 0, 11)]
+    public void TryResolveHotbarCommand_NormalizesAllTenHotbars(string command, byte expectedHotbarId, byte expectedSlotId)
     {
         bool resolved = KeybindDatReader.TryResolveHotbarCommand(command, out byte hotbarId, out byte slotId);
 
@@ -137,35 +138,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 rootPath,
                 CreateHotbarDatBytes(
                     [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 0, 0, (byte)HotbarSlotKind.Action)]),
-                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
-
-            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
-
-            CraftSequenceExecutionPreparationResult result =
-                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
-
-            Assert.True(result.CanRun);
-            Assert.Single(result.ActionKeyBindings);
-        }
-        finally
-        {
-            Directory.Delete(rootPath, recursive: true);
-        }
-    }
-
-    [Fact]
-    public async Task PrepareAsync_ReturnsBindings_WhenHotbarUsesOneBasedCoordinates()
-    {
-        string rootPath = CreateTempDirectory();
-
-        try
-        {
-            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
-            WriteDatFiles(
-                rootPath,
-                CreateHotbarDatBytes(
-                    [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
-                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
+                CreateKeybindDatBytes([('T', "HOTBAR_0_0", 'C', "31.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 

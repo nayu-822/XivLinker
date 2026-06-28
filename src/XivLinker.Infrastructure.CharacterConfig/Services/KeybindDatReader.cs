@@ -11,33 +11,7 @@ public sealed partial class KeybindDatReader
     private const byte XorKey = 0x73;
 
     private static readonly IReadOnlyDictionary<string, (byte HotbarId, byte SlotId)> HotbarCommandMap =
-        new Dictionary<string, (byte HotbarId, byte SlotId)>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["HOTBAR_0_0"] = (0, 0),
-            ["HOTBAR_0_1"] = (0, 1),
-            ["HOTBAR_0_2"] = (0, 2),
-            ["HOTBAR_0_3"] = (0, 3),
-            ["HOTBAR_0_4"] = (0, 4),
-            ["HOTBAR_0_5"] = (0, 5),
-            ["HOTBAR_0_6"] = (0, 6),
-            ["HOTBAR_0_7"] = (0, 7),
-            ["HOTBAR_0_8"] = (0, 8),
-            ["HOTBAR_0_9"] = (0, 9),
-            ["HOTBAR_0_10"] = (0, 10),
-            ["HOTBAR_0_11"] = (0, 11),
-            ["HOTBAR_1_1"] = (0, 0),
-            ["HOTBAR_1_2"] = (0, 1),
-            ["HOTBAR_1_3"] = (0, 2),
-            ["HOTBAR_1_4"] = (0, 3),
-            ["HOTBAR_1_5"] = (0, 4),
-            ["HOTBAR_1_6"] = (0, 5),
-            ["HOTBAR_1_7"] = (0, 6),
-            ["HOTBAR_1_8"] = (0, 7),
-            ["HOTBAR_1_9"] = (0, 8),
-            ["HOTBAR_1_10"] = (0, 9),
-            ["HOTBAR_1_11"] = (0, 10),
-            ["HOTBAR_1_12"] = (0, 11),
-        };
+        CreateHotbarCommandMap();
 
     private readonly ILogger<KeybindDatReader> logger;
 
@@ -82,7 +56,7 @@ public sealed partial class KeybindDatReader
 
             entries.Add(entry);
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}, RawBinding: {RawBinding}, CommandSectionType: {CommandSectionType}, BindingSectionType: {BindingSectionType}",
                 entry.Command,
                 KeybindDisplayFormatter.Format(entry.Primary),
@@ -135,50 +109,42 @@ public sealed partial class KeybindDatReader
                 continue;
             }
 
-            if (!byte.TryParse(match.Groups[1].Value, out byte parsedHotbarId)
-                || !byte.TryParse(match.Groups[2].Value, out byte parsedSlotId))
+            if (!byte.TryParse(match.Groups[1].Value, out hotbarId)
+                || !byte.TryParse(match.Groups[2].Value, out slotId))
             {
                 return false;
             }
 
-            return TryNormalizeHotbarCoordinates(parsedHotbarId, parsedSlotId, out hotbarId, out slotId);
+            return hotbarId <= 9
+                && slotId <= 11;
         }
 
         return false;
     }
 
-    private static bool TryNormalizeHotbarCoordinates(
-        byte parsedHotbarId,
-        byte parsedSlotId,
-        out byte hotbarId,
-        out byte slotId)
+    private static IReadOnlyDictionary<string, (byte HotbarId, byte SlotId)> CreateHotbarCommandMap()
     {
-        hotbarId = 0;
-        slotId = 0;
+        var map = new Dictionary<string, (byte HotbarId, byte SlotId)>(StringComparer.OrdinalIgnoreCase);
 
-        if (parsedHotbarId <= 9 && parsedSlotId <= 11 && (parsedHotbarId == 0 || parsedSlotId == 0))
+        for (byte hotbar = 0; hotbar < 10; hotbar++)
         {
-            hotbarId = parsedHotbarId;
-            slotId = parsedSlotId;
-            return true;
+            for (byte slot = 0; slot < 12; slot++)
+            {
+                map[$"HOTBAR_{hotbar}_{slot}"] = (hotbar, slot);
+            }
         }
 
-        if (parsedHotbarId is >= 1 and <= 10
-            && parsedSlotId is >= 1 and <= 12)
+        for (byte displayHotbar = 1; displayHotbar <= 10; displayHotbar++)
         {
-            hotbarId = (byte)(parsedHotbarId - 1);
-            slotId = (byte)(parsedSlotId - 1);
-            return true;
+            for (byte displaySlot = 1; displaySlot <= 12; displaySlot++)
+            {
+                map.TryAdd(
+                    $"HOTBAR_{displayHotbar}_{displaySlot}",
+                    ((byte)(displayHotbar - 1), (byte)(displaySlot - 1)));
+            }
         }
 
-        if (parsedHotbarId <= 9 && parsedSlotId <= 11)
-        {
-            hotbarId = parsedHotbarId;
-            slotId = parsedSlotId;
-            return true;
-        }
-
-        return false;
+        return map;
     }
 
     private IReadOnlyList<KeybindSectionEntry> ParseSections(byte[] decodedBody)

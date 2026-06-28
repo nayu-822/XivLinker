@@ -33,7 +33,7 @@ public sealed class HotbarDatReader
             throw new InvalidDataException("HOTBAR.DAT の body が 8 byte record に揃っていません。");
         }
 
-        logger.LogInformation(
+        logger.LogDebug(
             "HOTBAR.DAT decoded. DecodedLength: {Length}, FirstBytes: {FirstBytes}",
             decodedBody.Length,
             Convert.ToHexString(decodedBody.AsSpan(0, Math.Min(decodedBody.Length, 128))));

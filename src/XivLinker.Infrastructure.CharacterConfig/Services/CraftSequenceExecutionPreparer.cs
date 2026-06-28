@@ -105,7 +105,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 continue;
             }
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "Craft action hotbar slot resolved. Action: {Action}, LuminaActionId: {LuminaActionId}, GroupId: {GroupId}, HotbarId: {HotbarId}, SlotId: {SlotId}, SlotTypeId: {SlotTypeId}",
                 requiredAction.ActionName,
                 requiredAction.LuminaActionId,
@@ -137,17 +137,32 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 KeybindDisplayFormatter.ToKeys(gesture)));
         }
 
-        return new CraftSequenceExecutionPreparationResult
+        var result = new CraftSequenceExecutionPreparationResult
         {
             MissingActions = missingActions,
             UnboundActions = unboundActions,
             ActionKeyBindings = actionKeyBindings,
         };
+
+        logger.LogInformation(
+            "Craft execution preparation completed. Bindings: {BindingCount}, MissingActions: {MissingCount}, UnboundActions: {UnboundCount}",
+            result.ActionKeyBindings.Count,
+            result.MissingActions.Count,
+            result.UnboundActions.Count);
+
+        return result;
     }
 
     private static bool IsAvailableForCrafterJob(HotbarSlotEntry slot, CrafterJob crafterJob)
     {
-        return slot.GroupId == 0 || slot.GroupId == crafterJob.ClassJobId;
+        if (HotbarGroupDefinitions.IsShared(slot.GroupId))
+        {
+            return true;
+        }
+
+        return HotbarGroupDefinitions.TryGetDefinition(slot.GroupId, out HotbarGroupDefinition? definition)
+            && definition is not null
+            && definition.ClassJobId == crafterJob.ClassJobId;
     }
 
     private KeybindEntry? ResolveKeybindForHotbarSlot(
@@ -162,7 +177,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 continue;
             }
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "KEYBIND hotbar command resolved. Command: {Command}, ResolvedHotbarId: {ResolvedHotbarId}, ResolvedSlotId: {ResolvedSlotId}, Primary: {Primary}, Secondary: {Secondary}",
                 entry.Command,
                 resolvedHotbarId,
@@ -170,7 +185,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 KeybindDisplayFormatter.Format(entry.Primary),
                 KeybindDisplayFormatter.Format(entry.Secondary));
 
-            if (IsMatchingHotbarSlot(hotbarId, slotId, resolvedHotbarId, resolvedSlotId))
+            if (resolvedHotbarId == hotbarId && resolvedSlotId == slotId)
             {
                 return entry;
             }
@@ -182,22 +197,5 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             slotId);
 
         return null;
-    }
-
-    private static bool IsMatchingHotbarSlot(
-        byte hotbarId,
-        byte slotId,
-        byte resolvedHotbarId,
-        byte resolvedSlotId)
-    {
-        if (resolvedHotbarId == hotbarId && resolvedSlotId == slotId)
-        {
-            return true;
-        }
-
-        return hotbarId > 0
-            && slotId > 0
-            && resolvedHotbarId == hotbarId - 1
-            && resolvedSlotId == slotId - 1;
     }
 }
