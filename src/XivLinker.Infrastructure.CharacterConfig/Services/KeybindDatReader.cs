@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -10,6 +9,24 @@ namespace XivLinker.Infrastructure.CharacterConfig.Services;
 public sealed partial class KeybindDatReader
 {
     private const byte XorKey = 0x73;
+
+    private static readonly IReadOnlyDictionary<string, (byte HotbarId, byte SlotId)> HotbarCommandMap =
+        new Dictionary<string, (byte HotbarId, byte SlotId)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["HOTBAR_1_1"] = (1, 1),
+            ["HOTBAR_1_2"] = (1, 2),
+            ["HOTBAR_1_3"] = (1, 3),
+            ["HOTBAR_1_4"] = (1, 4),
+            ["HOTBAR_1_5"] = (1, 5),
+            ["HOTBAR_1_6"] = (1, 6),
+            ["HOTBAR_1_7"] = (1, 7),
+            ["HOTBAR_1_8"] = (1, 8),
+            ["HOTBAR_1_9"] = (1, 9),
+            ["HOTBAR_1_10"] = (1, 10),
+            ["HOTBAR_1_11"] = (1, 11),
+            ["HOTBAR_1_12"] = (1, 12),
+        };
+
     private readonly ILogger<KeybindDatReader> logger;
 
     public KeybindDatReader(ILogger<KeybindDatReader>? logger = null)
@@ -21,231 +38,62 @@ public sealed partial class KeybindDatReader
     {
         ArgumentNullException.ThrowIfNull(keybindDatBytes);
 
-        byte[] content = DatFileContentReader.ReadDecodedContent(
+        byte[] decodedBody = DatFileContentReader.ReadDecodedContent(
             keybindDatBytes,
             xorKey: XorKey,
             fileName: "KEYBIND.DAT");
 
-        logger.LogInformation(
-            "KEYBIND.DAT decoded. DecodedLength: {Length}, FirstBytes: {FirstBytes}",
-            content.Length,
-            ToHex(content, 64));
+        IReadOnlyList<KeybindSectionEntry> sections = ParseSections(decodedBody);
+        if (sections.Count % 2 != 0)
+        {
+            throw new InvalidDataException("KEYBIND.DAT の section 数が奇数です。command/binding ペアを解釈できません。");
+        }
 
         var entries = new List<KeybindEntry>();
-        int offset = 0;
 
-        while (offset < content.Length)
+        for (int index = 0; index < sections.Count; index += 2)
         {
-            try
-            {
-                string command = ReadSectionString(content, ref offset, expectedType: 'T');
-                string keyString = ReadSectionString(content, ref offset, expectedType: 'C');
+            KeybindSectionEntry commandSection = sections[index];
+            KeybindSectionEntry bindingSection = sections[index + 1];
 
-                KeybindEntry entry = ParseKeybindEntry(command, keyString);
-                if (string.IsNullOrWhiteSpace(entry.Command))
-                {
-                    continue;
-                }
+            (KeybindGesture? primary, KeybindGesture? secondary) = ParseBindingText(bindingSection.Content);
 
-                entries.Add(entry);
-                logger.LogInformation(
-                    "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}",
-                    entry.Command,
-                    entry.Primary?.DisplayText,
-                    entry.Secondary?.DisplayText);
-            }
-            catch (InvalidDataException exception)
+            var entry = new KeybindEntry(
+                commandSection.Content,
+                primary,
+                secondary)
             {
-                logger.LogWarning(
-                    exception,
-                    "KEYBIND.DAT section parse failed. Offset: {Offset}, Remaining: {Remaining}, NearBytes: {NearBytes}",
-                    offset,
-                    content.Length - offset,
-                    ToHex(content.AsSpan(offset, Math.Min(64, content.Length - offset)).ToArray(), 64));
-                throw;
-            }
+                CommandSectionType = commandSection.TagCharacter,
+                BindingSectionType = bindingSection.TagCharacter,
+                RawBindingText = bindingSection.Content,
+            };
+
+            entries.Add(entry);
+
+            logger.LogInformation(
+                "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}",
+                entry.Command,
+                KeybindDisplayFormatter.Format(entry.Primary),
+                KeybindDisplayFormatter.Format(entry.Secondary));
         }
 
         return entries;
     }
 
-    public IReadOnlyList<HotbarSlotKeyBinding> ReadHotbarKeyBindings(byte[] keybindDatBytes)
-    {
-        IReadOnlyList<KeybindEntry> entries = Read(keybindDatBytes);
-        var result = new List<HotbarSlotKeyBinding>();
-
-        foreach (KeybindEntry entry in entries)
-        {
-            if (!TryParseHotbarCommand(entry.Command, out int hotbarNumber, out int slotNumber))
-            {
-                continue;
-            }
-
-            KeybindGesture? gesture = entry.Primary ?? entry.Secondary;
-            if (gesture is null || gesture.Keys.Count == 0)
-            {
-                continue;
-            }
-
-            logger.LogInformation(
-                "Hotbar keybind resolved. Command: {Command}, Hotbar: {Hotbar}, Slot: {Slot}, Key: {Key}",
-                entry.Command,
-                hotbarNumber,
-                slotNumber,
-                gesture.DisplayText);
-
-            result.Add(new HotbarSlotKeyBinding(
-                hotbarNumber,
-                slotNumber,
-                entry.Command,
-                gesture.DisplayText,
-                gesture.Keys));
-        }
-
-        if (result.Count == 0)
-        {
-            logger.LogWarning(
-                "No hotbar keybind commands were resolved from KEYBIND.DAT. Commands: {Commands}",
-                string.Join(", ", entries.Select(static entry => entry.Command)));
-        }
-
-        return result;
-    }
-
     public static bool TryResolveHotbarCommand(
         string command,
-        out int hotbarNumber,
-        out int slotNumber)
+        out byte hotbarId,
+        out byte slotId)
     {
-        return TryParseHotbarCommand(command, out hotbarNumber, out slotNumber);
-    }
+        hotbarId = 0;
+        slotId = 0;
 
-    private static string ReadSectionString(
-        byte[] content,
-        ref int offset,
-        char expectedType)
-    {
-        if (offset + 3 > content.Length)
+        if (HotbarCommandMap.TryGetValue(command.Trim(), out (byte HotbarId, byte SlotId) mapped))
         {
-            throw new InvalidDataException("KEYBIND.DAT のsectionヘッダーが不正です。");
+            hotbarId = mapped.HotbarId;
+            slotId = mapped.SlotId;
+            return true;
         }
-
-        char type = (char)content[offset];
-        ushort size = BitConverter.ToUInt16(content, offset + 1);
-        offset += 3;
-
-        if (type != expectedType)
-        {
-            throw new InvalidDataException(
-                $"KEYBIND.DAT のsection typeが不正です。expected={expectedType}, actual={type}");
-        }
-
-        if (size == 0 || offset + size > content.Length)
-        {
-            throw new InvalidDataException(
-                $"KEYBIND.DAT のsection sizeが不正です。type={type}, size={size}");
-        }
-
-        ReadOnlySpan<byte> data = content.AsSpan(offset, size);
-        offset += size;
-
-        if (data.Length > 0 && data[^1] == 0)
-        {
-            data = data[..^1];
-        }
-
-        return Encoding.UTF8.GetString(data);
-    }
-
-    private static KeybindEntry ParseKeybindEntry(string command, string keyString)
-    {
-        string[] parts = keyString.Split(',', StringSplitOptions.None);
-
-        KeybindGesture? primary = parts.Length > 0
-            ? ParseGesture(parts[0])
-            : null;
-
-        KeybindGesture? secondary = parts.Length > 1
-            ? ParseGesture(parts[1])
-            : null;
-
-        return new KeybindEntry(command.Trim(), primary, secondary);
-    }
-
-    private static KeybindGesture? ParseGesture(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return null;
-        }
-
-        string[] parts = text.Split('.', StringSplitOptions.None);
-        string key = parts.Length > 0 ? parts[0] : string.Empty;
-        string modifier = parts.Length > 1 ? parts[1] : string.Empty;
-
-        if (string.IsNullOrWhiteSpace(key) || key == "0")
-        {
-            return null;
-        }
-
-        List<string> keys = [];
-
-        foreach (string modifierKey in NormalizeModifier(modifier))
-        {
-            keys.Add(modifierKey);
-        }
-
-        keys.Add(NormalizeKey(key));
-
-        string displayText = string.Join("+", keys);
-        return new KeybindGesture(key, modifier, displayText, keys);
-    }
-
-    private static IEnumerable<string> NormalizeModifier(string modifier)
-    {
-        if (string.IsNullOrWhiteSpace(modifier) || modifier == "0")
-        {
-            yield break;
-        }
-
-        if (!int.TryParse(modifier, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
-        {
-            yield return modifier;
-            yield break;
-        }
-
-        if ((value & 1) != 0)
-        {
-            yield return "Ctrl";
-        }
-
-        if ((value & 2) != 0)
-        {
-            yield return "Alt";
-        }
-
-        if ((value & 4) != 0)
-        {
-            yield return "Shift";
-        }
-    }
-
-    private static string NormalizeKey(string key)
-    {
-        return key.Trim() switch
-        {
-            " " => "Space",
-            _ => key.Trim(),
-        };
-    }
-
-    private static bool TryParseHotbarCommand(
-        string command,
-        out int hotbarNumber,
-        out int slotNumber)
-    {
-        hotbarNumber = 0;
-        slotNumber = 0;
 
         string normalized = command.Trim();
 
@@ -272,18 +120,126 @@ public sealed partial class KeybindDatReader
                 continue;
             }
 
-            hotbarNumber = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-            slotNumber = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            if (!byte.TryParse(match.Groups[1].Value, out hotbarId)
+                || !byte.TryParse(match.Groups[2].Value, out slotId))
+            {
+                return false;
+            }
 
-            return hotbarNumber is >= 1 and <= 10
-                && slotNumber is >= 1 and <= 12;
+            return hotbarId is >= 1 and <= 10
+                && slotId is >= 1 and <= 12;
         }
 
         return false;
     }
 
-    private static string ToHex(byte[] bytes, int maxLength)
+    private IReadOnlyList<KeybindSectionEntry> ParseSections(byte[] decodedBody)
     {
-        return Convert.ToHexString(bytes.AsSpan(0, Math.Min(bytes.Length, maxLength)));
+        var sections = new List<KeybindSectionEntry>();
+        int offset = 0;
+        int index = 0;
+
+        while (offset < decodedBody.Length)
+        {
+            sections.Add(ReadSection(decodedBody, index, ref offset));
+            index++;
+        }
+
+        return sections;
+    }
+
+    private static (KeybindGesture? Primary, KeybindGesture? Secondary) ParseBindingText(string bindingText)
+    {
+        string[] parts = bindingText.Split(',', StringSplitOptions.None);
+
+        KeybindGesture? primary = parts.Length > 0 ? ParseGesture(parts[0]) : null;
+        KeybindGesture? secondary = parts.Length > 1 ? ParseGesture(parts[1]) : null;
+
+        return (primary, secondary);
+    }
+
+    private static KeybindGesture? ParseGesture(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        string[] parts = text.Split('.', StringSplitOptions.None);
+        string keyCode = parts.Length > 0 ? parts[0].Trim() : string.Empty;
+        string modifierCode = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(keyCode) || keyCode == "00" || keyCode == "0")
+        {
+            return null;
+        }
+
+        return new KeybindGesture(keyCode, string.IsNullOrWhiteSpace(modifierCode) ? "00" : modifierCode);
+    }
+
+    private static KeybindSectionEntry ReadSection(
+        byte[] decodedBody,
+        int index,
+        ref int offset)
+    {
+        if (offset + 3 > decodedBody.Length)
+        {
+            throw new InvalidDataException("KEYBIND.DAT の section header が不正です。");
+        }
+
+        byte tag = decodedBody[offset];
+        ushort declaredSize = (ushort)(decodedBody[offset + 1] | (decodedBody[offset + 2] << 8));
+
+        if (declaredSize == 0)
+        {
+            throw new InvalidDataException($"KEYBIND.DAT に zero-sized section があります。Offset={offset}");
+        }
+
+        int payloadOffset = offset + 3;
+        int payloadEndExclusive = payloadOffset + declaredSize;
+
+        if (payloadEndExclusive > decodedBody.Length)
+        {
+            throw new InvalidDataException($"KEYBIND.DAT の section が終端を超えています。Offset={offset}");
+        }
+
+        byte[] payloadBytes = decodedBody[payloadOffset..payloadEndExclusive];
+
+        if (payloadBytes.Length == 0 || payloadBytes[^1] != 0)
+        {
+            throw new InvalidDataException($"KEYBIND.DAT の section に null terminator がありません。Offset={offset}");
+        }
+
+        string content = Encoding.UTF8.GetString(payloadBytes, 0, payloadBytes.Length - 1);
+
+        var section = new KeybindSectionEntry
+        {
+            Index = index,
+            Offset = offset,
+            Tag = tag,
+            DeclaredSize = declaredSize,
+            Content = content,
+            PayloadBytes = payloadBytes,
+        };
+
+        offset = payloadEndExclusive;
+        return section;
+    }
+
+    private sealed class KeybindSectionEntry
+    {
+        public int Index { get; init; }
+
+        public int Offset { get; init; }
+
+        public byte Tag { get; init; }
+
+        public char TagCharacter => (char)Tag;
+
+        public ushort DeclaredSize { get; init; }
+
+        public string Content { get; init; } = string.Empty;
+
+        public byte[] PayloadBytes { get; init; } = [];
     }
 }

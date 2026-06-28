@@ -5,13 +5,19 @@ public sealed record KeybindEntry(
     KeybindGesture? Primary,
     KeybindGesture? Secondary)
 {
+    public char CommandSectionType { get; init; }
+
+    public char BindingSectionType { get; init; }
+
+    public string RawBindingText { get; init; } = string.Empty;
+
     public bool HasPrimaryOrSecondary =>
-        (Primary?.Keys.Count ?? 0) > 0
-        || (Secondary?.Keys.Count ?? 0) > 0;
+        Primary?.IsAssigned == true || Secondary?.IsAssigned == true;
 }
 
 public sealed record KeybindGesture(
-    string Key,
-    string Modifier,
-    string DisplayText,
-    IReadOnlyList<string> Keys);
+    string KeyCode,
+    string ModifierCode)
+{
+    public bool IsAssigned => !string.IsNullOrWhiteSpace(KeyCode);
+}

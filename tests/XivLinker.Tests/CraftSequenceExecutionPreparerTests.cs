@@ -20,7 +20,7 @@ public sealed class CraftSequenceExecutionPreparerTests
 
         var reader = new HotbarDatReader();
 
-        HotbarSlotEntry entry = Assert.Single(reader.Read(datBytes, CrafterJobs.Carpenter, new HashSet<uint> { actionRowId }));
+        HotbarSlotEntry entry = Assert.Single(reader.Read(datBytes));
 
         Assert.Equal(actionRowId, entry.CommandId);
         Assert.Equal((byte)CrafterJobs.Carpenter.ClassJobId, entry.GroupId);
@@ -30,17 +30,29 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
-    public void KeybindDatReader_Read_ParsesSections()
+    public void KeybindDatReader_Read_AllowsNonTcSectionTags()
     {
-        byte[] datBytes = CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]);
+        byte[] datBytes = CreateKeybindDatBytes([('A', "HOTBAR_1_1", 'B', "31.0,")]);
 
         var reader = new KeybindDatReader();
 
         KeybindEntry entry = Assert.Single(reader.Read(datBytes));
 
         Assert.Equal("HOTBAR_1_1", entry.Command);
-        Assert.NotNull(entry.Primary);
-        Assert.Equal("1", entry.Primary!.DisplayText);
+        Assert.Equal('A', entry.CommandSectionType);
+        Assert.Equal('B', entry.BindingSectionType);
+        Assert.Equal("31.0,", entry.RawBindingText);
+        Assert.Equal("31", entry.Primary?.KeyCode);
+        Assert.Equal("0", entry.Primary?.ModifierCode);
+    }
+
+    [Fact]
+    public void KeybindDisplayFormatter_FormatsHexKeyAndModifier()
+    {
+        var gesture = new KeybindGesture("31", "04");
+
+        Assert.Equal("Shift+1", KeybindDisplayFormatter.Format(gesture));
+        Assert.Equal(["Shift", "1"], KeybindDisplayFormatter.ToKeys(gesture));
     }
 
     [Fact]
@@ -55,7 +67,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 rootPath,
                 CreateHotbarDatBytes(
                     [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
-                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
+                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
@@ -75,7 +87,7 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
-    public async Task PrepareAsync_ReturnsError_WhenHotbarDoesNotContainRequiredAction()
+    public async Task PrepareAsync_ReturnsMissingActions_WhenHotbarDoesNotContainRequiredAction()
     {
         string rootPath = CreateTempDirectory();
 
@@ -86,7 +98,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 rootPath,
                 CreateHotbarDatBytes(
                     [CreateHotbarRecord(otherActionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
-                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
+                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
@@ -94,7 +106,9 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Equal("HOTBAR.DAT を解析できないため、シーケンスを準備できません。", result.ErrorMessage);
+            Assert.Null(result.ErrorMessage);
+            CraftActionRequirement missingAction = Assert.Single(result.MissingActions);
+            Assert.Equal(CraftActionId.BasicSynthesis, missingAction.ActionId);
         }
         finally
         {
@@ -103,7 +117,7 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
-    public async Task PrepareAsync_ReturnsUnboundActions_WhenKeybindIsMissing()
+    public async Task PrepareAsync_ReturnsUnboundActions_WhenHotbarCommandIsNotMappedInKeybind()
     {
         string rootPath = CreateTempDirectory();
 
@@ -114,7 +128,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 rootPath,
                 CreateHotbarDatBytes(
                     [CreateHotbarRecord(actionRowId, (byte)CrafterJobs.Carpenter.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
-                CreateKeybindDatBytes([("OTHER_COMMAND", "1.0,0.0,")]));
+                CreateKeybindDatBytes([('T', "SOME_OTHER_COMMAND", 'C', "31.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
@@ -165,7 +179,7 @@ public sealed class CraftSequenceExecutionPreparerTests
             WriteDatFiles(
                 rootPath,
                 [0xAA, 0xBB, 0xCC],
-                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
+                CreateKeybindDatBytes([('T', "HOTBAR_1_1", 'C', "31.0,")]));
 
             CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
 
@@ -173,7 +187,7 @@ public sealed class CraftSequenceExecutionPreparerTests
                 await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
 
             Assert.False(result.CanRun);
-            Assert.Equal("HOTBAR.DAT を解析できないため、シーケンスを準備できません。", result.ErrorMessage);
+            Assert.Equal("HOTBAR.DAT を読み込めませんでした。", result.ErrorMessage);
         }
         finally
         {
@@ -199,36 +213,6 @@ public sealed class CraftSequenceExecutionPreparerTests
         Assert.NotEqual(carpenterRequirement.LuminaActionId, blacksmithRequirement.LuminaActionId);
         Assert.Equal(GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter), carpenterRequirement.LuminaActionId);
         Assert.Equal(GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Blacksmith), blacksmithRequirement.LuminaActionId);
-    }
-
-    [Fact]
-    public async Task PrepareAsync_ReturnsBindings_WhenCurrentJobVariantMatchesHotbarAction()
-    {
-        string rootPath = CreateTempDirectory();
-
-        try
-        {
-            uint blacksmithActionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Blacksmith);
-            WriteDatFiles(
-                rootPath,
-                CreateHotbarDatBytes(
-                    [CreateHotbarRecord(blacksmithActionRowId, (byte)CrafterJobs.Blacksmith.ClassJobId, 1, 1, (byte)HotbarSlotKind.Action)]),
-                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
-
-            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
-
-            CraftSequenceExecutionPreparationResult result =
-                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Blacksmith);
-
-            Assert.True(result.CanRun);
-            CraftActionKeyBinding binding = Assert.Single(result.ActionKeyBindings);
-            Assert.Equal(CraftActionId.BasicSynthesis, binding.ActionId);
-            Assert.Equal("1", binding.KeyGestureText);
-        }
-        finally
-        {
-            Directory.Delete(rootPath, recursive: true);
-        }
     }
 
     [Fact]
@@ -315,22 +299,17 @@ public sealed class CraftSequenceExecutionPreparerTests
         return record;
     }
 
-    private static byte[] CreateKeybindDatBytes(IReadOnlyList<(string Command, string KeyString)> entries)
-    {
-        return CreateKeybindDatFileBytes(CreateKeybindContent(entries.ToArray()));
-    }
-
-    private static byte[] CreateKeybindContent(params (string Command, string KeyString)[] entries)
+    private static byte[] CreateKeybindDatBytes(IReadOnlyList<(char CommandTag, string Command, char BindingTag, string Binding)> entries)
     {
         using var stream = new MemoryStream();
 
-        foreach ((string command, string keyString) in entries)
+        foreach ((char commandTag, string command, char bindingTag, string binding) in entries)
         {
-            WriteSection(stream, 'T', command);
-            WriteSection(stream, 'C', keyString);
+            WriteSection(stream, commandTag, command);
+            WriteSection(stream, bindingTag, binding);
         }
 
-        return stream.ToArray();
+        return CreateKeybindDatFileBytes(stream.ToArray());
     }
 
     private static void WriteSection(Stream stream, char type, string text)

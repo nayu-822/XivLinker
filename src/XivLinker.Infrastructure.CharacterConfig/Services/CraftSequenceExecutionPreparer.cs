@@ -62,28 +62,16 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 "HOTBAR.DAT または KEYBIND.DAT を読み込めないため、シーケンスを準備できません。");
         }
 
-        logger.LogInformation(
-            "Character config files loaded. HotbarPath: {HotbarPath}, HotbarBytes: {HotbarLength}, KeybindPath: {KeybindPath}, KeybindBytes: {KeybindLength}",
-            files.HotbarPath,
-            files.HotbarBytes.Length,
-            files.KeybindPath,
-            files.KeybindBytes.Length);
-
-        IReadOnlySet<uint> knownActionIds = requiredActions
-            .Where(static action => action.LuminaActionId > 0)
-            .Select(static action => action.LuminaActionId)
-            .ToHashSet();
-
         IReadOnlyList<HotbarSlotEntry> hotbarSlots;
         try
         {
-            hotbarSlots = hotbarDatReader.Read(files.HotbarBytes, crafterJob, knownActionIds);
+            hotbarSlots = hotbarDatReader.Read(files.HotbarBytes);
         }
-        catch (Exception exception) when (exception is UnsupportedCharacterConfigFormatException or InvalidDataException)
+        catch (Exception exception) when (exception is InvalidDataException or IOException)
         {
             logger.LogWarning(exception, "Failed to parse HOTBAR.DAT.");
             return CraftSequenceExecutionPreparationResult.Failed(
-                "HOTBAR.DAT を解析できないため、シーケンスを準備できません。");
+                "HOTBAR.DAT を読み込めませんでした。");
         }
 
         IReadOnlyList<KeybindEntry> keybindEntries;
@@ -91,17 +79,11 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         {
             keybindEntries = keybindDatReader.Read(files.KeybindBytes);
         }
-        catch (Exception exception) when (exception is UnsupportedCharacterConfigFormatException or InvalidDataException)
+        catch (Exception exception) when (exception is InvalidDataException or IOException)
         {
             logger.LogWarning(exception, "Failed to parse KEYBIND.DAT.");
             return CraftSequenceExecutionPreparationResult.Failed(
-                "KEYBIND.DAT を解析できないため、シーケンスを準備できません。");
-        }
-
-        if (!keybindEntries.Any(static entry => entry.HasPrimaryOrSecondary))
-        {
-            return CraftSequenceExecutionPreparationResult.Failed(
-                "ホットバーのキーバインドを取得できませんでした。KEYBIND.DAT のcommand解析ログを確認してください。");
+                "KEYBIND.DAT を読み込めませんでした。");
         }
 
         var missingActions = new List<CraftActionRequirement>();
@@ -117,37 +99,22 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             if (slot is null)
             {
                 missingActions.Add(requiredAction);
-                logger.LogInformation(
-                    "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
-                    requiredAction.ActionName,
-                    requiredAction.LuminaActionId,
-                    "-",
-                    "-");
                 continue;
             }
 
             KeybindEntry? keybind = ResolveKeybindForHotbarSlot(keybindEntries, slot.HotbarId, slot.SlotId);
-            if (keybind is null || !keybind.HasPrimaryOrSecondary)
+            if (keybind is null)
             {
                 unboundActions.Add(requiredAction);
-                logger.LogInformation(
-                    "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
-                    requiredAction.ActionName,
-                    requiredAction.LuminaActionId,
-                    $"Hotbar {slot.HotbarId} Slot {slot.SlotId}",
-                    "-");
                 continue;
             }
 
-            KeybindGesture gesture = keybind.Primary ?? keybind.Secondary
-                ?? throw new InvalidOperationException("KEYBIND.DAT のバインド解決結果が不正です。");
-
-            logger.LogInformation(
-                "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
-                requiredAction.ActionName,
-                requiredAction.LuminaActionId,
-                $"Hotbar {slot.HotbarId} Slot {slot.SlotId}",
-                KeybindDisplayFormatter.Format(gesture));
+            KeybindGesture? gesture = keybind.Primary ?? keybind.Secondary;
+            if (gesture is null || !gesture.IsAssigned)
+            {
+                unboundActions.Add(requiredAction);
+                continue;
+            }
 
             actionKeyBindings.Add(new CraftActionKeyBinding(
                 requiredAction.ActionId,
@@ -157,13 +124,6 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
                 KeybindDisplayFormatter.Format(gesture),
                 KeybindDisplayFormatter.ToKeys(gesture)));
         }
-
-        logger.LogInformation(
-            "Craft execution preparation completed. Sequence: {SequenceName}, ResolvedBindings: {ResolvedBindings}, MissingActions: {MissingActions}, UnboundActions: {UnboundActions}",
-            sequence.Name,
-            string.Join(", ", actionKeyBindings.Select(static binding => $"{binding.ActionName} -> Hotbar {binding.HotbarNumber} Slot {binding.SlotNumber} -> {binding.KeyGestureText}")),
-            string.Join(", ", missingActions.Select(static action => action.ActionName)),
-            string.Join(", ", unboundActions.Select(static action => action.ActionName)));
 
         return new CraftSequenceExecutionPreparationResult
         {
@@ -185,7 +145,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
     {
         foreach (KeybindEntry entry in keybindEntries)
         {
-            if (!KeybindDatReader.TryResolveHotbarCommand(entry.Command, out int resolvedHotbarId, out int resolvedSlotId))
+            if (!KeybindDatReader.TryResolveHotbarCommand(entry.Command, out byte resolvedHotbarId, out byte resolvedSlotId))
             {
                 continue;
             }
