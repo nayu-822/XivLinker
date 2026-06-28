@@ -6,6 +6,26 @@ namespace XivLinker.Infrastructure.Overlay.Services;
 
 public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurrentPlayerStateService, IDisposable
 {
+    private static readonly string[] CurrentPlayerCombatantProps =
+    [
+        "Name",
+        "ID",
+        "OwnerID",
+        "BNpcID",
+        "Type",
+        "Job",
+        "ClassJob",
+        "Level",
+        "CurrentZoneID",
+        "CurrentMapID",
+        "MapID",
+        "MapId",
+        "PosX",
+        "PosY",
+        "PosZ",
+        "Heading",
+    ];
+
     private readonly IOverlayPluginWebSocketSessionService sessionService;
     private readonly ILuminaGameDataProvider luminaGameDataProvider;
     private readonly ILogger<OverlayPluginCurrentPlayerStateService> logger;
@@ -190,13 +210,37 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
         try
         {
-            string response = await sessionService.SendRequestAsync("getCombatants", cancellationToken: cancellationToken);
+            Dictionary<string, object?> parameters = new()
+            {
+                ["props"] = CurrentPlayerCombatantProps,
+            };
+
+            if (!string.IsNullOrWhiteSpace(primaryPlayerName))
+            {
+                parameters["names"] = new[] { primaryPlayerName };
+            }
+
+            string response = await sessionService.SendRequestAsync(
+                "getCombatants",
+                parameters,
+                cancellationToken);
             OverlayCurrentPlayerSnapshot? snapshot = OverlayPluginMessageParser.TryParseCurrentPlayerSnapshot(response, primaryPlayerName);
             if (snapshot is null)
             {
                 UpdateState(CreateUnavailableState("現在プレイヤーを未取得"));
                 return;
             }
+
+            logger.LogDebug(
+                "Current combatant snapshot. Name: {Name}, TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}, Job: {Job}, Level: {Level}",
+                snapshot.PlayerName,
+                snapshot.TerritoryTypeId,
+                snapshot.MapId,
+                snapshot.RawX,
+                snapshot.RawY,
+                snapshot.RawZ,
+                snapshot.ClassJobId,
+                snapshot.Level);
 
             primaryPlayerName = snapshot.PlayerName;
             currentTerritoryTypeId = snapshot.TerritoryTypeId > 0 ? snapshot.TerritoryTypeId : currentTerritoryTypeId;
@@ -220,11 +264,21 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
             if (snapshot.RawX == 0 && snapshot.RawY == 0 && snapshot.RawZ == 0)
             {
                 issueMessage ??= "ワールド座標が未取得です。";
-                logger.LogDebug("World coordinates are not available from getCombatants.");
+                logger.LogWarning(
+                    "Current player coordinates are zero. getCombatants response sample: {ResponseSample}",
+                    response.Length > 4000 ? response[..4000] : response);
             }
 
             if ((territoryTypeId is not null and > 0) || (mapId is not null and > 0))
             {
+                logger.LogDebug(
+                    "Before map coordinate conversion. TerritoryTypeId: {TerritoryTypeId}, MapId: {MapId}, RawX: {RawX}, RawY: {RawY}, RawZ: {RawZ}",
+                    territoryTypeId,
+                    mapId,
+                    snapshot.RawX,
+                    snapshot.RawY,
+                    snapshot.RawZ);
+
                 ResolvedMapLocation? location = await luminaGameDataProvider.ResolveMapLocationAsync(
                     territoryTypeId,
                     mapId,
@@ -235,6 +289,15 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
                 if (location is not null)
                 {
+                    logger.LogDebug(
+                        "After map coordinate conversion. MapName: {MapName}, MapId: {MapId}, MapX: {MapX}, MapY: {MapY}, CoordinatesText: {CoordinatesText}, Issue: {IssueMessage}",
+                        location.MapName,
+                        location.MapId,
+                        location.MapX,
+                        location.MapY,
+                        location.CoordinatesText,
+                        location.IssueMessage);
+
                     if (!string.IsNullOrWhiteSpace(location.MapName)
                         && !location.MapName.StartsWith("Territory ID:", StringComparison.OrdinalIgnoreCase)
                         && !string.Equals(location.MapName, "未取得", StringComparison.Ordinal))

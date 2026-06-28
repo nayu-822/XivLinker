@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using XivLinker.Infrastructure.Overlay.Models;
 
@@ -151,13 +152,36 @@ public static class OverlayPluginMessageParser
             {
                 PlayerName = resolvedName,
                 TerritoryTypeId = ReadUInt32(current, "CurrentZoneID")
-                    ?? ReadUInt32(current, "TerritoryType"),
+                    ?? ReadUInt32(current, "CurrentZoneId")
+                    ?? ReadUInt32(current, "TerritoryType")
+                    ?? ReadUInt32(current, "territoryType")
+                    ?? ReadUInt32(current, "territoryTypeId"),
                 MapId = ReadUInt32(current, "CurrentMapID")
+                    ?? ReadUInt32(current, "CurrentMapId")
                     ?? ReadUInt32(current, "MapID")
-                    ?? ReadUInt32(current, "MapId"),
-                RawX = ReadSingle(current, "PosX") ?? 0,
-                RawY = ReadSingle(current, "PosY") ?? 0,
-                RawZ = ReadSingle(current, "PosZ") ?? 0,
+                    ?? ReadUInt32(current, "MapId")
+                    ?? ReadUInt32(current, "mapId"),
+                RawX = ReadSingle(current, "PosX")
+                    ?? ReadSingle(current, "posX")
+                    ?? ReadSingle(current, "X")
+                    ?? ReadSingle(current, "x")
+                    ?? ReadSingle(current, "WorldX")
+                    ?? ReadSingle(current, "worldX")
+                    ?? 0,
+                RawY = ReadSingle(current, "PosY")
+                    ?? ReadSingle(current, "posY")
+                    ?? ReadSingle(current, "Y")
+                    ?? ReadSingle(current, "y")
+                    ?? ReadSingle(current, "WorldY")
+                    ?? ReadSingle(current, "worldY")
+                    ?? 0,
+                RawZ = ReadSingle(current, "PosZ")
+                    ?? ReadSingle(current, "posZ")
+                    ?? ReadSingle(current, "Z")
+                    ?? ReadSingle(current, "z")
+                    ?? ReadSingle(current, "WorldZ")
+                    ?? ReadSingle(current, "worldZ")
+                    ?? 0,
                 ClassJobId = ReadUInt32(current, "Job") ?? ReadUInt32(current, "ClassJob"),
                 Level = ReadInt32(current, "Level"),
             };
@@ -221,7 +245,12 @@ public static class OverlayPluginMessageParser
         return property.ValueKind switch
         {
             JsonValueKind.Number when property.TryGetSingle(out float value) => value,
-            JsonValueKind.String when float.TryParse(property.GetString(), out float value) => value,
+            JsonValueKind.String when float.TryParse(
+                property.GetString(),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out float value) => value,
+            JsonValueKind.String when float.TryParse(property.GetString(), out float fallbackValue) => fallbackValue,
             _ => null,
         };
     }
