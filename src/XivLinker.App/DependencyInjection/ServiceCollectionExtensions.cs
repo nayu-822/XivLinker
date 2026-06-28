@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOverlayPluginCurrentPlayerStateService, OverlayPluginCurrentPlayerStateService>();
         services.AddSingleton<ICharacterConfigDataService, CharacterConfigDataService>();
         services.AddSingleton<ICharacterProfileStore, CharacterProfileStore>();
+        services.AddSingleton<ICraftActionIdResolver, CraftActionIdResolver>();
         services.AddSingleton<CharacterConfigFileLoader>();
         services.AddSingleton<HotbarDatReader>();
         services.AddSingleton<KeybindDatReader>();

@@ -9,17 +9,20 @@ namespace XivLinker.Infrastructure.CharacterConfig.Services;
 
 public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPreparer
 {
+    private readonly ICraftActionIdResolver craftActionIdResolver;
     private readonly CharacterConfigFileLoader characterConfigFileLoader;
     private readonly HotbarDatReader hotbarDatReader;
     private readonly KeybindDatReader keybindDatReader;
     private readonly ILogger<CraftSequenceExecutionPreparer> logger;
 
     public CraftSequenceExecutionPreparer(
+        ICraftActionIdResolver craftActionIdResolver,
         CharacterConfigFileLoader characterConfigFileLoader,
         HotbarDatReader hotbarDatReader,
         KeybindDatReader keybindDatReader,
         ILogger<CraftSequenceExecutionPreparer> logger)
     {
+        this.craftActionIdResolver = craftActionIdResolver;
         this.characterConfigFileLoader = characterConfigFileLoader;
         this.hotbarDatReader = hotbarDatReader;
         this.keybindDatReader = keybindDatReader;
@@ -31,7 +34,10 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         CrafterJob crafterJob,
         CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<CraftActionRequirement> requiredActions = ResolveRequiredActions(sequence, crafterJob);
+        IReadOnlyList<CraftActionRequirement> requiredActions = await craftActionIdResolver.ResolveRequiredActionsAsync(
+            sequence,
+            crafterJob,
+            cancellationToken);
         if (requiredActions.Count == 0)
         {
             return CraftSequenceExecutionPreparationResult.Failed(
@@ -64,6 +70,7 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             files.KeybindBytes.Length);
 
         IReadOnlySet<uint> knownActionIds = requiredActions
+            .Where(static action => action.LuminaActionId > 0)
             .Select(static action => action.LuminaActionId)
             .ToHashSet();
 
@@ -160,30 +167,5 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
         return slot.ClassJobId is null
             || slot.ClassJobId == 0
             || slot.ClassJobId == crafterJob.ClassJobId;
-    }
-
-    private static IReadOnlyList<CraftActionRequirement> ResolveRequiredActions(CraftSequence sequence, CrafterJob crafterJob)
-    {
-        return sequence.Steps
-            .Select(step => step.ActionId)
-            .Where(actionId => !string.IsNullOrWhiteSpace(actionId.Value))
-            .Distinct()
-            .Select(actionId =>
-            {
-                if (!CraftActionCatalog.TryGet(actionId, out CraftActionDefinition? definition) || definition is null)
-                {
-                    return null;
-                }
-
-                CrafterActionVariant? variant = definition.Variants
-                    .FirstOrDefault(item => item.ClassJobRowId == crafterJob.ClassJobId);
-
-                return variant is null
-                    ? null
-                    : new CraftActionRequirement(actionId, variant.LuminaRowId, definition.DisplayName);
-            })
-            .Where(static item => item is not null)
-            .Cast<CraftActionRequirement>()
-            .ToArray();
     }
 }

@@ -162,6 +162,70 @@ public sealed class CraftSequenceExecutionPreparerTests
         }
     }
 
+    [Fact]
+    public async Task ResolveRequiredActionsAsync_ReturnsJobSpecificLuminaActionId()
+    {
+        CraftActionIdResolver resolver = CreateResolver();
+
+        IReadOnlyList<CraftActionRequirement> carpenterRequirements = await resolver.ResolveRequiredActionsAsync(
+            CreateSequence(CraftActionId.BasicSynthesis),
+            CrafterJobs.Carpenter);
+        IReadOnlyList<CraftActionRequirement> blacksmithRequirements = await resolver.ResolveRequiredActionsAsync(
+            CreateSequence(CraftActionId.BasicSynthesis),
+            CrafterJobs.Blacksmith);
+
+        CraftActionRequirement carpenterRequirement = Assert.Single(carpenterRequirements);
+        CraftActionRequirement blacksmithRequirement = Assert.Single(blacksmithRequirements);
+
+        Assert.NotEqual(carpenterRequirement.LuminaActionId, blacksmithRequirement.LuminaActionId);
+        Assert.Equal(GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter), carpenterRequirement.LuminaActionId);
+        Assert.Equal(GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Blacksmith), blacksmithRequirement.LuminaActionId);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReturnsBindings_WhenCurrentJobVariantMatchesHotbarAction()
+    {
+        string rootPath = CreateTempDirectory();
+
+        try
+        {
+            uint blacksmithActionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Blacksmith);
+            WriteDatFiles(
+                rootPath,
+                CreateHotbarDatBytes([CreateHotbarRecord(1, 1, HotbarSlotKind.Action, blacksmithActionRowId, CrafterJobs.Blacksmith.ClassJobId)]),
+                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
+
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
+
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Blacksmith);
+
+            Assert.True(result.CanRun);
+            CraftActionKeyBinding binding = Assert.Single(result.ActionKeyBindings);
+            Assert.Equal(CraftActionId.BasicSynthesis, binding.ActionId);
+            Assert.Equal("1", binding.KeyGestureText);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ResolveRequiredActionsAsync_ReturnsZeroLuminaActionId_WhenActionIsUnknown()
+    {
+        CraftActionIdResolver resolver = CreateResolver();
+
+        IReadOnlyList<CraftActionRequirement> requirements = await resolver.ResolveRequiredActionsAsync(
+            CreateSequence(new CraftActionId("craftaction:test-unknown")),
+            CrafterJobs.Carpenter);
+
+        CraftActionRequirement requirement = Assert.Single(requirements);
+
+        Assert.Equal(0U, requirement.LuminaActionId);
+        Assert.Equal("craftaction:test-unknown", requirement.ActionName);
+    }
+
     private static CraftSequence CreateSequence(CraftActionId actionId)
     {
         return new CraftSequence
@@ -183,10 +247,16 @@ public sealed class CraftSequenceExecutionPreparerTests
         };
 
         return new CraftSequenceExecutionPreparer(
+            CreateResolver(),
             new CharacterConfigFileLoader(new FakeCharacterProfileStore(profile)),
             new HotbarDatReader(),
             new KeybindDatReader(),
             NullLogger<CraftSequenceExecutionPreparer>.Instance);
+    }
+
+    private static CraftActionIdResolver CreateResolver()
+    {
+        return new CraftActionIdResolver(NullLogger<CraftActionIdResolver>.Instance);
     }
 
     private static uint GetLuminaActionId(CraftActionId actionId, CrafterJob crafterJob)

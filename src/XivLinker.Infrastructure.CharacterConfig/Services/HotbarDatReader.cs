@@ -40,7 +40,7 @@ public sealed class HotbarDatReader
             IReadOnlyList<int> offsets = FindUInt32Offsets(content, actionId).Take(20).ToArray();
 
             logger.LogDebug(
-                "HOTBAR.DAT action id occurrence diagnostic. ActionId: {ActionId}, Offsets: {Offsets}",
+                "HOTBAR.DAT action id occurrence diagnostic. LuminaActionId: {LuminaActionId}, Offsets: {Offsets}",
                 actionId,
                 string.Join(", ", offsets.Select(static offset => $"0x{offset:X}")));
         }
