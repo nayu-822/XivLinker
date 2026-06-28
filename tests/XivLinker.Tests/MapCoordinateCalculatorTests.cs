@@ -46,6 +46,17 @@ public sealed class MapCoordinateCalculatorTests
     {
         string actual = MapCoordinateCalculator.FormatCoordinates(double.NaN, 8.76);
 
-        Assert.Equal("座標を変換できません", actual);
+        Assert.Equal(MapCoordinateCalculator.CoordinateConversionFailedText, actual);
+    }
+
+    [Fact]
+    public void CoordinateConversionFailedText_IsNotMojibake()
+    {
+        string text = MapCoordinateCalculator.CoordinateConversionFailedText;
+
+        Assert.DoesNotContain("邵ｺ", text);
+        Assert.DoesNotContain("郢ｧ", text);
+        Assert.DoesNotContain("陟", text);
+        Assert.DoesNotContain("隶", text);
     }
 }

@@ -2,6 +2,8 @@ namespace XivLinker.Infrastructure.Lumina.Services;
 
 public static class MapCoordinateCalculator
 {
+    public const string CoordinateConversionFailedText = "座標を変換できません";
+
     public static double ConvertWorldToMapCoordinate(double position, double offset, double sizeFactor)
     {
         if (sizeFactor <= 0)
@@ -18,7 +20,7 @@ public static class MapCoordinateCalculator
     {
         if (double.IsNaN(x) || double.IsNaN(y) || double.IsInfinity(x) || double.IsInfinity(y))
         {
-            return "座標を変換できません";
+            return CoordinateConversionFailedText;
         }
 
         return $"X: {x:0.0} / Y: {y:0.0}";
