@@ -12,6 +12,8 @@ public interface ICharacterProfileStore
 
     CharacterData? SelectedCharacterData { get; }
 
+    string? SelectedCharacterDirectoryPath { get; }
+
     Task InitializeAsync(CancellationToken cancellationToken = default);
 
     Task AddProfileAsync(string path, string? displayName = null, CancellationToken cancellationToken = default);

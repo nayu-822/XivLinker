@@ -4,6 +4,8 @@ public sealed class CharacterData
 {
     public required CharacterProfile Profile { get; init; }
 
+    public required string CharacterDirectoryPath { get; init; }
+
     public required HotbarAnalysisResult HotbarAnalysisResult { get; init; }
 
     public required KeybindAnalysisResult KeybindAnalysisResult { get; init; }

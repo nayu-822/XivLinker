@@ -34,12 +34,13 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
 
     public event EventHandler? StateChanged;
 
-    // Expose snapshots so callers cannot mutate store state without persistence.
     public IReadOnlyList<CharacterProfile> Profiles => profiles.Select(CloneProfile).ToArray();
 
     public CharacterProfile? SelectedProfile => selectedProfile is null ? null : CloneProfile(selectedProfile);
 
     public CharacterData? SelectedCharacterData => selectedCharacterData is null ? null : CloneCharacterData(selectedCharacterData);
+
+    public string? SelectedCharacterDirectoryPath => selectedProfile?.CharacterSettingsDirectory;
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -167,8 +168,6 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
 
     private void LoadProfilesFromDisk()
     {
-        // The persisted store is a small user-data JSON file, so synchronous I/O keeps
-        // the implementation simple for now. If the payload grows, move this path to async.
         string path = appDataPathService.CharacterProfilesFilePath;
         if (!File.Exists(path))
         {
@@ -244,6 +243,7 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
             selectedCharacterData = new CharacterData
             {
                 Profile = CloneProfile(profile),
+                CharacterDirectoryPath = profile.CharacterSettingsDirectory,
                 HotbarAnalysisResult = new HotbarAnalysisResult
                 {
                     FilePath = CharacterConfigPathResolver.ResolveHotbarDatPath(profile),
@@ -310,7 +310,6 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
         Directory.CreateDirectory(directory);
 
         string tempPath = Path.Combine(directory, $"{Path.GetFileName(path)}.tmp");
-        // These payloads are small enough that synchronous writes are acceptable for now.
         File.WriteAllText(tempPath, content);
 
         if (File.Exists(path))
@@ -341,6 +340,7 @@ public sealed class CharacterProfileStore : ICharacterProfileStore
         return new CharacterData
         {
             Profile = CloneProfile(characterData.Profile),
+            CharacterDirectoryPath = characterData.CharacterDirectoryPath,
             HotbarAnalysisResult = new HotbarAnalysisResult
             {
                 FilePath = characterData.HotbarAnalysisResult.FilePath,

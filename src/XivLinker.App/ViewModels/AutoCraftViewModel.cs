@@ -16,7 +16,7 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
         IAutoCraftSequenceEditorDialogService sequenceEditorDialogService,
         OverlayWindowService overlayWindowService,
         AutoCraftExecutionService autoCraftExecutionService,
-        ICraftHotbarRegistrationValidator craftHotbarRegistrationValidator,
+        ICraftSequenceExecutionPreparer craftSequenceExecutionPreparer,
         IOverlayPluginCurrentPlayerStateService currentPlayerStateService)
     {
         this.currentPlayerStateService = currentPlayerStateService;
@@ -30,7 +30,7 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
             sequence => sequenceEditorDialogService.ShowEditorAsync(sequence, SaveSequence),
             () => SelectedCrafterJob?.Job,
             () => IsCurrentJobNonCrafter,
-            craftHotbarRegistrationValidator,
+            craftSequenceExecutionPreparer,
             overlayWindowService,
             autoCraftExecutionService);
 
@@ -62,14 +62,14 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
     public string CrafterJobStatusText =>
         DetectionState switch
         {
-            CrafterJobDetectionState.Crafter => "現在のクラフター職を自動検出しています。",
-            CrafterJobDetectionState.NonCrafter => "現在のジョブがクラフター以外のため、自動クラフトは実行できません。",
-            _ => "現在のジョブを自動検出できないため、手動で選択してください。",
+            CrafterJobDetectionState.Crafter => "現在のクラフター職を自動判定しています。",
+            CrafterJobDetectionState.NonCrafter => "現在のジョブがクラフターではないため、自動クラフトは実行できません。",
+            _ => "現在のジョブを自動判定できないため、手動で選択してください。",
         };
 
     public string Title => "自動クラフト";
 
-    public string Description => "登録済みシーケンスの確認、作成、編集、実行をここから行えます。";
+    public string Description => "登録済みシーケンスの確認、編集、実行準備をここから行えます。";
 
     public void Dispose()
     {

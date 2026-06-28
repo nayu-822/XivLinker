@@ -2,17 +2,20 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
 using XivLinker.App.Services;
 using XivLinker.Application.Abstractions;
+using XivLinker.Application.Models;
 using XivLinker.Domain.Models;
 
 namespace XivLinker.App.ViewModels;
 
 public sealed class AutoCraftSequenceListViewModel
 {
+    private const string AutoCraftTitle = "自動クラフト";
+
     private readonly ICraftSequenceStore craftSequenceStore;
     private readonly Func<CraftSequence?, Task> openEditor;
     private readonly Func<CrafterJob?> getSelectedCrafterJob;
     private readonly Func<bool> isCurrentJobNonCrafter;
-    private readonly ICraftHotbarRegistrationValidator hotbarRegistrationValidator;
+    private readonly ICraftSequenceExecutionPreparer craftSequenceExecutionPreparer;
     private readonly OverlayWindowService overlayWindowService;
     private readonly AutoCraftExecutionService autoCraftExecutionService;
 
@@ -21,7 +24,7 @@ public sealed class AutoCraftSequenceListViewModel
         Func<CraftSequence?, Task> openEditor,
         Func<CrafterJob?> getSelectedCrafterJob,
         Func<bool> isCurrentJobNonCrafter,
-        ICraftHotbarRegistrationValidator hotbarRegistrationValidator,
+        ICraftSequenceExecutionPreparer craftSequenceExecutionPreparer,
         OverlayWindowService overlayWindowService,
         AutoCraftExecutionService autoCraftExecutionService)
     {
@@ -29,7 +32,7 @@ public sealed class AutoCraftSequenceListViewModel
         this.openEditor = openEditor;
         this.getSelectedCrafterJob = getSelectedCrafterJob;
         this.isCurrentJobNonCrafter = isCurrentJobNonCrafter;
-        this.hotbarRegistrationValidator = hotbarRegistrationValidator;
+        this.craftSequenceExecutionPreparer = craftSequenceExecutionPreparer;
         this.overlayWindowService = overlayWindowService;
         this.autoCraftExecutionService = autoCraftExecutionService;
 
@@ -122,8 +125,8 @@ public sealed class AutoCraftSequenceListViewModel
         if (isCurrentJobNonCrafter())
         {
             await overlayWindowService.ShowMessageAsync(
-                "自動クラフト",
-                "現在のジョブがクラフター以外のため、このシーケンスは実行できません。");
+                AutoCraftTitle,
+                "現在のジョブがクラフターではないため、このシーケンスは実行できません。");
             return;
         }
 
@@ -131,26 +134,29 @@ public sealed class AutoCraftSequenceListViewModel
         if (crafterJob is null)
         {
             await overlayWindowService.ShowMessageAsync(
-                "自動クラフト",
-                "現在のジョブを自動検出できないため、クラフター職を選択してから実行してください。");
+                AutoCraftTitle,
+                "現在のジョブを自動判定できないため、クラフター職を選択してから実行してください。");
             return;
         }
 
-        var validationResult = await hotbarRegistrationValidator.ValidateAsync(fullSequence, crafterJob);
-        if (!validationResult.CanRun)
+        CraftSequenceExecutionPreparationResult preparationResult =
+            await craftSequenceExecutionPreparer.PrepareAsync(fullSequence, crafterJob);
+
+        if (!preparationResult.CanRun)
         {
-            if (!string.IsNullOrWhiteSpace(validationResult.ErrorMessage))
+            if (!string.IsNullOrWhiteSpace(preparationResult.ErrorMessage))
             {
                 await overlayWindowService.ShowMessageAsync(
-                    "自動クラフト",
-                    validationResult.ErrorMessage);
+                    AutoCraftTitle,
+                    preparationResult.ErrorMessage);
                 return;
             }
 
-            await overlayWindowService.ShowMissingHotbarActionsAsync(
+            await overlayWindowService.ShowCraftExecutionPreparationFailedAsync(
                 fullSequence.Name,
                 crafterJob.Name,
-                validationResult.MissingActions);
+                preparationResult.MissingActions,
+                preparationResult.UnboundActions);
             return;
         }
 
@@ -160,6 +166,12 @@ public sealed class AutoCraftSequenceListViewModel
             return;
         }
 
-        await autoCraftExecutionService.StartAsync(fullSequence, runCount.Value);
+        await autoCraftExecutionService.StartAsync(new AutoCraftExecutionContext
+        {
+            Sequence = fullSequence,
+            RunCount = runCount.Value,
+            CrafterJob = crafterJob,
+            ActionKeyBindings = preparationResult.ActionKeyBindings,
+        });
     }
 }

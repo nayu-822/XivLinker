@@ -3,9 +3,9 @@ using XivLinker.Domain.Models;
 
 namespace XivLinker.Application.Abstractions;
 
-public interface ICraftHotbarRegistrationValidator
+public interface ICraftSequenceExecutionPreparer
 {
-    Task<CraftSequenceValidationResult> ValidateAsync(
+    Task<CraftSequenceExecutionPreparationResult> PrepareAsync(
         CraftSequence sequence,
         CrafterJob crafterJob,
         CancellationToken cancellationToken = default);

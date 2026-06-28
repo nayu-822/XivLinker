@@ -24,6 +24,7 @@ public sealed class CharacterConfigDataService : ICharacterConfigDataService
         return new CharacterData
         {
             Profile = profile,
+            CharacterDirectoryPath = profile.CharacterSettingsDirectory,
             HotbarAnalysisResult = hotbarResult,
             KeybindAnalysisResult = keybindResult,
             LoadedAt = DateTimeOffset.Now,

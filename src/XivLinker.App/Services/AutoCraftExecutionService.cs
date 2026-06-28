@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using XivLinker.App.ViewModels;
-using XivLinker.Domain.Models;
 
 namespace XivLinker.App.Services;
 
@@ -31,31 +30,31 @@ public sealed class AutoCraftExecutionService
 
     public string CurrentSequenceName { get; private set; } = string.Empty;
 
-    public async Task<bool> StartAsync(CraftSequence sequence, int runCount, CancellationToken cancellationToken = default)
+    public async Task<bool> StartAsync(AutoCraftExecutionContext context, CancellationToken cancellationToken = default)
     {
-        if (IsRunning || runCount < 1)
+        if (IsRunning || context.RunCount < 1)
         {
             return false;
         }
 
-        var overlayViewModel = new AutoCraftRunOverlayViewModel(sequence.Name, CancelAsync)
+        var overlayViewModel = new AutoCraftRunOverlayViewModel(context.Sequence.Name, CancelAsync)
         {
-            StatusText = "テスト実行を開始しています。",
+            StatusText = "自動クラフトを開始しています...",
         };
 
         try
         {
             executionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             IsRunning = true;
-            CurrentSequenceName = sequence.Name;
+            CurrentSequenceName = context.Sequence.Name;
             currentOverlayViewModel = overlayViewModel;
             RaiseStateChanged();
 
             overlayWindowService.ShowRunOverlay(overlayViewModel);
             overlayWindowService.HideMainWindow();
-            eventLog.Add($"自動クラフトを開始しました: {sequence.Name} / {runCount} 回");
+            eventLog.Add($"自動クラフトを開始しました: {context.Sequence.Name} / {context.RunCount} 回");
 
-            _ = ExecuteAsync(sequence, runCount, executionCts.Token);
+            _ = ExecuteAsync(context, executionCts.Token);
             await Task.CompletedTask;
             return true;
         }
@@ -80,32 +79,32 @@ public sealed class AutoCraftExecutionService
         return Task.CompletedTask;
     }
 
-    private async Task ExecuteAsync(CraftSequence sequence, int runCount, CancellationToken cancellationToken)
+    private async Task ExecuteAsync(AutoCraftExecutionContext context, CancellationToken cancellationToken)
     {
         try
         {
             await autoCraftActionExecutor.ExecuteAsync(
-                sequence,
-                runCount,
+                context.Sequence,
+                context.RunCount,
                 UpdateOverlayStatus,
                 cancellationToken);
 
-            UpdateOverlayStatus("テスト実行が完了しました。メインウィンドウを表示します。");
-            eventLog.Add($"自動クラフトが完了しました: {sequence.Name}");
+            UpdateOverlayStatus("自動クラフトが完了しました。メインウィンドウを表示します...");
+            eventLog.Add($"自動クラフトが完了しました: {context.Sequence.Name}");
             await Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken);
             await RestoreWindowsAsync(activateMainWindow: false);
         }
         catch (OperationCanceledException)
         {
-            UpdateOverlayStatus("停止しました。メインウィンドウへ戻ります。");
-            eventLog.Add($"自動クラフトを停止しました: {sequence.Name}", "Warning");
+            UpdateOverlayStatus("中断しました。メインウィンドウへ戻ります...");
+            eventLog.Add($"自動クラフトを中断しました: {context.Sequence.Name}", "Warning");
             await RestoreWindowsAsync(activateMainWindow: true);
         }
         catch (Exception exception)
         {
             logger.LogError(exception, "Auto craft execution failed.");
-            UpdateOverlayStatus("エラーが発生しました。メインウィンドウへ戻ります。");
-            eventLog.Add($"自動クラフト実行中にエラーが発生しました: {sequence.Name}", "Error");
+            UpdateOverlayStatus("エラーが発生しました。メインウィンドウへ戻ります...");
+            eventLog.Add($"自動クラフト実行中にエラーが発生しました: {context.Sequence.Name}", "Error");
             await Task.Delay(TimeSpan.FromMilliseconds(1200));
             await RestoreWindowsAsync(activateMainWindow: true);
         }
@@ -117,7 +116,7 @@ public sealed class AutoCraftExecutionService
 
     private void UpdateOverlayStatus(string statusText)
     {
-        if (currentOverlayViewModel is null)
+        if (currentOverlayViewModel is null || System.Windows.Application.Current is null)
         {
             return;
         }
@@ -133,6 +132,11 @@ public sealed class AutoCraftExecutionService
 
     private async Task RestoreWindowsAsync(bool activateMainWindow)
     {
+        if (System.Windows.Application.Current is null)
+        {
+            return;
+        }
+
         if (System.Windows.Application.Current.Dispatcher.CheckAccess())
         {
             overlayWindowService.CloseRunOverlay();
@@ -159,6 +163,12 @@ public sealed class AutoCraftExecutionService
 
     private void RaiseStateChanged()
     {
+        if (System.Windows.Application.Current is null)
+        {
+            StateChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         if (System.Windows.Application.Current.Dispatcher.CheckAccess())
         {
             StateChanged?.Invoke(this, EventArgs.Empty);

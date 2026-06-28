@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.App.Services;
 using XivLinker.App.ViewModels;
 using XivLinker.Application.Abstractions;
+using XivLinker.Application.Models;
 using XivLinker.Domain.Models;
 using XivLinker.Infrastructure.Overlay.Models;
 using XivLinker.Infrastructure.Overlay.Services;
@@ -124,7 +125,7 @@ public sealed class AutoCraftViewModelTests
                 new FakeAutoCraftActionExecutor(),
                 new AppEventLogViewModel(),
                 NullLogger<AutoCraftExecutionService>.Instance),
-            new FakeCraftHotbarRegistrationValidator(),
+            new FakeCraftSequenceExecutionPreparer(),
             currentPlayerStateService);
     }
 
@@ -176,6 +177,7 @@ public sealed class AutoCraftViewModelTests
                 UpdatedAt = CurrentState.UpdatedAt,
                 IssueMessage = CurrentState.IssueMessage,
             };
+
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -212,14 +214,14 @@ public sealed class AutoCraftViewModelTests
         }
     }
 
-    private sealed class FakeCraftHotbarRegistrationValidator : ICraftHotbarRegistrationValidator
+    private sealed class FakeCraftSequenceExecutionPreparer : ICraftSequenceExecutionPreparer
     {
-        public Task<XivLinker.Application.Models.CraftSequenceValidationResult> ValidateAsync(
+        public Task<CraftSequenceExecutionPreparationResult> PrepareAsync(
             CraftSequence sequence,
             CrafterJob crafterJob,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new XivLinker.Application.Models.CraftSequenceValidationResult());
+            return Task.FromResult(new CraftSequenceExecutionPreparationResult());
         }
     }
 }

@@ -8,6 +8,8 @@ namespace XivLinker.App.Services;
 
 public class OverlayWindowService
 {
+    private const string AutoCraftTitle = "自動クラフト";
+
     private AutoCraftRunOptionsWindow? currentRunOptionsWindow;
     private AutoCraftRunOverlayWindow? currentRunOverlayWindow;
 
@@ -61,23 +63,27 @@ public class OverlayWindowService
         return Task.FromResult(result == true ? confirmedRunCount : null);
     }
 
-    public virtual Task ShowMissingHotbarActionsAsync(
+    public virtual Task ShowCraftExecutionPreparationFailedAsync(
         string sequenceName,
         string crafterJobName,
-        IReadOnlyList<CraftActionRequirement> missingActions)
+        IReadOnlyList<CraftActionRequirement> missingActions,
+        IReadOnlyList<CraftActionRequirement> unboundActions)
     {
-        string actionLines = string.Join(
-            Environment.NewLine,
-            missingActions.Select(static action => $"・{action.ActionName}"));
+        string missingActionLines = missingActions.Count == 0
+            ? "なし"
+            : string.Join(Environment.NewLine, missingActions.Select(static action => $"・{action.ActionName}"));
+        string unboundActionLines = unboundActions.Count == 0
+            ? "なし"
+            : string.Join(Environment.NewLine, unboundActions.Select(static action => $"・{action.ActionName}"));
 
         MessageBox.Show(
             ResolveOwnerWindow(),
-            $"未登録アクションがあるため、シーケンスを実行できません。{Environment.NewLine}{Environment.NewLine}" +
+            $"シーケンスを実行できません。{Environment.NewLine}{Environment.NewLine}" +
             $"シーケンス: {sequenceName}{Environment.NewLine}" +
             $"現在ジョブ: {crafterJobName}{Environment.NewLine}{Environment.NewLine}" +
-            $"以下のアクションを現在ジョブのホットバーに登録してください。{Environment.NewLine}" +
-            $"{actionLines}",
-            "自動クラフト",
+            $"ホットバーに未登録のアクション:{Environment.NewLine}{missingActionLines}{Environment.NewLine}{Environment.NewLine}" +
+            $"キー未割り当てのアクション:{Environment.NewLine}{unboundActionLines}",
+            AutoCraftTitle,
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
 
@@ -160,6 +166,11 @@ public class OverlayWindowService
 
     private static Window? ResolveOwnerWindow()
     {
+        if (System.Windows.Application.Current is null)
+        {
+            return null;
+        }
+
         Window? activeWindow = System.Windows.Application.Current.Windows
             .OfType<Window>()
             .FirstOrDefault(static window => window.IsActive);
@@ -169,6 +180,6 @@ public class OverlayWindowService
 
     private static Window? ResolveMainWindow()
     {
-        return System.Windows.Application.Current.MainWindow;
+        return System.Windows.Application.Current?.MainWindow;
     }
 }

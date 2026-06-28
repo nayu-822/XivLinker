@@ -33,7 +33,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOverlayPluginCurrentPlayerStateService, OverlayPluginCurrentPlayerStateService>();
         services.AddSingleton<ICharacterConfigDataService, CharacterConfigDataService>();
         services.AddSingleton<ICharacterProfileStore, CharacterProfileStore>();
-        services.AddSingleton<ICraftHotbarRegistrationValidator, CraftHotbarRegistrationValidator>();
+        services.AddSingleton<CharacterConfigFileLoader>();
+        services.AddSingleton<HotbarDatReader>();
+        services.AddSingleton<KeybindDatReader>();
+        services.AddSingleton<ICraftSequenceExecutionPreparer, CraftSequenceExecutionPreparer>();
         services.AddSingleton<ICraftSequenceStore, CraftSequenceStore>();
         services.AddSingleton<CraftActionIconSourceService>();
         services.AddSingleton<IFolderPickerService, FolderPickerService>();
