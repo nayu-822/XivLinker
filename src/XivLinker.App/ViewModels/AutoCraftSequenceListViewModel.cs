@@ -10,17 +10,23 @@ public sealed class AutoCraftSequenceListViewModel
 {
     private readonly ICraftSequenceStore craftSequenceStore;
     private readonly Func<CraftSequence?, Task> openEditor;
+    private readonly Func<CrafterJob?>? getSelectedCrafterJob;
+    private readonly ICraftHotbarRegistrationValidator? hotbarRegistrationValidator;
     private readonly OverlayWindowService? overlayWindowService;
     private readonly AutoCraftExecutionService? autoCraftExecutionService;
 
     public AutoCraftSequenceListViewModel(
         ICraftSequenceStore craftSequenceStore,
         Func<CraftSequence?, Task> openEditor,
+        Func<CrafterJob?>? getSelectedCrafterJob = null,
+        ICraftHotbarRegistrationValidator? hotbarRegistrationValidator = null,
         OverlayWindowService? overlayWindowService = null,
         AutoCraftExecutionService? autoCraftExecutionService = null)
     {
         this.craftSequenceStore = craftSequenceStore;
         this.openEditor = openEditor;
+        this.getSelectedCrafterJob = getSelectedCrafterJob;
+        this.hotbarRegistrationValidator = hotbarRegistrationValidator;
         this.overlayWindowService = overlayWindowService;
         this.autoCraftExecutionService = autoCraftExecutionService;
 
@@ -131,6 +137,30 @@ public sealed class AutoCraftSequenceListViewModel
         if (fullSequence is null)
         {
             return;
+        }
+
+        CrafterJob? crafterJob = getSelectedCrafterJob?.Invoke();
+        if (crafterJob is null)
+        {
+            await overlayWindowService.ShowMessageAsync(
+                "自動クラフト",
+                "現在のジョブを自動検出できないため、クラフター職を選択してから実行してください。");
+            return;
+        }
+
+        if (hotbarRegistrationValidator is not null)
+        {
+            Application.Models.CraftSequenceValidationResult validationResult =
+                await hotbarRegistrationValidator.ValidateAsync(fullSequence, crafterJob);
+
+            if (!validationResult.CanRun)
+            {
+                await overlayWindowService.ShowMissingHotbarActionsAsync(
+                    fullSequence.Name,
+                    crafterJob.Name,
+                    validationResult.MissingActions);
+                return;
+            }
         }
 
         int? runCount = await overlayWindowService.ShowRunOptionsAsync(fullSequence.Name);

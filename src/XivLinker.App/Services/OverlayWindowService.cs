@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Windows;
+using XivLinker.Application.Models;
 using XivLinker.App.ViewModels;
 using XivLinker.App.Views;
 
@@ -58,6 +59,41 @@ public sealed class OverlayWindowService
         currentRunOptionsWindow = window;
         bool? result = window.ShowDialog();
         return Task.FromResult(result == true ? confirmedRunCount : null);
+    }
+
+    public Task ShowMissingHotbarActionsAsync(
+        string sequenceName,
+        string crafterJobName,
+        IReadOnlyList<CraftActionRequirement> missingActions)
+    {
+        string actionLines = string.Join(
+            Environment.NewLine,
+            missingActions.Select(static action => $"・{action.ActionName}"));
+
+        MessageBox.Show(
+            ResolveOwnerWindow(),
+            $"未登録アクションがあるため、シーケンスを実行できません。{Environment.NewLine}{Environment.NewLine}" +
+            $"シーケンス: {sequenceName}{Environment.NewLine}" +
+            $"現在ジョブ: {crafterJobName}{Environment.NewLine}{Environment.NewLine}" +
+            $"以下のアクションを現在ジョブのホットバーに登録してください。{Environment.NewLine}" +
+            $"{actionLines}",
+            "自動クラフト",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+
+        return Task.CompletedTask;
+    }
+
+    public Task ShowMessageAsync(string title, string message)
+    {
+        MessageBox.Show(
+            ResolveOwnerWindow(),
+            message,
+            title,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+
+        return Task.CompletedTask;
     }
 
     public void ShowRunOverlay(AutoCraftRunOverlayViewModel viewModel)
