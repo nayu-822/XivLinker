@@ -128,16 +128,44 @@ public sealed class CraftSequenceExecutionPreparer : ICraftSequenceExecutionPrep
             if (keyBinding is null || keyBinding.Keys.Count == 0)
             {
                 unboundActions.Add(requiredAction);
+                logger.LogInformation(
+                    "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
+                    requiredAction.ActionName,
+                    requiredAction.LuminaActionId,
+                    slot is null ? "-" : $"Hotbar {slot.HotbarNumber} Slot {slot.SlotNumber}",
+                    "-");
                 continue;
             }
+
+            logger.LogInformation(
+                "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
+                requiredAction.ActionName,
+                requiredAction.LuminaActionId,
+                slot is null ? "-" : $"Hotbar {slot.HotbarNumber} Slot {slot.SlotNumber}",
+                keyBinding.KeyGestureText);
+
+            HotbarSlotEntry resolvedSlot = slot!;
+            HotbarSlotKeyBinding resolvedKeyBinding = keyBinding!;
 
             actionKeyBindings.Add(new CraftActionKeyBinding(
                 requiredAction.ActionId,
                 requiredAction.ActionName,
-                slot.HotbarNumber,
-                slot.SlotNumber,
-                keyBinding.KeyGestureText,
-                keyBinding.Keys));
+                resolvedSlot.HotbarNumber,
+                resolvedSlot.SlotNumber,
+                resolvedKeyBinding.KeyGestureText,
+                resolvedKeyBinding.Keys));
+
+            continue;
+        }
+
+        foreach (CraftActionRequirement missingAction in missingActions)
+        {
+            logger.LogInformation(
+                "Craft action execution binding check. Action: {ActionName}, LuminaActionId: {LuminaActionId}, HotbarSlot: {HotbarSlot}, Keybind: {Keybind}",
+                missingAction.ActionName,
+                missingAction.LuminaActionId,
+                "-",
+                "-");
         }
 
         logger.LogInformation(

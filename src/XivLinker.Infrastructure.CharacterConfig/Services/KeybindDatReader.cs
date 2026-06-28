@@ -48,7 +48,7 @@ public sealed partial class KeybindDatReader
                 }
 
                 entries.Add(entry);
-                logger.LogDebug(
+                logger.LogInformation(
                     "KEYBIND command loaded. Command: {Command}, Primary: {Primary}, Secondary: {Secondary}",
                     entry.Command,
                     entry.Primary?.DisplayText,

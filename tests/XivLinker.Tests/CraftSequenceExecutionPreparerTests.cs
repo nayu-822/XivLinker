@@ -212,6 +212,35 @@ public sealed class CraftSequenceExecutionPreparerTests
     }
 
     [Fact]
+    public async Task PrepareAsync_ReturnsBindings_WhenHotbarUsesActionIdAnchorLayout()
+    {
+        string rootPath = CreateTempDirectory();
+
+        try
+        {
+            uint actionRowId = GetLuminaActionId(CraftActionId.BasicSynthesis, CrafterJobs.Carpenter);
+            WriteDatFiles(
+                rootPath,
+                CreateDatFileBytes(0x31, CreateAnchoredHotbarPayload(1, 1, HotbarSlotKind.Action, actionRowId, CrafterJobs.Carpenter.ClassJobId)),
+                CreateKeybindDatBytes([("HOTBAR_1_1", "1.0,0.0,")]));
+
+            CraftSequenceExecutionPreparer preparer = CreatePreparer(rootPath);
+
+            CraftSequenceExecutionPreparationResult result =
+                await preparer.PrepareAsync(CreateSequence(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+            Assert.True(result.CanRun);
+            CraftActionKeyBinding binding = Assert.Single(result.ActionKeyBindings);
+            Assert.Equal(CraftActionId.BasicSynthesis, binding.ActionId);
+            Assert.Equal("1", binding.KeyGestureText);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ResolveRequiredActionsAsync_ReturnsZeroLuminaActionId_WhenActionIsUnknown()
     {
         CraftActionIdResolver resolver = CreateResolver();
@@ -291,6 +320,22 @@ public sealed class CraftSequenceExecutionPreparerTests
     private static byte[] CreateKeybindDatBytes(IReadOnlyList<(string Command, string KeyString)> entries)
     {
         return CreateDatFileBytes(0x73, CreateKeybindContent(entries.ToArray()));
+    }
+
+    private static byte[] CreateAnchoredHotbarPayload(
+        byte hotbarNumber,
+        byte slotNumber,
+        HotbarSlotKind kind,
+        uint actionId,
+        uint classJobId)
+    {
+        byte[] payload = new byte[15];
+        payload[0] = hotbarNumber;
+        payload[1] = slotNumber;
+        payload[2] = (byte)kind;
+        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(4, 4), actionId);
+        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(8, 4), classJobId);
+        return payload;
     }
 
     private static byte[] CreateKeybindContent(params (string Command, string KeyString)[] entries)

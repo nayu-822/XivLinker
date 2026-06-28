@@ -9,6 +9,17 @@ namespace XivLinker.Infrastructure.CharacterConfig.Services;
 public sealed class HotbarDatReader
 {
     private const byte XorKey = 0x31;
+
+    private static readonly HotbarAnchorLayout[] HotbarAnchorLayouts =
+    [
+        new(HotbarRelativeOffset: -4, SlotRelativeOffset: -3, KindRelativeOffset: -2, ClassJobRelativeOffset: 4),
+        new(HotbarRelativeOffset: -8, SlotRelativeOffset: -7, KindRelativeOffset: -6, ClassJobRelativeOffset: 4),
+        new(HotbarRelativeOffset: -12, SlotRelativeOffset: -11, KindRelativeOffset: -10, ClassJobRelativeOffset: 4),
+        new(HotbarRelativeOffset: -16, SlotRelativeOffset: -15, KindRelativeOffset: -14, ClassJobRelativeOffset: 4),
+        new(HotbarRelativeOffset: 4, SlotRelativeOffset: 5, KindRelativeOffset: 6, ClassJobRelativeOffset: 8),
+        new(HotbarRelativeOffset: 8, SlotRelativeOffset: 9, KindRelativeOffset: 10, ClassJobRelativeOffset: 12),
+    ];
+
     private readonly ILogger<HotbarDatReader> logger;
 
     public HotbarDatReader(ILogger<HotbarDatReader>? logger = null)
@@ -37,15 +48,31 @@ public sealed class HotbarDatReader
 
         foreach (uint actionId in knownCraftActionIds)
         {
-            IReadOnlyList<int> offsets = FindUInt32Offsets(content, actionId).Take(20).ToArray();
+            IReadOnlyList<int> offsets = FindUInt32Offsets(content, actionId).Take(50).ToArray();
 
-            logger.LogDebug(
-                "HOTBAR.DAT action id occurrence diagnostic. LuminaActionId: {LuminaActionId}, Offsets: {Offsets}",
+            logger.LogInformation(
+                "HOTBAR.DAT LuminaActionId occurrence. LuminaActionId: {LuminaActionId}, Offsets: {Offsets}",
                 actionId,
-                string.Join(", ", offsets.Select(static offset => $"0x{offset:X}")));
+                offsets.Count == 0
+                    ? "-"
+                    : string.Join(", ", offsets.Select(static offset => $"0x{offset:X}")));
+
+            foreach (int offset in offsets.Take(10))
+            {
+                logger.LogInformation(
+                    "HOTBAR.DAT LuminaActionId context. LuminaActionId: {LuminaActionId}, Offset: 0x{Offset:X}, Context: {Context}",
+                    actionId,
+                    offset,
+                    ToHexAround(content, offset));
+            }
         }
 
         IReadOnlyList<HotbarSlotEntry> entries = TryReadKnownLayout(content, crafterJob, knownCraftActionIds);
+        if (entries.Count == 0 && knownCraftActionIds.Count > 0)
+        {
+            entries = TryReadByActionIdAnchors(content, crafterJob, knownCraftActionIds);
+        }
+
         if (entries.Count > 0)
         {
             foreach (HotbarSlotEntry slot in entries)
@@ -114,11 +141,10 @@ public sealed class HotbarDatReader
         if (knownCraftActionIds.Count > 0 && bestKnownMatchCount == 0)
         {
             logger.LogWarning(
-                "HOTBAR.DAT could not locate any required craft action ids. RequiredActionIds: {RequiredActionIds}",
+                "HOTBAR.DAT could not locate any required craft action ids by known layouts. RequiredActionIds: {RequiredActionIds}",
                 string.Join(", ", knownCraftActionIds));
 
-            throw new UnsupportedCharacterConfigFormatException(
-                "HOTBAR.DAT からシーケンス用アクションの登録情報を取得できませんでした。");
+            return [];
         }
 
         if (bestEntries.Count > 0 && bestLayout is not null)
@@ -134,6 +160,96 @@ public sealed class HotbarDatReader
         }
 
         return bestEntries;
+    }
+
+    private IReadOnlyList<HotbarSlotEntry> TryReadByActionIdAnchors(
+        byte[] content,
+        CrafterJob crafterJob,
+        IReadOnlySet<uint> knownCraftActionIds)
+    {
+        var entries = new List<HotbarSlotEntry>();
+
+        foreach (uint actionId in knownCraftActionIds)
+        {
+            IReadOnlyList<int> actionOffsets = FindUInt32Offsets(content, actionId).ToArray();
+
+            foreach (int actionOffset in actionOffsets)
+            {
+                foreach (HotbarAnchorLayout layout in HotbarAnchorLayouts)
+                {
+                    int hotbarOffset = actionOffset + layout.HotbarRelativeOffset;
+                    int slotOffset = actionOffset + layout.SlotRelativeOffset;
+                    int kindOffset = actionOffset + layout.KindRelativeOffset;
+                    int classJobOffset = actionOffset + layout.ClassJobRelativeOffset;
+
+                    if (!IsInRange(content, hotbarOffset, 1)
+                        || !IsInRange(content, slotOffset, 1)
+                        || !IsInRange(content, kindOffset, 1))
+                    {
+                        continue;
+                    }
+
+                    int hotbarNumber = content[hotbarOffset];
+                    int slotNumber = content[slotOffset];
+                    byte kindByte = content[kindOffset];
+
+                    if (hotbarNumber is < 1 or > 10 || slotNumber is < 1 or > 12)
+                    {
+                        continue;
+                    }
+
+                    HotbarSlotKind kind = ResolveKind(kindByte);
+                    if (kind is not HotbarSlotKind.Action and not HotbarSlotKind.GeneralAction)
+                    {
+                        logger.LogInformation(
+                            "HOTBAR.DAT action slot candidate skipped by kind. LuminaActionId: {LuminaActionId}, ActionOffset: 0x{ActionOffset:X}, Hotbar: {Hotbar}, Slot: {Slot}, KindByte: {KindByte}, Kind: {Kind}, Layout: {Layout}",
+                            actionId,
+                            actionOffset,
+                            hotbarNumber,
+                            slotNumber,
+                            kindByte,
+                            kind,
+                            layout);
+                        continue;
+                    }
+
+                    uint? classJobId = null;
+                    bool isShared = true;
+
+                    if (IsInRange(content, classJobOffset, 4))
+                    {
+                        uint rawClassJobId = BinaryPrimitives.ReadUInt32LittleEndian(content.AsSpan(classJobOffset, 4));
+                        classJobId = rawClassJobId == 0 ? null : rawClassJobId;
+                        isShared = classJobId is null || classJobId == 0 || classJobId == crafterJob.ClassJobId;
+                    }
+
+                    entries.Add(new HotbarSlotEntry(
+                        hotbarNumber,
+                        slotNumber,
+                        kind,
+                        actionId,
+                        classJobId,
+                        isShared));
+
+                    logger.LogInformation(
+                        "HOTBAR.DAT action slot candidate. LuminaActionId: {LuminaActionId}, ActionOffset: 0x{ActionOffset:X}, Hotbar: {Hotbar}, Slot: {Slot}, KindByte: {KindByte}, Kind: {Kind}, ClassJobId: {ClassJobId}, Shared: {Shared}, Layout: {Layout}",
+                        actionId,
+                        actionOffset,
+                        hotbarNumber,
+                        slotNumber,
+                        kindByte,
+                        kind,
+                        classJobId,
+                        isShared,
+                        layout);
+                }
+            }
+        }
+
+        return entries
+            .GroupBy(static entry => new { entry.HotbarNumber, entry.SlotNumber, entry.ActionOrCommandId })
+            .Select(static group => group.First())
+            .ToArray();
     }
 
     private static List<HotbarSlotEntry> TryReadLayout(
@@ -221,6 +337,18 @@ public sealed class HotbarDatReader
         return Convert.ToHexString(bytes.AsSpan(0, Math.Min(bytes.Length, maxLength)));
     }
 
+    private static string ToHexAround(byte[] content, int centerOffset, int before = 48, int after = 48)
+    {
+        int start = Math.Max(0, centerOffset - before);
+        int length = Math.Min(content.Length - start, before + 4 + after);
+        return Convert.ToHexString(content.AsSpan(start, length));
+    }
+
+    private static bool IsInRange(byte[] content, int offset, int length)
+    {
+        return offset >= 0 && length >= 0 && offset + length <= content.Length;
+    }
+
     private sealed record HotbarRecordLayout(
         int RecordSize,
         int HotbarOffset,
@@ -228,4 +356,10 @@ public sealed class HotbarDatReader
         int TypeOffset,
         int IdOffset,
         int ClassJobOffset);
+
+    private sealed record HotbarAnchorLayout(
+        int HotbarRelativeOffset,
+        int SlotRelativeOffset,
+        int KindRelativeOffset,
+        int ClassJobRelativeOffset);
 }
