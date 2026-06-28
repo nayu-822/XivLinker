@@ -25,10 +25,11 @@ public sealed class CraftHotbarRegistrationValidatorTests
             ],
         };
 
-        Application.Models.CraftSequenceValidationResult result =
+        CraftSequenceValidationResult result =
             await validator.ValidateAsync(sequence, CrafterJobs.Carpenter);
 
         Assert.False(result.CanRun);
+        Assert.Null(result.ErrorMessage);
         CraftActionRequirement missing = Assert.Single(result.MissingActions);
         Assert.Equal(CraftActionId.BasicTouch, missing.ActionId);
     }
@@ -54,14 +55,64 @@ public sealed class CraftHotbarRegistrationValidatorTests
             ],
         };
 
-        Application.Models.CraftSequenceValidationResult result =
+        CraftSequenceValidationResult result =
             await validator.ValidateAsync(sequence, CrafterJobs.Carpenter);
 
         Assert.True(result.CanRun);
         Assert.Empty(result.MissingActions);
+        Assert.Null(result.ErrorMessage);
     }
 
-    private static CharacterData CreateCharacterData(byte[] rawBytes)
+    [Fact]
+    public async Task ValidateAsync_ReturnsError_WhenCharacterDataIsMissing()
+    {
+        var validator = new CraftHotbarRegistrationValidator(new FakeCharacterProfileStore(null));
+
+        CraftSequenceValidationResult result =
+            await validator.ValidateAsync(new CraftSequence(), CrafterJobs.Carpenter);
+
+        Assert.False(result.CanRun);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ReturnsError_WhenHotbarCannotBeRead()
+    {
+        CharacterData characterData = CreateCharacterData([], exists: false);
+        var validator = new CraftHotbarRegistrationValidator(new FakeCharacterProfileStore(characterData));
+
+        CraftSequenceValidationResult result =
+            await validator.ValidateAsync(CreateSequenceWith(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+        Assert.False(result.CanRun);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ReturnsError_WhenRegisteredActionsCannotBeResolved()
+    {
+        CharacterData characterData = CreateCharacterData([0x00, 0x00, 0x00, 0x00], exists: true);
+        var validator = new CraftHotbarRegistrationValidator(new FakeCharacterProfileStore(characterData));
+
+        CraftSequenceValidationResult result =
+            await validator.ValidateAsync(CreateSequenceWith(CraftActionId.BasicSynthesis), CrafterJobs.Carpenter);
+
+        Assert.False(result.CanRun);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    private static CraftSequence CreateSequenceWith(CraftActionId actionId)
+    {
+        return new CraftSequence
+        {
+            Steps =
+            [
+                new CraftSequenceStep { ActionId = actionId },
+            ],
+        };
+    }
+
+    private static CharacterData CreateCharacterData(byte[] rawBytes, bool exists = true)
     {
         return new CharacterData
         {
@@ -73,7 +124,7 @@ public sealed class CraftHotbarRegistrationValidatorTests
             HotbarAnalysisResult = new HotbarAnalysisResult
             {
                 FilePath = "C:\\TestCharacter\\HOTBAR.DAT",
-                Exists = true,
+                Exists = exists,
                 RawBytes = rawBytes,
             },
             KeybindAnalysisResult = new KeybindAnalysisResult

@@ -92,6 +92,12 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
 
     private void OnCurrentPlayerStateChanged(object? sender, EventArgs e)
     {
+        if (System.Windows.Application.Current?.Dispatcher is { } dispatcher)
+        {
+            _ = dispatcher.InvokeAsync(UpdateCurrentCrafterJobFromState);
+            return;
+        }
+
         UpdateCurrentCrafterJobFromState();
     }
 
@@ -103,6 +109,7 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
         {
             DetectionState = CrafterJobDetectionState.Unknown;
             SelectedCrafterJob ??= CrafterJobs.FirstOrDefault();
+            OnPropertyChanged(nameof(SelectedCrafterJob));
             return;
         }
 
@@ -111,11 +118,13 @@ public partial class AutoCraftViewModel : ObservableObject, IDisposable
         {
             DetectionState = CrafterJobDetectionState.Crafter;
             SelectedCrafterJob = CrafterJobs.FirstOrDefault(item => item.Job?.ClassJobId == detectedJob.ClassJobId);
+            OnPropertyChanged(nameof(SelectedCrafterJob));
             return;
         }
 
         DetectionState = CrafterJobDetectionState.NonCrafter;
         SelectedCrafterJob = CrafterJobSelectionItemViewModel.NonCrafter;
+        OnPropertyChanged(nameof(SelectedCrafterJob));
     }
 
     private void RefreshDisplayedCrafterJobs()

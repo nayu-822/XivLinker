@@ -20,5 +20,5 @@ public sealed class CrafterJobSelectionItemViewModel
     }
 
     public static CrafterJobSelectionItemViewModel NonCrafter { get; } =
-        new(null, "クラフター以外");
+        new(null, "-");
 }

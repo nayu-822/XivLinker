@@ -18,7 +18,7 @@ public sealed class AutoCraftViewModelTests
             ClassJobId = 8,
         });
 
-        var viewModel = CreateViewModel(currentPlayerStateService);
+        AutoCraftViewModel viewModel = CreateViewModel(currentPlayerStateService);
 
         Assert.True(viewModel.IsCrafterJobAutoDetected);
         Assert.False(viewModel.CanChangeCrafterJob);
@@ -27,21 +27,21 @@ public sealed class AutoCraftViewModelTests
     }
 
     [Fact]
-    public void Constructor_ShowsNonCrafterState_WhenCurrentJobIsNotCrafter()
+    public void Constructor_ShowsDash_WhenCurrentJobIsNotCrafter()
     {
         var currentPlayerStateService = new FakeCurrentPlayerStateService(new CurrentPlayerState
         {
             ClassJobId = 1,
         });
 
-        var viewModel = CreateViewModel(currentPlayerStateService);
+        AutoCraftViewModel viewModel = CreateViewModel(currentPlayerStateService);
 
         Assert.True(viewModel.IsCrafterJobAutoDetected);
         Assert.True(viewModel.IsCurrentJobNonCrafter);
         Assert.False(viewModel.CanChangeCrafterJob);
         Assert.Equal(CrafterJobDetectionState.NonCrafter, viewModel.DetectionState);
         Assert.Null(viewModel.SelectedCrafterJob?.Job);
-        Assert.Equal("クラフター以外", viewModel.SelectedCrafterJob?.DisplayName);
+        Assert.Equal("-", viewModel.SelectedCrafterJob?.DisplayName);
         Assert.Single(viewModel.DisplayedCrafterJobs);
     }
 
@@ -50,7 +50,7 @@ public sealed class AutoCraftViewModelTests
     {
         var currentPlayerStateService = new FakeCurrentPlayerStateService(new CurrentPlayerState());
 
-        var viewModel = CreateViewModel(currentPlayerStateService);
+        AutoCraftViewModel viewModel = CreateViewModel(currentPlayerStateService);
 
         Assert.False(viewModel.IsCrafterJobAutoDetected);
         Assert.False(viewModel.IsCurrentJobNonCrafter);
@@ -58,6 +58,59 @@ public sealed class AutoCraftViewModelTests
         Assert.Equal(CrafterJobDetectionState.Unknown, viewModel.DetectionState);
         Assert.Equal(XivLinker.Domain.Models.CrafterJobs.All.Count, viewModel.DisplayedCrafterJobs.Count);
         Assert.NotNull(viewModel.SelectedCrafterJob);
+    }
+
+    [Fact]
+    public void StateChanged_UpdatesSelectedCrafterJob_WhenCrafterJobChanges()
+    {
+        var currentPlayerStateService = new MutableCurrentPlayerStateService(new CurrentPlayerState
+        {
+            ClassJobId = 8,
+        });
+
+        AutoCraftViewModel viewModel = CreateViewModel(currentPlayerStateService);
+
+        currentPlayerStateService.SetClassJobId(9);
+
+        Assert.Equal(CrafterJobDetectionState.Crafter, viewModel.DetectionState);
+        Assert.Equal(9u, viewModel.SelectedCrafterJob?.Job?.ClassJobId);
+        Assert.False(viewModel.CanChangeCrafterJob);
+    }
+
+    [Fact]
+    public void StateChanged_UpdatesToNonCrafterState_WhenLeavingCrafterJob()
+    {
+        var currentPlayerStateService = new MutableCurrentPlayerStateService(new CurrentPlayerState
+        {
+            ClassJobId = 8,
+        });
+
+        AutoCraftViewModel viewModel = CreateViewModel(currentPlayerStateService);
+
+        currentPlayerStateService.SetClassJobId(1);
+
+        Assert.Equal(CrafterJobDetectionState.NonCrafter, viewModel.DetectionState);
+        Assert.Equal("-", viewModel.SelectedCrafterJob?.DisplayName);
+        Assert.False(viewModel.CanChangeCrafterJob);
+        Assert.Single(viewModel.DisplayedCrafterJobs);
+    }
+
+    [Fact]
+    public void StateChanged_UpdatesToCrafterState_WhenReturningFromNonCrafter()
+    {
+        var currentPlayerStateService = new MutableCurrentPlayerStateService(new CurrentPlayerState
+        {
+            ClassJobId = 1,
+        });
+
+        AutoCraftViewModel viewModel = CreateViewModel(currentPlayerStateService);
+
+        currentPlayerStateService.SetClassJobId(8);
+
+        Assert.Equal(CrafterJobDetectionState.Crafter, viewModel.DetectionState);
+        Assert.Equal(8u, viewModel.SelectedCrafterJob?.Job?.ClassJobId);
+        Assert.Equal(XivLinker.Domain.Models.CrafterJobs.All.Count, viewModel.DisplayedCrafterJobs.Count);
+        Assert.False(viewModel.CanChangeCrafterJob);
     }
 
     private static AutoCraftViewModel CreateViewModel(IOverlayPluginCurrentPlayerStateService currentPlayerStateService)
@@ -75,7 +128,7 @@ public sealed class AutoCraftViewModelTests
             currentPlayerStateService);
     }
 
-    private sealed class FakeCurrentPlayerStateService : IOverlayPluginCurrentPlayerStateService
+    private class FakeCurrentPlayerStateService : IOverlayPluginCurrentPlayerStateService
     {
         public FakeCurrentPlayerStateService(CurrentPlayerState currentState)
         {
@@ -88,7 +141,43 @@ public sealed class AutoCraftViewModelTests
             remove { }
         }
 
-        public CurrentPlayerState CurrentState { get; }
+        public CurrentPlayerState CurrentState { get; protected set; }
+    }
+
+    private sealed class MutableCurrentPlayerStateService : IOverlayPluginCurrentPlayerStateService
+    {
+        public MutableCurrentPlayerStateService(CurrentPlayerState currentState)
+        {
+            CurrentState = currentState;
+        }
+
+        public event EventHandler? StateChanged;
+
+        public CurrentPlayerState CurrentState { get; private set; }
+
+        public void SetClassJobId(uint? classJobId)
+        {
+            CurrentState = new CurrentPlayerState
+            {
+                IsConnected = CurrentState.IsConnected,
+                PlayerName = CurrentState.PlayerName,
+                TerritoryTypeId = CurrentState.TerritoryTypeId,
+                MapId = CurrentState.MapId,
+                RawX = CurrentState.RawX,
+                RawY = CurrentState.RawY,
+                RawZ = CurrentState.RawZ,
+                MapX = CurrentState.MapX,
+                MapY = CurrentState.MapY,
+                ClassJobId = classJobId,
+                ClassJobName = CurrentState.ClassJobName,
+                Level = CurrentState.Level,
+                MapName = CurrentState.MapName,
+                CoordinatesText = CurrentState.CoordinatesText,
+                UpdatedAt = CurrentState.UpdatedAt,
+                IssueMessage = CurrentState.IssueMessage,
+            };
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private sealed class FakeCraftSequenceStore : ICraftSequenceStore

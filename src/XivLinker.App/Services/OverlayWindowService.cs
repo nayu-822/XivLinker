@@ -96,7 +96,7 @@ public class OverlayWindowService
         return Task.CompletedTask;
     }
 
-    public void ShowRunOverlay(AutoCraftRunOverlayViewModel viewModel)
+    public virtual void ShowRunOverlay(AutoCraftRunOverlayViewModel viewModel)
     {
         if (currentRunOverlayWindow is not null)
         {
@@ -121,23 +121,23 @@ public class OverlayWindowService
         window.Show();
     }
 
-    public void CloseRunOverlay()
+    public virtual void CloseRunOverlay()
     {
         currentRunOverlayWindow?.Close();
         currentRunOverlayWindow = null;
     }
 
-    public void HideMainWindow()
+    public virtual void HideMainWindow()
     {
         ResolveMainWindow()?.Hide();
     }
 
-    public void ShowMainWindow()
+    public virtual void ShowMainWindow()
     {
         ShowMainWindow(activate: true);
     }
 
-    public void ShowMainWindow(bool activate)
+    public virtual void ShowMainWindow(bool activate)
     {
         Window? mainWindow = ResolveMainWindow();
         if (mainWindow is null)

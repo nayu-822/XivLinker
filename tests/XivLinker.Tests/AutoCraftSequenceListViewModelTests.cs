@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.App.Services;
 using XivLinker.App.ViewModels;
 using XivLinker.Application.Abstractions;
+using XivLinker.Application.Models;
 using XivLinker.Application.Services;
 using XivLinker.Domain.Models;
 using XivLinker.Domain.Models.Crafting;
@@ -36,9 +37,13 @@ public sealed class AutoCraftSequenceListViewModelTests
 
             store.Save(sequence);
 
-            var viewModel = new AutoCraftSequenceListViewModel(
+            var viewModel = CreateViewModel(
                 store,
-                _ => Task.CompletedTask);
+                new TestOverlayWindowService(),
+                new FakeCraftHotbarRegistrationValidator(new CraftSequenceValidationResult()),
+                new CountingAutoCraftActionExecutor(),
+                () => CrafterJobs.Carpenter,
+                () => false);
 
             viewModel.Refresh();
             CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
@@ -61,7 +66,153 @@ public sealed class AutoCraftSequenceListViewModelTests
     public async Task RunSequenceCommand_ShowsMessageAndDoesNotStart_WhenCurrentJobIsNonCrafter()
     {
         var store = new InMemoryCraftSequenceStore();
-        var sequence = new CraftSequence
+        var sequence = CreateSequence();
+        store.Save(sequence);
+
+        var overlayWindowService = new TestOverlayWindowService();
+        var actionExecutor = new CountingAutoCraftActionExecutor();
+        var viewModel = CreateViewModel(
+            store,
+            overlayWindowService,
+            new FakeCraftHotbarRegistrationValidator(new CraftSequenceValidationResult()),
+            actionExecutor,
+            () => null,
+            () => true);
+
+        viewModel.Refresh();
+        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
+
+        await viewModel.RunSequenceCommand.ExecuteAsync(summary);
+
+        Assert.Equal("自動クラフト", overlayWindowService.LastTitle);
+        Assert.Equal("現在のジョブがクラフター以外のため、このシーケンスは実行できません。", overlayWindowService.LastMessage);
+        Assert.Equal(0, actionExecutor.ExecuteCount);
+        Assert.Equal(0, overlayWindowService.RunOptionsShownCount);
+    }
+
+    [Fact]
+    public async Task RunSequenceCommand_ShowsMessageAndDoesNotStart_WhenCrafterJobIsUnknown()
+    {
+        var store = new InMemoryCraftSequenceStore();
+        var sequence = CreateSequence();
+        store.Save(sequence);
+
+        var overlayWindowService = new TestOverlayWindowService();
+        var actionExecutor = new CountingAutoCraftActionExecutor();
+        var viewModel = CreateViewModel(
+            store,
+            overlayWindowService,
+            new FakeCraftHotbarRegistrationValidator(new CraftSequenceValidationResult()),
+            actionExecutor,
+            () => null,
+            () => false);
+
+        viewModel.Refresh();
+        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
+
+        await viewModel.RunSequenceCommand.ExecuteAsync(summary);
+
+        Assert.Equal("自動クラフト", overlayWindowService.LastTitle);
+        Assert.Equal("現在のジョブを自動検出できないため、クラフター職を選択してから実行してください。", overlayWindowService.LastMessage);
+        Assert.Equal(0, actionExecutor.ExecuteCount);
+        Assert.Equal(0, overlayWindowService.RunOptionsShownCount);
+    }
+
+    [Fact]
+    public async Task RunSequenceCommand_ShowsMissingActionsAndDoesNotStart_WhenActionsAreMissing()
+    {
+        var store = new InMemoryCraftSequenceStore();
+        var sequence = CreateSequence();
+        store.Save(sequence);
+
+        var overlayWindowService = new TestOverlayWindowService();
+        var actionExecutor = new CountingAutoCraftActionExecutor();
+        var validator = new FakeCraftHotbarRegistrationValidator(new CraftSequenceValidationResult
+        {
+            MissingActions =
+            [
+                new CraftActionRequirement(CraftActionId.BasicSynthesis, "作業"),
+            ],
+        });
+
+        var viewModel = CreateViewModel(
+            store,
+            overlayWindowService,
+            validator,
+            actionExecutor,
+            () => CrafterJobs.Carpenter,
+            () => false);
+
+        viewModel.Refresh();
+        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
+
+        await viewModel.RunSequenceCommand.ExecuteAsync(summary);
+
+        Assert.Equal(1, overlayWindowService.MissingActionsShownCount);
+        Assert.Equal(0, overlayWindowService.RunOptionsShownCount);
+        Assert.Equal(0, actionExecutor.ExecuteCount);
+    }
+
+    [Fact]
+    public async Task RunSequenceCommand_ShowsErrorMessageAndDoesNotStart_WhenValidationFails()
+    {
+        var store = new InMemoryCraftSequenceStore();
+        var sequence = CreateSequence();
+        store.Save(sequence);
+
+        var overlayWindowService = new TestOverlayWindowService();
+        var actionExecutor = new CountingAutoCraftActionExecutor();
+        var validator = new FakeCraftHotbarRegistrationValidator(
+            CraftSequenceValidationResult.Failed("ホットバー情報を読み込めません"));
+
+        var viewModel = CreateViewModel(
+            store,
+            overlayWindowService,
+            validator,
+            actionExecutor,
+            () => CrafterJobs.Carpenter,
+            () => false);
+
+        viewModel.Refresh();
+        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
+
+        await viewModel.RunSequenceCommand.ExecuteAsync(summary);
+
+        Assert.Equal("ホットバー情報を読み込めません", overlayWindowService.LastMessage);
+        Assert.Equal(0, overlayWindowService.RunOptionsShownCount);
+        Assert.Equal(0, actionExecutor.ExecuteCount);
+    }
+
+    [Fact]
+    public async Task RunSequenceCommand_Starts_WhenValidationSucceeds()
+    {
+        var store = new InMemoryCraftSequenceStore();
+        var sequence = CreateSequence();
+        store.Save(sequence);
+
+        var overlayWindowService = new TestOverlayWindowService();
+        var actionExecutor = new CountingAutoCraftActionExecutor();
+        var viewModel = CreateViewModel(
+            store,
+            overlayWindowService,
+            new FakeCraftHotbarRegistrationValidator(new CraftSequenceValidationResult()),
+            actionExecutor,
+            () => CrafterJobs.Carpenter,
+            () => false);
+
+        viewModel.Refresh();
+        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
+
+        await viewModel.RunSequenceCommand.ExecuteAsync(summary);
+        await Task.Delay(50);
+
+        Assert.Equal(1, overlayWindowService.RunOptionsShownCount);
+        Assert.Equal(1, actionExecutor.ExecuteCount);
+    }
+
+    private static CraftSequence CreateSequence()
+    {
+        return new CraftSequence
         {
             SequenceId = Guid.NewGuid(),
             Name = "テスト",
@@ -73,34 +224,40 @@ public sealed class AutoCraftSequenceListViewModelTests
                 },
             ],
         };
-        store.Save(sequence);
+    }
 
-        var overlayWindowService = new TestOverlayWindowService();
-        var actionExecutor = new CountingAutoCraftActionExecutor();
+    private static AutoCraftSequenceListViewModel CreateViewModel(
+        ICraftSequenceStore store,
+        TestOverlayWindowService overlayWindowService,
+        ICraftHotbarRegistrationValidator validator,
+        CountingAutoCraftActionExecutor actionExecutor,
+        Func<CrafterJob?> getSelectedCrafterJob,
+        Func<bool> isCurrentJobNonCrafter)
+    {
+        EnsureWpfApplication();
+
         var executionService = new AutoCraftExecutionService(
             overlayWindowService,
             actionExecutor,
             new AppEventLogViewModel(),
             NullLogger<AutoCraftExecutionService>.Instance);
 
-        var viewModel = new AutoCraftSequenceListViewModel(
+        return new AutoCraftSequenceListViewModel(
             store,
             _ => Task.CompletedTask,
-            () => null,
-            () => true,
-            new PassThroughCraftHotbarRegistrationValidator(),
+            getSelectedCrafterJob,
+            isCurrentJobNonCrafter,
+            validator,
             overlayWindowService,
             executionService);
+    }
 
-        viewModel.Refresh();
-        CraftSequenceSummaryViewModel summary = Assert.Single(viewModel.Sequences);
-
-        await viewModel.RunSequenceCommand.ExecuteAsync(summary);
-
-        Assert.Equal("自動クラフト", overlayWindowService.LastTitle);
-        Assert.Equal("現在のジョブがクラフター以外のため、このシーケンスは実行できません。", overlayWindowService.LastMessage);
-        Assert.Equal(0, actionExecutor.ExecuteCount);
-        Assert.False(executionService.IsRunning);
+    private static void EnsureWpfApplication()
+    {
+        if (System.Windows.Application.Current is null)
+        {
+            _ = new System.Windows.Application();
+        }
     }
 
     private sealed class InMemoryCraftSequenceStore : ICraftSequenceStore
@@ -122,14 +279,21 @@ public sealed class AutoCraftSequenceListViewModelTests
         }
     }
 
-    private sealed class PassThroughCraftHotbarRegistrationValidator : ICraftHotbarRegistrationValidator
+    private sealed class FakeCraftHotbarRegistrationValidator : ICraftHotbarRegistrationValidator
     {
-        public Task<XivLinker.Application.Models.CraftSequenceValidationResult> ValidateAsync(
+        private readonly CraftSequenceValidationResult result;
+
+        public FakeCraftHotbarRegistrationValidator(CraftSequenceValidationResult result)
+        {
+            this.result = result;
+        }
+
+        public Task<CraftSequenceValidationResult> ValidateAsync(
             CraftSequence sequence,
             CrafterJob crafterJob,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new XivLinker.Application.Models.CraftSequenceValidationResult());
+            return Task.FromResult(result);
         }
     }
 
@@ -154,6 +318,10 @@ public sealed class AutoCraftSequenceListViewModelTests
 
         public string? LastMessage { get; private set; }
 
+        public int RunOptionsShownCount { get; private set; }
+
+        public int MissingActionsShownCount { get; private set; }
+
         public override Task ShowMessageAsync(string title, string message)
         {
             LastTitle = title;
@@ -163,7 +331,37 @@ public sealed class AutoCraftSequenceListViewModelTests
 
         public override Task<int?> ShowRunOptionsAsync(string sequenceName)
         {
+            RunOptionsShownCount++;
             return Task.FromResult<int?>(1);
+        }
+
+        public override Task ShowMissingHotbarActionsAsync(
+            string sequenceName,
+            string crafterJobName,
+            IReadOnlyList<CraftActionRequirement> missingActions)
+        {
+            MissingActionsShownCount++;
+            return Task.CompletedTask;
+        }
+
+        public override void ShowRunOverlay(AutoCraftRunOverlayViewModel viewModel)
+        {
+        }
+
+        public override void CloseRunOverlay()
+        {
+        }
+
+        public override void HideMainWindow()
+        {
+        }
+
+        public override void ShowMainWindow()
+        {
+        }
+
+        public override void ShowMainWindow(bool activate)
+        {
         }
     }
 }

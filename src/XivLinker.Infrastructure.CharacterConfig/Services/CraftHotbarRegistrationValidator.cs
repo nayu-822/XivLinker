@@ -22,47 +22,63 @@ public sealed class CraftHotbarRegistrationValidator : ICraftHotbarRegistrationV
         CancellationToken cancellationToken = default)
     {
         CharacterData? characterData = characterProfileStore.SelectedCharacterData;
-        byte[]? rawBytes = characterData?.HotbarAnalysisResult.RawBytes;
-
-        if (characterData?.HotbarAnalysisResult.Exists != true || rawBytes is null || rawBytes.Length == 0)
+        if (characterData is null)
         {
-            return Task.FromResult(new CraftSequenceValidationResult
-            {
-                MissingActions = ResolveRequirements(sequence).ToArray(),
-                Message = "HOTBAR.DAT を読み込めないため、ホットバー登録を確認できません。",
-            });
+            return Task.FromResult(CraftSequenceValidationResult.Failed(
+                "キャラクター設定が読み込まれていないため、ホットバー登録を確認できません。"));
+        }
+
+        if (characterData.Errors.Count > 0)
+        {
+            return Task.FromResult(CraftSequenceValidationResult.Failed(
+                "キャラクター設定の読み込みに失敗しているため、ホットバー登録を確認できません。"));
+        }
+
+        byte[]? rawBytes = characterData.HotbarAnalysisResult.RawBytes;
+        if (characterData.HotbarAnalysisResult.Exists != true || rawBytes is null || rawBytes.Length == 0)
+        {
+            return Task.FromResult(CraftSequenceValidationResult.Failed(
+                "現在選択中の HOTBAR.DAT を読み込めないため、ホットバー登録を確認できません。"));
+        }
+
+        IReadOnlyList<CraftActionRequirement> requiredActions = ResolveRequirements(sequence);
+        if (requiredActions.Count == 0)
+        {
+            return Task.FromResult(new CraftSequenceValidationResult());
         }
 
         byte[] xorBytes = DecodeWithXor(rawBytes, 0x31);
         HashSet<CraftActionId> registeredActions = ResolveRegisteredActions(rawBytes, xorBytes, crafterJob);
+        if (registeredActions.Count == 0)
+        {
+            return Task.FromResult(CraftSequenceValidationResult.Failed(
+                "現在選択中のホットバー情報を読み取れないため、シーケンスを実行できません。"));
+        }
 
-        CraftActionRequirement[] missingActions = ResolveRequirements(sequence)
-            .Where(requirement => !registeredActions.Contains(requirement.ActionId))
+        CraftActionRequirement[] missingActions = requiredActions
+            .Where(action => !registeredActions.Contains(action.ActionId))
             .ToArray();
 
         return Task.FromResult(new CraftSequenceValidationResult
         {
             MissingActions = missingActions,
-            Message = missingActions.Length == 0
-                ? null
-                : "未登録アクションがあります。",
         });
     }
 
     private static IReadOnlyList<CraftActionRequirement> ResolveRequirements(CraftSequence sequence)
     {
         return sequence.Steps
-            .Select(static step => step.ActionId)
-            .Where(static actionId => !string.IsNullOrWhiteSpace(actionId.Value))
+            .Select(step => step.ActionId)
+            .Where(actionId => !string.IsNullOrWhiteSpace(actionId.Value))
             .Distinct()
-            .Select(static actionId =>
+            .Select(actionId =>
             {
                 if (CraftActionCatalog.TryGet(actionId, out CraftActionDefinition? definition) && definition is not null)
                 {
                     return new CraftActionRequirement(actionId, definition.DisplayName);
                 }
 
-                return new CraftActionRequirement(actionId, $"未知のアクション / {actionId.Value}");
+                return new CraftActionRequirement(actionId, $"未定義アクション / {actionId.Value}");
             })
             .ToArray();
     }
@@ -76,7 +92,7 @@ public sealed class CraftHotbarRegistrationValidator : ICraftHotbarRegistrationV
 
         foreach (CraftActionDefinition definition in CraftActionCatalog.GetAll())
         {
-            CrafterActionVariant? variant = definition.Variants.FirstOrDefault(x => x.ClassJobRowId == crafterJob.ClassJobId);
+            CrafterActionVariant? variant = definition.Variants.FirstOrDefault(item => item.ClassJobRowId == crafterJob.ClassJobId);
             if (variant is null)
             {
                 continue;
