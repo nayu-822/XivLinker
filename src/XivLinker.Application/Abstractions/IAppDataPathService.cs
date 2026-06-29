@@ -13,4 +13,6 @@ public interface IAppDataPathService
     string CacheRootPath { get; }
 
     string IconCachePath { get; }
+
+    string LogsPath { get; }
 }

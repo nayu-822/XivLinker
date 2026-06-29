@@ -15,8 +15,9 @@ public sealed class AppDataPathService : IAppDataPathService
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XivLinker")
             : Path.GetFullPath(rootPath);
 
-        CacheRootPath = Path.Combine(AppDataRootPath, "cache");
-        IconCachePath = Path.Combine(CacheRootPath, "icons");
+        CacheRootPath = Path.Combine(AppDataRootPath, "Cache");
+        IconCachePath = Path.Combine(CacheRootPath, "Icons");
+        LogsPath = Path.Combine(AppDataRootPath, "Logs");
         SettingsFilePath = Path.Combine(AppDataRootPath, "settings.json");
         CharacterProfilesFilePath = Path.Combine(AppDataRootPath, "character-profiles.json");
         CraftSequencesFilePath = Path.Combine(AppDataRootPath, "craft-sequences.json");
@@ -24,6 +25,7 @@ public sealed class AppDataPathService : IAppDataPathService
         Directory.CreateDirectory(AppDataRootPath);
         Directory.CreateDirectory(CacheRootPath);
         Directory.CreateDirectory(IconCachePath);
+        Directory.CreateDirectory(LogsPath);
     }
 
     public string AppDataRootPath { get; }
@@ -37,4 +39,6 @@ public sealed class AppDataPathService : IAppDataPathService
     public string CacheRootPath { get; }
 
     public string IconCachePath { get; }
+
+    public string LogsPath { get; }
 }

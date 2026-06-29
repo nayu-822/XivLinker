@@ -24,6 +24,8 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="{StaticResource App.GridLength.SectionGap}" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Border Style="{StaticResource CompactCardStyle}">
@@ -329,6 +331,103 @@
                 </Border>
 
                 <Border Grid.Row="6"
+                        Style="{StaticResource CompactCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="アプリデータ管理"
+                                   Style="{StaticResource SectionTitleTextStyle}" />
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
+                                   Text="アプリが利用しているキャッシュとログファイルを確認し、必要に応じて整理できます。"
+                                   Style="{StaticResource BodyTextStyle}"
+                                   TextWrapping="Wrap" />
+
+                        <Border Margin="{StaticResource App.Thickness.TopGapM}"
+                                Style="{StaticResource ReadOnlyValueContainerStyle}">
+                            <TextBlock Text="{Binding AppDataRootPath}"
+                                       Style="{StaticResource CaptionTextStyle}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+
+                        <StackPanel Margin="{StaticResource App.Thickness.TopGapM}"
+                                    Orientation="Horizontal">
+                            <Button Command="{Binding OpenAppDataFolderCommand}"
+                                    Style="{StaticResource SmallActionButtonStyle}">
+                                <TextBlock Text="アプリデータフォルダーを開く" />
+                            </Button>
+
+                            <Button Margin="{StaticResource App.Thickness.PageHeaderActionSpacing}"
+                                    Command="{Binding RefreshAppDataStatsCommand}"
+                                    Style="{StaticResource SmallActionButtonStyle}">
+                                <TextBlock Text="再読み込み" />
+                            </Button>
+                        </StackPanel>
+
+                        <Border Margin="{StaticResource App.Thickness.TopGapM}"
+                                Style="{StaticResource DenseSubtlePanelStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="{StaticResource App.GridLength.GapS}" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <TextBlock Text="アイコンキャッシュ"
+                                               Style="{StaticResource LabelTextStyle}" />
+                                    <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                               Text="{Binding IconCacheSummary}"
+                                               Style="{StaticResource CaptionTextStyle}" />
+                                </StackPanel>
+
+                                <Button Grid.Column="1"
+                                        Command="{Binding OpenIconCacheFolderCommand}"
+                                        Style="{StaticResource SmallActionButtonStyle}">
+                                    <TextBlock Text="開く" />
+                                </Button>
+
+                                <Button Grid.Column="3"
+                                        Command="{Binding ClearIconCacheCommand}"
+                                        Style="{StaticResource TinyDangerActionButtonStyle}">
+                                    <TextBlock Text="削除" />
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <Border Margin="{StaticResource App.Thickness.TopGapM}"
+                                Style="{StaticResource DenseSubtlePanelStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="{StaticResource App.GridLength.GapS}" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <TextBlock Text="ログファイル"
+                                               Style="{StaticResource LabelTextStyle}" />
+                                    <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                               Text="{Binding LogFilesSummary}"
+                                               Style="{StaticResource CaptionTextStyle}" />
+                                </StackPanel>
+
+                                <Button Grid.Column="1"
+                                        Command="{Binding OpenLogFolderCommand}"
+                                        Style="{StaticResource SmallActionButtonStyle}">
+                                    <TextBlock Text="開く" />
+                                </Button>
+
+                                <Button Grid.Column="3"
+                                        Command="{Binding ClearLogFilesCommand}"
+                                        Style="{StaticResource TinyDangerActionButtonStyle}">
+                                    <TextBlock Text="削除" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="8"
                         Style="{StaticResource CompactCardStyle}">
                     <StackPanel>
                         <TextBlock Text="&#x30ED;&#x30B0;&#x8A2D;&#x5B9A;"

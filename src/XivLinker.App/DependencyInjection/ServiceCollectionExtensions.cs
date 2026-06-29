@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("OverlayPlugin"));
 
         services.AddSingleton<IAppDataPathService, AppDataPathService>();
+        services.AddSingleton<IAppDataFolderService, AppDataFolderService>();
         services.AddSingleton<LuminaGameDataService>();
         services.AddSingleton<ILuminaGameDataProvider>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());
         services.AddSingleton<LuminaActionIconService>();
@@ -41,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICraftSequenceStore, CraftSequenceStore>();
         services.AddSingleton<CraftActionIconSourceService>();
         services.AddSingleton<IFolderPickerService, FolderPickerService>();
+        services.AddSingleton<IConfirmationDialogService, ConfirmationDialogService>();
         services.AddSingleton<IAutoCraftSequenceEditorDialogService, AutoCraftSequenceEditorDialogService>();
         services.AddSingleton<IAutoCraftActionExecutor, AutoCraftActionExecutor>();
         services.AddSingleton<OverlayWindowService>();

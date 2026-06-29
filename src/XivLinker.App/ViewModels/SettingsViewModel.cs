@@ -16,6 +16,8 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly IFolderPickerService folderPickerService;
     private readonly ICharacterProfileStore characterProfileStore;
+    private readonly IAppDataFolderService appDataFolderService;
+    private readonly IConfirmationDialogService confirmationDialogService;
 
     [ObservableProperty]
     private string selectedCharacterName = "未選択";
@@ -44,16 +46,32 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool hasSelectedCharacter;
 
+    [ObservableProperty]
+    private string appDataRootPath = "-";
+
+    [ObservableProperty]
+    private string iconCacheSummary = "0 件 / 0 B";
+
+    [ObservableProperty]
+    private string logFilesSummary = "0 件 / 0 B";
+
+    [ObservableProperty]
+    private bool isAppDataOperationRunning;
+
     public SettingsViewModel(
         IOptions<OverlayPluginOptions> overlayPluginOptions,
         IOptions<LuminaOptions> luminaOptions,
         DataSourceStatusViewModel dataSourceStatus,
         AppEventLogViewModel eventLog,
         IFolderPickerService folderPickerService,
-        ICharacterProfileStore characterProfileStore)
+        ICharacterProfileStore characterProfileStore,
+        IAppDataFolderService appDataFolderService,
+        IConfirmationDialogService confirmationDialogService)
     {
         this.folderPickerService = folderPickerService;
         this.characterProfileStore = characterProfileStore;
+        this.appDataFolderService = appDataFolderService;
+        this.confirmationDialogService = confirmationDialogService;
 
         OverlayWebSocketUri = overlayPluginOptions.Value.WebSocketUri;
         SqPackPath = string.IsNullOrWhiteSpace(luminaOptions.Value.SqPackPath)
@@ -69,13 +87,21 @@ public partial class SettingsViewModel : ObservableObject
         ReloadCharacterProfileCommand = new AsyncRelayCommand<CharacterProfileItemViewModel>(ReloadCharacterProfileAsync);
         RemoveCharacterProfileCommand = new AsyncRelayCommand<CharacterProfileItemViewModel>(RemoveCharacterProfileAsync);
         SaveSelectedCharacterNameCommand = new AsyncRelayCommand(SaveSelectedCharacterNameAsync, CanSaveSelectedCharacterName);
+        OpenAppDataFolderCommand = new AsyncRelayCommand(OpenAppDataFolderAsync, CanRunAppDataOperation);
+        OpenIconCacheFolderCommand = new AsyncRelayCommand(OpenIconCacheFolderAsync, CanRunAppDataOperation);
+        OpenLogFolderCommand = new AsyncRelayCommand(OpenLogFolderAsync, CanRunAppDataOperation);
+        ClearIconCacheCommand = new AsyncRelayCommand(ClearIconCacheAsync, CanRunAppDataOperation);
+        ClearLogFilesCommand = new AsyncRelayCommand(ClearLogFilesAsync, CanRunAppDataOperation);
+        RefreshAppDataStatsCommand = new AsyncRelayCommand(RefreshAppDataStatsAsync, CanRunAppDataOperation);
         CharacterProfiles = [];
+        AppDataRootPath = appDataFolderService.AppDataRootPath;
 
         // These page view models are singletons today. If their lifetime changes,
         // move command-state updates into a shared log presenter/service.
         EventLog.Items.CollectionChanged += OnItemsChanged;
         characterProfileStore.StateChanged += OnCharacterProfileStoreStateChanged;
         RefreshCharacterProfiles();
+        _ = RefreshAppDataStatsAsync();
     }
 
     public DataSourceStatusViewModel DataSourceStatus { get; }
@@ -114,9 +140,31 @@ public partial class SettingsViewModel : ObservableObject
 
     public IAsyncRelayCommand SaveSelectedCharacterNameCommand { get; }
 
+    public IAsyncRelayCommand OpenAppDataFolderCommand { get; }
+
+    public IAsyncRelayCommand OpenIconCacheFolderCommand { get; }
+
+    public IAsyncRelayCommand OpenLogFolderCommand { get; }
+
+    public IAsyncRelayCommand ClearIconCacheCommand { get; }
+
+    public IAsyncRelayCommand ClearLogFilesCommand { get; }
+
+    public IAsyncRelayCommand RefreshAppDataStatsCommand { get; }
+
     partial void OnEditableSelectedCharacterNameChanged(string value)
     {
         SaveSelectedCharacterNameCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsAppDataOperationRunningChanged(bool value)
+    {
+        OpenAppDataFolderCommand.NotifyCanExecuteChanged();
+        OpenIconCacheFolderCommand.NotifyCanExecuteChanged();
+        OpenLogFolderCommand.NotifyCanExecuteChanged();
+        ClearIconCacheCommand.NotifyCanExecuteChanged();
+        ClearLogFilesCommand.NotifyCanExecuteChanged();
+        RefreshAppDataStatsCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanClearLog()
@@ -124,9 +172,83 @@ public partial class SettingsViewModel : ObservableObject
         return EventLog.Items.Count > 0;
     }
 
+    private bool CanRunAppDataOperation()
+    {
+        return !IsAppDataOperationRunning;
+    }
+
     private void ClearLog()
     {
         EventLog.Clear();
+    }
+
+    private Task OpenAppDataFolderAsync()
+    {
+        return appDataFolderService.OpenFolderAsync(appDataFolderService.AppDataRootPath);
+    }
+
+    private Task OpenIconCacheFolderAsync()
+    {
+        return appDataFolderService.OpenFolderAsync(appDataFolderService.IconCachePath);
+    }
+
+    private Task OpenLogFolderAsync()
+    {
+        return appDataFolderService.OpenFolderAsync(appDataFolderService.LogsPath);
+    }
+
+    private async Task ClearIconCacheAsync()
+    {
+        if (!confirmationDialogService.Confirm(
+                "アイコンキャッシュを削除",
+                "アイコンキャッシュを削除します。必要になったアイコンは次回表示時に再生成されます。削除しますか？"))
+        {
+            return;
+        }
+
+        IsAppDataOperationRunning = true;
+
+        try
+        {
+            await appDataFolderService.DeleteIconCacheAsync();
+            EventLog.Add("アイコンキャッシュを削除しました。", "Warning");
+            await RefreshAppDataStatsAsync();
+        }
+        finally
+        {
+            IsAppDataOperationRunning = false;
+        }
+    }
+
+    private async Task ClearLogFilesAsync()
+    {
+        if (!confirmationDialogService.Confirm(
+                "ログファイルを削除",
+                "保存済みのログファイルを削除します。現在表示中のアプリ内ログは削除されません。削除しますか？"))
+        {
+            return;
+        }
+
+        IsAppDataOperationRunning = true;
+
+        try
+        {
+            await appDataFolderService.DeleteLogFilesAsync();
+            EventLog.Add("ログファイルを削除しました。", "Warning");
+            await RefreshAppDataStatsAsync();
+        }
+        finally
+        {
+            IsAppDataOperationRunning = false;
+        }
+    }
+
+    private async Task RefreshAppDataStatsAsync()
+    {
+        AppDataFolderStats stats = await appDataFolderService.GetStatsAsync();
+        AppDataRootPath = appDataFolderService.AppDataRootPath;
+        IconCacheSummary = FormatSummary(stats.IconCache);
+        LogFilesSummary = FormatSummary(stats.Logs);
     }
 
     private async Task AddCharacterProfileAsync()
@@ -291,5 +413,25 @@ public partial class SettingsViewModel : ObservableObject
         EventLog.Add(
             $"キャラクター設定の{action}後に読み込みエラーが発生しました: {selectedData.Profile.DisplayName} / {string.Join(" | ", selectedData.Errors)}",
             "Error");
+    }
+
+    private static string FormatSummary(AppDataStorageCategoryStats stats)
+    {
+        return $"{stats.FileCount} 件 / {FormatBytes(stats.TotalBytes)}";
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double value = bytes;
+        int unitIndex = 0;
+
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        return $"{value:0.#} {units[unitIndex]}";
     }
 }

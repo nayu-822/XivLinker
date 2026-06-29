@@ -2,17 +2,22 @@ using Lumina;
 using Lumina.Data.Files;
 using System.Collections.Concurrent;
 using System.IO;
+using XivLinker.Application.Abstractions;
 
 namespace XivLinker.Infrastructure.Lumina.Services;
 
 public sealed class LuminaActionIconService
 {
     private readonly ILuminaGameDataProvider gameDataProvider;
+    private readonly IAppDataPathService appDataPathService;
     private readonly ConcurrentDictionary<uint, Task<byte[]?>> iconCache = [];
 
-    public LuminaActionIconService(ILuminaGameDataProvider gameDataProvider)
+    public LuminaActionIconService(
+        ILuminaGameDataProvider gameDataProvider,
+        IAppDataPathService appDataPathService)
     {
         this.gameDataProvider = gameDataProvider;
+        this.appDataPathService = appDataPathService;
     }
 
     public async Task<byte[]?> GetIconPngAsync(uint iconId, CancellationToken cancellationToken = default)
@@ -104,9 +109,8 @@ public sealed class LuminaActionIconService
             : $"ui/icon/{folder:D6}/{iconId:D6}.tex";
     }
 
-    private static string GetIconCachePath(uint iconId)
+    private string GetIconCachePath(uint iconId)
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(localAppData, "XivLinker", "Cache", "Icons", $"{iconId:D6}.png");
+        return Path.Combine(appDataPathService.IconCachePath, $"{iconId:D6}.png");
     }
 }
