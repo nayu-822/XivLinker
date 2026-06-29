@@ -6,6 +6,14 @@
     <SolidColorBrush x:Key="App.Brush.SurfaceStrong" Color="#243244" />
     <SolidColorBrush x:Key="App.Brush.Border" Color="#314254" />
     <SolidColorBrush x:Key="App.Brush.BorderSubtle" Color="#2A3747" />
+    <SolidColorBrush x:Key="App.Brush.ControlHover" Color="#2A3748" />
+    <SolidColorBrush x:Key="App.Brush.ControlDisabled" Color="#16202B" />
+    <SolidColorBrush x:Key="App.Brush.PopupBackground" Color="#1A2330" />
+    <SolidColorBrush x:Key="App.Brush.AccentSoft" Color="#1F63D2C6" />
+    <SolidColorBrush x:Key="App.Brush.ScrollTrack" Color="#15202B" />
+    <SolidColorBrush x:Key="App.Brush.ScrollThumb" Color="#435466" />
+    <SolidColorBrush x:Key="App.Brush.ScrollThumbHover" Color="#5A7087" />
+    <SolidColorBrush x:Key="App.Brush.ScrollThumbPressed" Color="#7390AE" />
     <SolidColorBrush x:Key="App.Brush.TextPrimary" Color="#F3F7FB" />
     <SolidColorBrush x:Key="App.Brush.TextSecondary" Color="#C5D0DD" />
     <SolidColorBrush x:Key="App.Brush.TextMuted" Color="#8D9BAA" />

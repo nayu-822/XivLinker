@@ -70,7 +70,7 @@ public sealed class SettingsViewModelTests
 
             await WaitUntilAsync(() =>
                 context.EventLog.Items.Count > 1
-                && context.EventLog.Items.Any(item => item.Message.Contains("ERROR", StringComparison.Ordinal)));
+                && context.EventLog.Items.Any(item => item.Message.Contains("ファイルログ出力レベル", StringComparison.Ordinal)));
 
             Assert.Contains(context.EventLog.Items, item => item.Message.Contains("ERROR", StringComparison.Ordinal));
         }

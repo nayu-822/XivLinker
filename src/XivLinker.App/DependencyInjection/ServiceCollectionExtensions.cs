@@ -23,7 +23,8 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("OverlayPlugin"));
 
         services.AddSingleton<IAppDataPathService, AppDataPathService>();
-        services.AddSingleton<IAppSettingsStore, AppSettingsStore>();
+        services.AddSingleton<IAppSettingsStore>(static serviceProvider =>
+            new AppSettingsStore(serviceProvider.GetRequiredService<IAppDataPathService>()));
         services.AddSingleton(static serviceProvider => new FileLogOptions
         {
             LogsPath = serviceProvider.GetRequiredService<IAppDataPathService>().LogsPath,

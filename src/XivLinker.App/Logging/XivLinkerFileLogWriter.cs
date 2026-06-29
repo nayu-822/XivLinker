@@ -8,7 +8,6 @@ public sealed class XivLinkerFileLogWriter : IDisposable
 {
     private readonly ConcurrentQueue<WriteRequest> queue = new();
     private readonly SemaphoreSlim signal = new(0);
-    private readonly CancellationTokenSource disposeCancellationTokenSource = new();
     private readonly Task backgroundTask;
     private readonly FileLogOptions options;
     private StreamWriter? writer;
@@ -59,38 +58,19 @@ public sealed class XivLinkerFileLogWriter : IDisposable
         }
 
         disposed = true;
-        FlushAsync().GetAwaiter().GetResult();
-        disposeCancellationTokenSource.Cancel();
         signal.Release();
 
-        try
-        {
-            backgroundTask.GetAwaiter().GetResult();
-        }
-        catch (OperationCanceledException)
-        {
-        }
-
+        backgroundTask.GetAwaiter().GetResult();
+        writer?.Flush();
         writer?.Dispose();
         signal.Dispose();
-        disposeCancellationTokenSource.Dispose();
     }
 
     private async Task ProcessQueueAsync()
     {
-        while (!disposeCancellationTokenSource.IsCancellationRequested || !queue.IsEmpty)
+        while (true)
         {
-            try
-            {
-                await signal.WaitAsync(disposeCancellationTokenSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                if (queue.IsEmpty)
-                {
-                    break;
-                }
-            }
+            await signal.WaitAsync();
 
             while (queue.TryDequeue(out WriteRequest? request))
             {
@@ -102,6 +82,11 @@ public sealed class XivLinkerFileLogWriter : IDisposable
                 }
 
                 await WriteCoreAsync(request.Timestamp, request.Text);
+            }
+
+            if (disposed && queue.IsEmpty)
+            {
+                break;
             }
         }
 

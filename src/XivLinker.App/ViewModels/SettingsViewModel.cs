@@ -111,15 +111,13 @@ public partial class SettingsViewModel : ObservableObject
         AppDataRootPath = appDataFolderService.AppDataRootPath;
         FileLogLevelOptions =
         [
-            new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Debug, "DEBUG", "調査用の詳細ログまでファイルへ出力します。"),
+            new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Debug, "DEBUG", "開発向けの詳細ログまでファイルへ出力します。"),
             new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Info, "INFO", "通常の動作確認に必要な主要ログを出力します。"),
             new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Warn, "WARN", "警告とエラーのみを出力します。"),
             new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Error, "ERROR", "エラーのみを出力します。"),
         ];
         selectedFileLogLevel = FindFileLogLevelOption(appSettingsStore.Current.FileLogLevel);
 
-        // These page view models are singletons today. If their lifetime changes,
-        // move command-state updates into a shared log presenter/service.
         EventLog.Items.CollectionChanged += OnItemsChanged;
         characterProfileStore.StateChanged += OnCharacterProfileStoreStateChanged;
         appSettingsStore.SettingsChanged += OnAppSettingsChanged;
@@ -139,15 +137,15 @@ public partial class SettingsViewModel : ObservableObject
 
     public string SqPackPath { get; }
 
-    public string CharacterConfigStatus => "登録済みキャラクター";
+    public string CharacterConfigStatus => "利用中キャラクター設定";
 
-    public string CharacterConfigDescription => "FF14 のキャラクター設定フォルダーを登録して、対象キャラクターを切り替えられます。";
+    public string CharacterConfigDescription => "FF14 のキャラクター設定フォルダーを登録して、ホットバーやキーバインドの状態を確認できます。";
 
-    public string CharacterNameDescription => "表示名は後から変更できます。空で保存するとフォルダー名に戻ります。";
+    public string CharacterNameDescription => "表示名は後から変更できます。変更内容はキャラクター設定フォルダー一覧に反映されます。";
 
-    public string LuminaPathDescription => "パスの変更や参照ダイアログは今後対応予定です。";
+    public string LuminaPathDescription => "ゲームデータの参照パスは初回導入時のみ設定が必要です。";
 
-    public string LogRetentionDescription => "未実装: 現在はメモリ上のログをそのまま表示しています。";
+    public string LogRetentionDescription => "ファイルログは %LOCALAPPDATA%\\XivLinker\\Logs に日別で保存されます。出力レベルは DEBUG / INFO / WARN / ERROR から選択できます。";
 
     public IAsyncRelayCommand ReconnectOverlayCommand { get; }
 
@@ -260,7 +258,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!confirmationDialogService.Confirm(
                 "ログファイルを削除",
-                "保存済みのログファイルを削除します。現在表示中のアプリ内ログは削除されません。削除しますか？"))
+                "保存済みのログファイルを削除します。現在表示中のアプリ内ログは削除されません。アプリが使用中のログファイルは削除できない場合があります。削除しますか？"))
         {
             return;
         }
@@ -353,17 +351,12 @@ public partial class SettingsViewModel : ObservableObject
 
         await characterProfileStore.UpdateDisplayNameAsync(selectedProfile.Id, EditableSelectedCharacterName);
         string savedName = characterProfileStore.SelectedProfile?.DisplayName ?? EditableSelectedCharacterName;
-        EventLog.Add($"キャラクター設定名を更新しました: {savedName}");
+        EventLog.Add($"キャラクター表示名を更新しました: {savedName}");
     }
 
     private bool CanSaveSelectedCharacterName()
     {
-        if (!HasSelectedCharacter)
-        {
-            return false;
-        }
-
-        return true;
+        return HasSelectedCharacter;
     }
 
     private void RefreshCharacterProfiles()

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Application.Abstractions;
 using XivLinker.Application.Settings;
 
@@ -12,12 +14,16 @@ public sealed class AppSettingsStore : IAppSettingsStore
     };
 
     private readonly IAppDataPathService appDataPathService;
+    private readonly ILogger<AppSettingsStore> logger;
     private readonly object syncRoot = new();
     private AppSettings current;
 
-    public AppSettingsStore(IAppDataPathService appDataPathService)
+    public AppSettingsStore(
+        IAppDataPathService appDataPathService,
+        ILogger<AppSettingsStore>? logger = null)
     {
         this.appDataPathService = appDataPathService;
+        this.logger = logger ?? NullLogger<AppSettingsStore>.Instance;
         current = LoadFromDiskCore();
     }
 
@@ -27,7 +33,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
         {
             lock (syncRoot)
             {
-                return current;
+                return Clone(current);
             }
         }
     }
@@ -48,7 +54,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
                 }
 
                 SettingsChanged?.Invoke(this, EventArgs.Empty);
-                return loadedSettings;
+                return Clone(loadedSettings);
             },
             cancellationToken);
     }
@@ -72,6 +78,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
                 }
 
                 SettingsChanged?.Invoke(this, EventArgs.Empty);
+                logger.LogInformation("アプリ設定ファイルを保存しました。Path={Path}", appDataPathService.SettingsFilePath);
             },
             cancellationToken);
     }
@@ -90,13 +97,19 @@ public sealed class AppSettingsStore : IAppSettingsStore
             AppSettings? settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             return settings ?? new AppSettings();
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
-            BackupBrokenFile(path);
+            string backupPath = BackupBrokenFile(path);
+            logger.LogWarning(
+                exception,
+                "アプリ設定ファイルの JSON 形式が不正だったため退避しました。Path={Path}, BackupPath={BackupPath}",
+                path,
+                backupPath);
             return new AppSettings();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
+            logger.LogWarning(exception, "アプリ設定ファイルを読み込めなかったため既定値を使用します。Path={Path}", path);
             return new AppSettings();
         }
     }
@@ -118,7 +131,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
         File.Move(tempPath, path);
     }
 
-    private static void BackupBrokenFile(string path)
+    private static string BackupBrokenFile(string path)
     {
         string directory = Path.GetDirectoryName(path)!;
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
@@ -127,6 +140,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
             directory,
             $"{fileNameWithoutExtension}.invalid-{DateTimeOffset.Now:yyyyMMddHHmmss}{extension}");
         File.Move(path, backupPath, overwrite: true);
+        return backupPath;
     }
 
     private static AppSettings Clone(AppSettings settings)

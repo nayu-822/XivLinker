@@ -86,6 +86,31 @@ public sealed class XivLinkerFileLogWriterTests
         }
     }
 
+    [Fact]
+    public async Task Dispose_DrainsQueuedLogs()
+    {
+        string rootPath = CreateAppDataRoot();
+
+        try
+        {
+            AppDataPathService pathService = new(rootPath);
+            string logPath = Path.Combine(pathService.LogsPath, "xivlinker-20260629.log");
+
+            using (XivLinkerFileLogWriter writer = new(new FileLogOptions { LogsPath = pathService.LogsPath }))
+            {
+                writer.Enqueue(new DateTime(2026, 6, 29, 12, 0, 0), "dispose-drain");
+            }
+
+            string text = await File.ReadAllTextAsync(logPath);
+
+            Assert.Contains("dispose-drain", text);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+        }
+    }
+
     private static string CreateAppDataRoot()
     {
         string rootPath = Path.Combine(Path.GetTempPath(), "XivLinkerTests", Guid.NewGuid().ToString("N"));

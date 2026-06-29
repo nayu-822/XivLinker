@@ -91,6 +91,26 @@ public sealed class AppSettingsStoreTests
         }
     }
 
+    [Fact]
+    public void Current_ReturnsCopy()
+    {
+        string rootPath = CreateAppDataRoot();
+
+        try
+        {
+            AppSettingsStore store = new(new AppDataPathService(rootPath));
+
+            var snapshot = store.Current;
+            snapshot.FileLogLevel = XivLinkerLogLevel.Error;
+
+            Assert.Equal(XivLinkerLogLevel.Info, store.Current.FileLogLevel);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+        }
+    }
+
     private static string CreateAppDataRoot()
     {
         string rootPath = Path.Combine(Path.GetTempPath(), "XivLinkerTests", Guid.NewGuid().ToString("N"));
