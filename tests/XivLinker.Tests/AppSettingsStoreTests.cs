@@ -6,7 +6,7 @@ namespace XivLinker.Tests;
 public sealed class AppSettingsStoreTests
 {
     [Fact]
-    public async Task LoadAsync_WithoutSettingsFile_ReturnsDefaultInfoLevel()
+    public async Task LoadAsync_WithoutSettingsFile_ReturnsDefaultLogLevels()
     {
         string rootPath = CreateAppDataRoot();
 
@@ -17,6 +17,7 @@ public sealed class AppSettingsStoreTests
             var settings = await store.LoadAsync();
 
             Assert.Equal(XivLinkerLogLevel.Info, settings.FileLogLevel);
+            Assert.Equal(XivLinkerLogLevel.Warn, settings.WebSocketLogLevel);
         }
         finally
         {
@@ -33,12 +34,17 @@ public sealed class AppSettingsStoreTests
         {
             AppSettingsStore store = new(new AppDataPathService(rootPath));
 
-            await store.SaveAsync(new() { FileLogLevel = XivLinkerLogLevel.Warn });
+            await store.SaveAsync(new()
+            {
+                FileLogLevel = XivLinkerLogLevel.Warn,
+                WebSocketLogLevel = XivLinkerLogLevel.Debug,
+            });
 
             AppSettingsStore reloaded = new(new AppDataPathService(rootPath));
             var settings = await reloaded.LoadAsync();
 
             Assert.Equal(XivLinkerLogLevel.Warn, settings.FileLogLevel);
+            Assert.Equal(XivLinkerLogLevel.Debug, settings.WebSocketLogLevel);
         }
         finally
         {
@@ -61,6 +67,7 @@ public sealed class AppSettingsStoreTests
             var settings = await store.LoadAsync();
 
             Assert.Equal(XivLinkerLogLevel.Info, settings.FileLogLevel);
+            Assert.Equal(XivLinkerLogLevel.Warn, settings.WebSocketLogLevel);
             Assert.False(File.Exists(pathService.SettingsFilePath));
             Assert.Single(Directory.EnumerateFiles(rootPath, "settings.invalid-*.json"));
         }
@@ -102,8 +109,10 @@ public sealed class AppSettingsStoreTests
 
             var snapshot = store.Current;
             snapshot.FileLogLevel = XivLinkerLogLevel.Error;
+            snapshot.WebSocketLogLevel = XivLinkerLogLevel.Debug;
 
             Assert.Equal(XivLinkerLogLevel.Info, store.Current.FileLogLevel);
+            Assert.Equal(XivLinkerLogLevel.Warn, store.Current.WebSocketLogLevel);
         }
         finally
         {

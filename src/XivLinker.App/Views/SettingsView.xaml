@@ -442,10 +442,30 @@
                         <ComboBox Margin="{StaticResource App.Thickness.TopGapS}"
                                   DisplayMemberPath="DisplayName"
                                   ItemsSource="{Binding FileLogLevelOptions}"
-                                  SelectedItem="{Binding SelectedFileLogLevel}"
+                                  SelectedItem="{Binding SelectedFileLogLevel, Mode=TwoWay}"
+                                  TextSearch.TextPath="DisplayName"
                                   Style="{StaticResource InputComboBoxStyle}" />
                         <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
                                    Text="{Binding SelectedFileLogLevel.Description}"
+                                   Style="{StaticResource CaptionTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapM}"
+                                   Text="WS通信ログ出力レベル"
+                                   Style="{StaticResource LabelTextStyle}" />
+                        <ComboBox Margin="{StaticResource App.Thickness.TopGapS}"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding WebSocketLogLevelOptions}"
+                                  SelectedItem="{Binding SelectedWebSocketLogLevel, Mode=TwoWay}"
+                                  TextSearch.TextPath="DisplayName"
+                                  Style="{StaticResource InputComboBoxStyle}" />
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                   Text="{Binding WebSocketLogDescription}"
+                                   Style="{StaticResource CaptionTextStyle}"
+                                   Foreground="{DynamicResource App.Brush.TextSecondary}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="{StaticResource App.Thickness.TopGapS}"
+                                   Text="{Binding SelectedWebSocketLogLevel.Description}"
                                    Style="{StaticResource CaptionTextStyle}"
                                    Foreground="{DynamicResource App.Brush.TextSecondary}"
                                    TextWrapping="Wrap" />

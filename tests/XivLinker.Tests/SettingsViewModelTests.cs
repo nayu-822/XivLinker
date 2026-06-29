@@ -1,4 +1,4 @@
-﻿#pragma warning disable CS0067
+#pragma warning disable CS0067
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -17,7 +17,7 @@ namespace XivLinker.Tests;
 public sealed class SettingsViewModelTests
 {
     [Fact]
-    public void Constructor_SelectsInfoLevelByDefault()
+    public void Constructor_SelectsDefaultLogLevels()
     {
         string rootPath = CreateAppDataRoot();
 
@@ -26,6 +26,7 @@ public sealed class SettingsViewModelTests
             using TestContext context = new(rootPath);
 
             Assert.Equal("INFO", context.ViewModel.SelectedFileLogLevel?.DisplayName);
+            Assert.Equal("WARN", context.ViewModel.SelectedWebSocketLogLevel?.DisplayName);
         }
         finally
         {
@@ -58,7 +59,31 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    public async Task ChangingSelectedFileLogLevel_AddsEventLogMessage()
+    public async Task ChangingSelectedWebSocketLogLevel_SavesSettings()
+    {
+        string rootPath = CreateAppDataRoot();
+
+        try
+        {
+            using TestContext context = new(rootPath);
+
+            await InvokeSaveWebSocketLogLevelAsync(context.ViewModel, XivLinkerLogLevel.Debug);
+
+            await WaitUntilAsync(() =>
+                context.SettingsStore.Current.WebSocketLogLevel == XivLinkerLogLevel.Debug
+                && File.Exists(context.PathService.SettingsFilePath));
+
+            string json = await File.ReadAllTextAsync(context.PathService.SettingsFilePath);
+            Assert.Contains("\"WebSocketLogLevel\": 0", json);
+        }
+        finally
+        {
+            Directory.Delete(rootPath, true);
+        }
+    }
+
+    [Fact]
+    public async Task ChangingSelectedFileLogLevel_UpdatesStoredLevel()
     {
         string rootPath = CreateAppDataRoot();
 
@@ -68,11 +93,7 @@ public sealed class SettingsViewModelTests
 
             await InvokeSaveFileLogLevelAsync(context.ViewModel, XivLinkerLogLevel.Error);
 
-            await WaitUntilAsync(() =>
-                context.EventLog.Items.Count > 1
-                && context.EventLog.Items.Any(item => item.Message.Contains("ファイルログ出力レベル", StringComparison.Ordinal)));
-
-            Assert.Contains(context.EventLog.Items, item => item.Message.Contains("ERROR", StringComparison.Ordinal));
+            Assert.Equal(XivLinkerLogLevel.Error, context.SettingsStore.Current.FileLogLevel);
         }
         finally
         {
@@ -98,6 +119,16 @@ public sealed class SettingsViewModelTests
     private static async Task InvokeSaveFileLogLevelAsync(SettingsViewModel viewModel, XivLinkerLogLevel level)
     {
         var method = typeof(SettingsViewModel).GetMethod("SaveFileLogLevelAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        object? result = method!.Invoke(viewModel, [level]);
+        Task task = Assert.IsAssignableFrom<Task>(result);
+        await task;
+    }
+
+    private static async Task InvokeSaveWebSocketLogLevelAsync(SettingsViewModel viewModel, XivLinkerLogLevel level)
+    {
+        var method = typeof(SettingsViewModel).GetMethod("SaveWebSocketLogLevelAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         Assert.NotNull(method);
 
         object? result = method!.Invoke(viewModel, [level]);

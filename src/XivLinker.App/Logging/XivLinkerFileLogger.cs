@@ -6,16 +6,13 @@ public sealed class XivLinkerFileLogger : ILogger
 {
     private readonly string categoryName;
     private readonly XivLinkerFileLoggerProvider provider;
-    private readonly XivLinkerFileLogWriter writer;
 
     public XivLinkerFileLogger(
         string categoryName,
-        XivLinkerFileLoggerProvider provider,
-        XivLinkerFileLogWriter writer)
+        XivLinkerFileLoggerProvider provider)
     {
         this.categoryName = categoryName;
         this.provider = provider;
-        this.writer = writer;
     }
 
     public IDisposable BeginScope<TState>(TState state)
@@ -26,7 +23,7 @@ public sealed class XivLinkerFileLogger : ILogger
 
     public bool IsEnabled(LogLevel logLevel)
     {
-        return provider.IsEnabled(logLevel);
+        return provider.IsEnabled(categoryName, logLevel);
     }
 
     public void Log<TState>(
@@ -59,7 +56,7 @@ public sealed class XivLinkerFileLogger : ILogger
             entry = $"{entry}{Environment.NewLine}{exception}";
         }
 
-        writer.Enqueue(timestamp, entry);
+        provider.Write(categoryName, logLevel, timestamp, entry);
     }
 
     private sealed class NullScope : IDisposable

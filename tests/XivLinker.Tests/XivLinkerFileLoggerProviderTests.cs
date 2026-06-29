@@ -8,7 +8,7 @@ namespace XivLinker.Tests;
 public sealed class XivLinkerFileLoggerProviderTests
 {
     [Fact]
-    public void DefaultInfoLevel_EnablesInfoAndAbove()
+    public void DefaultLevels_EnableAppInfoAndWebSocketWarn()
     {
         string rootPath = CreateAppDataRoot();
 
@@ -16,10 +16,10 @@ public sealed class XivLinkerFileLoggerProviderTests
         {
             using TestContext context = CreateContext(rootPath);
 
-            Assert.False(context.Provider.IsEnabled(LogLevel.Debug));
-            Assert.True(context.Provider.IsEnabled(LogLevel.Information));
-            Assert.True(context.Provider.IsEnabled(LogLevel.Warning));
-            Assert.True(context.Provider.IsEnabled(LogLevel.Error));
+            Assert.True(context.Provider.IsEnabled("XivLinker.App.App", LogLevel.Information));
+            Assert.False(context.Provider.IsEnabled("XivLinker.App.App", LogLevel.Debug));
+            Assert.True(context.Provider.IsEnabled("XivLinker.Infrastructure.Overlay.Services.Client", LogLevel.Warning));
+            Assert.False(context.Provider.IsEnabled("XivLinker.Infrastructure.Overlay.Services.Client", LogLevel.Information));
         }
         finally
         {
@@ -28,7 +28,7 @@ public sealed class XivLinkerFileLoggerProviderTests
     }
 
     [Fact]
-    public async Task SaveWarnLevel_DisablesInfoAndKeepsWarnEnabled()
+    public async Task SavingSettings_UpdatesAppAndWebSocketThresholdsIndependently()
     {
         string rootPath = CreateAppDataRoot();
 
@@ -36,31 +36,16 @@ public sealed class XivLinkerFileLoggerProviderTests
         {
             using TestContext context = CreateContext(rootPath);
 
-            await context.SettingsStore.SaveAsync(new() { FileLogLevel = XivLinkerLogLevel.Warn });
+            await context.SettingsStore.SaveAsync(new()
+            {
+                FileLogLevel = XivLinkerLogLevel.Error,
+                WebSocketLogLevel = XivLinkerLogLevel.Debug,
+            });
 
-            Assert.False(context.Provider.IsEnabled(LogLevel.Information));
-            Assert.True(context.Provider.IsEnabled(LogLevel.Warning));
-            Assert.True(context.Provider.IsEnabled(LogLevel.Error));
-        }
-        finally
-        {
-            Directory.Delete(rootPath, true);
-        }
-    }
-
-    [Fact]
-    public async Task SaveDebugLevel_EnablesDebugAndTrace()
-    {
-        string rootPath = CreateAppDataRoot();
-
-        try
-        {
-            using TestContext context = CreateContext(rootPath);
-
-            await context.SettingsStore.SaveAsync(new() { FileLogLevel = XivLinkerLogLevel.Debug });
-
-            Assert.True(context.Provider.IsEnabled(LogLevel.Trace));
-            Assert.True(context.Provider.IsEnabled(LogLevel.Debug));
+            Assert.False(context.Provider.IsEnabled("XivLinker.App.App", LogLevel.Warning));
+            Assert.True(context.Provider.IsEnabled("XivLinker.App.App", LogLevel.Error));
+            Assert.True(context.Provider.IsEnabled("XivLinker.Infrastructure.Overlay.Services.Client", LogLevel.Debug));
+            Assert.True(context.Provider.IsEnabled("XivLinker.Infrastructure.Overlay.Services.Client", LogLevel.Trace));
         }
         finally
         {
@@ -72,9 +57,11 @@ public sealed class XivLinkerFileLoggerProviderTests
     {
         AppDataPathService pathService = new(rootPath);
         AppSettingsStore settingsStore = new(pathService);
-        XivLinkerFileLogWriter writer = new(new FileLogOptions { LogsPath = pathService.LogsPath });
-        XivLinkerFileLoggerProvider provider = new(settingsStore, writer);
-        return new TestContext(settingsStore, provider, writer);
+        XivLinkerLogWriterSet writerSet = new(
+            new XivLinkerFileLogWriter(new FileLogOptions { LogsPath = pathService.LogsPath, FilePrefix = "xivlinker" }),
+            new XivLinkerFileLogWriter(new FileLogOptions { LogsPath = pathService.LogsPath, FilePrefix = "websocket" }));
+        XivLinkerFileLoggerProvider provider = new(settingsStore, writerSet);
+        return new TestContext(settingsStore, provider, writerSet);
     }
 
     private static string CreateAppDataRoot()
@@ -89,23 +76,23 @@ public sealed class XivLinkerFileLoggerProviderTests
         public TestContext(
             AppSettingsStore settingsStore,
             XivLinkerFileLoggerProvider provider,
-            XivLinkerFileLogWriter writer)
+            XivLinkerLogWriterSet writerSet)
         {
             SettingsStore = settingsStore;
             Provider = provider;
-            Writer = writer;
+            WriterSet = writerSet;
         }
 
         public AppSettingsStore SettingsStore { get; }
 
         public XivLinkerFileLoggerProvider Provider { get; }
 
-        public XivLinkerFileLogWriter Writer { get; }
+        public XivLinkerLogWriterSet WriterSet { get; }
 
         public void Dispose()
         {
             Provider.Dispose();
-            Writer.Dispose();
+            WriterSet.Dispose();
         }
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using XivLinker.Application.Abstractions;
 using XivLinker.Application.Services;
 using XivLinker.App.Logging;
@@ -24,12 +25,25 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IAppDataPathService, AppDataPathService>();
         services.AddSingleton<IAppSettingsStore>(static serviceProvider =>
-            new AppSettingsStore(serviceProvider.GetRequiredService<IAppDataPathService>()));
+            new AppSettingsStore(
+                serviceProvider.GetRequiredService<IAppDataPathService>(),
+                serviceProvider.GetRequiredService<ILogger<AppSettingsStore>>()));
+        services.AddSingleton(static serviceProvider => new XivLinkerLogWriterSet(
+            new XivLinkerFileLogWriter(new FileLogOptions
+            {
+                LogsPath = serviceProvider.GetRequiredService<IAppDataPathService>().LogsPath,
+                FilePrefix = "xivlinker",
+            }),
+            new XivLinkerFileLogWriter(new FileLogOptions
+            {
+                LogsPath = serviceProvider.GetRequiredService<IAppDataPathService>().LogsPath,
+                FilePrefix = "websocket",
+            })));
         services.AddSingleton(static serviceProvider => new FileLogOptions
         {
             LogsPath = serviceProvider.GetRequiredService<IAppDataPathService>().LogsPath,
+            FilePrefix = "xivlinker",
         });
-        services.AddSingleton<XivLinkerFileLogWriter>();
         services.AddSingleton<IAppDataFolderService, AppDataFolderService>();
         services.AddSingleton<LuminaGameDataService>();
         services.AddSingleton<ILuminaGameDataProvider>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());

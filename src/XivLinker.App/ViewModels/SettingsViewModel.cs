@@ -25,6 +25,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IAppSettingsStore appSettingsStore;
     private readonly ILogger<SettingsViewModel> logger;
     private bool isUpdatingFileLogLevelSelection;
+    private bool isUpdatingWebSocketLogLevelSelection;
 
     [ObservableProperty]
     private string selectedCharacterName = "未選択";
@@ -67,6 +68,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private XivLinkerLogLevelOptionViewModel? selectedFileLogLevel;
+
+    [ObservableProperty]
+    private XivLinkerLogLevelOptionViewModel? selectedWebSocketLogLevel;
 
     public SettingsViewModel(
         IOptions<OverlayPluginOptions> overlayPluginOptions,
@@ -116,7 +120,8 @@ public partial class SettingsViewModel : ObservableObject
             new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Warn, "WARN", "警告とエラーのみを出力します。"),
             new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Error, "ERROR", "エラーのみを出力します。"),
         ];
-        selectedFileLogLevel = FindFileLogLevelOption(appSettingsStore.Current.FileLogLevel);
+        selectedFileLogLevel = FindLogLevelOption(appSettingsStore.Current.FileLogLevel, XivLinkerLogLevel.Info);
+        selectedWebSocketLogLevel = FindLogLevelOption(appSettingsStore.Current.WebSocketLogLevel, XivLinkerLogLevel.Warn);
 
         EventLog.Items.CollectionChanged += OnItemsChanged;
         characterProfileStore.StateChanged += OnCharacterProfileStoreStateChanged;
@@ -133,6 +138,8 @@ public partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<XivLinkerLogLevelOptionViewModel> FileLogLevelOptions { get; }
 
+    public IReadOnlyList<XivLinkerLogLevelOptionViewModel> WebSocketLogLevelOptions => FileLogLevelOptions;
+
     public string OverlayWebSocketUri { get; }
 
     public string SqPackPath { get; }
@@ -146,6 +153,8 @@ public partial class SettingsViewModel : ObservableObject
     public string LuminaPathDescription => "ゲームデータの参照パスは初回導入時のみ設定が必要です。";
 
     public string LogRetentionDescription => "ファイルログは %LOCALAPPDATA%\\XivLinker\\Logs に日別で保存されます。出力レベルは DEBUG / INFO / WARN / ERROR から選択できます。";
+
+    public string WebSocketLogDescription => "WS通信ログは OverlayPlugin WebSocket の接続・切断・受信イベントなどを記録します。通常は WARN のままで問題ありません。通信内容の調査時のみ INFO または DEBUG に変更してください。";
 
     public IAsyncRelayCommand ReconnectOverlayCommand { get; }
 
@@ -188,6 +197,16 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         _ = SaveFileLogLevelAsync(value.Value);
+    }
+
+    partial void OnSelectedWebSocketLogLevelChanged(XivLinkerLogLevelOptionViewModel? value)
+    {
+        if (value is null || isUpdatingWebSocketLogLevelSelection)
+        {
+            return;
+        }
+
+        _ = SaveWebSocketLogLevelAsync(value.Value);
     }
 
     partial void OnIsAppDataOperationRunningChanged(bool value)
@@ -292,8 +311,20 @@ public partial class SettingsViewModel : ObservableObject
         settings.FileLogLevel = level;
 
         await appSettingsStore.SaveAsync(settings);
+        EventLog.Add($"ファイルログ出力レベルを {level.ToDisplayName()} に変更しました。");
         logger.LogInformation("ファイルログ出力レベルを変更しました。Level={FileLogLevel}", level.ToDisplayName());
         EventLog.Add($"ファイルログ出力レベルを {level.ToDisplayName()} に変更しました。");
+    }
+
+    private async Task SaveWebSocketLogLevelAsync(XivLinkerLogLevel level)
+    {
+        AppSettings settings = appSettingsStore.Current;
+        settings.WebSocketLogLevel = level;
+
+        await appSettingsStore.SaveAsync(settings);
+        EventLog.Add($"WS通信ログ出力レベルを {level.ToDisplayName()} に変更しました。");
+        logger.LogInformation("WS通信ログ出力レベルを変更しました。Level={WebSocketLogLevel}", level.ToDisplayName());
+        EventLog.Add($"WS通信ログ出力レベルを {level.ToDisplayName()} に変更しました。");
     }
 
     private async Task AddCharacterProfileAsync()
@@ -440,13 +471,16 @@ public partial class SettingsViewModel : ObservableObject
         void Apply()
         {
             isUpdatingFileLogLevelSelection = true;
+            isUpdatingWebSocketLogLevelSelection = true;
             try
             {
-                SelectedFileLogLevel = FindFileLogLevelOption(appSettingsStore.Current.FileLogLevel);
+                SelectedFileLogLevel = FindLogLevelOption(appSettingsStore.Current.FileLogLevel, XivLinkerLogLevel.Info);
+                SelectedWebSocketLogLevel = FindLogLevelOption(appSettingsStore.Current.WebSocketLogLevel, XivLinkerLogLevel.Warn);
             }
             finally
             {
                 isUpdatingFileLogLevelSelection = false;
+                isUpdatingWebSocketLogLevelSelection = false;
             }
         }
 
@@ -499,9 +533,9 @@ public partial class SettingsViewModel : ObservableObject
         return $"{value:0.#} {units[unitIndex]}";
     }
 
-    private XivLinkerLogLevelOptionViewModel FindFileLogLevelOption(XivLinkerLogLevel level)
+    private XivLinkerLogLevelOptionViewModel FindLogLevelOption(XivLinkerLogLevel level, XivLinkerLogLevel fallbackLevel)
     {
         return FileLogLevelOptions.FirstOrDefault(option => option.Value == level)
-            ?? FileLogLevelOptions.First(option => option.Value == XivLinkerLogLevel.Info);
+            ?? FileLogLevelOptions.First(option => option.Value == fallbackLevel);
     }
 }

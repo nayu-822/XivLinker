@@ -16,6 +16,7 @@ public partial class App : System.Windows.Application
 {
     private readonly IHost _host;
     private readonly CancellationTokenSource startupInitializationCancellationTokenSource = new();
+    private XivLinkerFileLoggerProvider? fileLoggerProvider;
     private Task? startupInitializationTask;
 
     public App()
@@ -36,7 +37,6 @@ public partial class App : System.Windows.Application
             {
                 logging.ClearProviders();
                 logging.AddDebug();
-                logging.Services.AddSingleton<ILoggerProvider, XivLinkerFileLoggerProvider>();
             })
             .Build();
 
@@ -50,7 +50,11 @@ public partial class App : System.Windows.Application
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
+        ILoggerFactory loggerFactory = _host.Services.GetRequiredService<ILoggerFactory>();
         IAppSettingsStore appSettingsStore = _host.Services.GetRequiredService<IAppSettingsStore>();
+        XivLinkerLogWriterSet writerSet = _host.Services.GetRequiredService<XivLinkerLogWriterSet>();
+        fileLoggerProvider ??= new XivLinkerFileLoggerProvider(appSettingsStore, writerSet);
+        loggerFactory.AddProvider(fileLoggerProvider);
         await appSettingsStore.LoadAsync();
         await _host.StartAsync();
 
@@ -123,6 +127,7 @@ public partial class App : System.Windows.Application
         }
         finally
         {
+            fileLoggerProvider?.Dispose();
             startupInitializationCancellationTokenSource.Dispose();
             _host.Dispose();
             base.OnExit(e);

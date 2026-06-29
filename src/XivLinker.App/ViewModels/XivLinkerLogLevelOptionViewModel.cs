@@ -5,4 +5,10 @@ namespace XivLinker.App.ViewModels;
 public sealed record XivLinkerLogLevelOptionViewModel(
     XivLinkerLogLevel Value,
     string DisplayName,
-    string Description);
+    string Description)
+{
+    public override string ToString()
+    {
+        return DisplayName;
+    }
+}

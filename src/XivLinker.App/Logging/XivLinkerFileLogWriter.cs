@@ -120,7 +120,7 @@ public sealed class XivLinkerFileLogWriter : IDisposable
 
         writer?.Dispose();
 
-        string filePath = Path.Combine(logsPath, $"xivlinker-{timestamp:yyyyMMdd}.log");
+        string filePath = Path.Combine(logsPath, $"{options.FilePrefix}-{timestamp:yyyyMMdd}.log");
         writer = new StreamWriter(
             new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));

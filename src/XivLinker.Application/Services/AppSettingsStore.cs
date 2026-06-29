@@ -24,7 +24,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
     {
         this.appDataPathService = appDataPathService;
         this.logger = logger ?? NullLogger<AppSettingsStore>.Instance;
-        current = LoadFromDiskCore();
+        current = new AppSettings();
     }
 
     public AppSettings Current
@@ -148,6 +148,7 @@ public sealed class AppSettingsStore : IAppSettingsStore
         return new AppSettings
         {
             FileLogLevel = settings.FileLogLevel,
+            WebSocketLogLevel = settings.WebSocketLogLevel,
         };
     }
 }

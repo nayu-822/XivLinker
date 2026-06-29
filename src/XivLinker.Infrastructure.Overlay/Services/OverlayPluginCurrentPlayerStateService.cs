@@ -64,20 +64,23 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
 
     private void OnSessionEventReceived(object? sender, string rawJson)
     {
-        logger.LogInformation(
+        logger.LogDebug(
             "CurrentPlayerStateService received OverlayPlugin event raw JSON: {RawJson}",
             rawJson);
 
         if (!OverlayPluginMessageParser.TryParseEventMessage(rawJson, out OverlayPluginEventMessage? message) || message is null)
         {
             logger.LogWarning(
-                "CurrentPlayerStateService could not parse OverlayPlugin event. RawJson: {RawJson}",
-                rawJson);
+                "CurrentPlayerStateService could not parse OverlayPlugin event.");
+            logger.LogDebug("Unparseable OverlayPlugin event raw JSON: {RawJson}", rawJson);
             return;
         }
 
         logger.LogInformation(
-            "CurrentPlayerStateService parsed OverlayPlugin event. MessageType: {MessageType}, Payload: {Payload}, RawJson: {RawJson}",
+            "CurrentPlayerStateService parsed OverlayPlugin event. MessageType: {MessageType}",
+            message.MessageType);
+        logger.LogDebug(
+            "CurrentPlayerStateService parsed OverlayPlugin event payload. MessageType: {MessageType}, Payload: {Payload}, RawJson: {RawJson}",
             message.MessageType,
             message.Payload.GetRawText(),
             message.RawJson);
@@ -92,7 +95,10 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
         if (!OverlayPluginMessageParser.TryParseChangeZone(message, out uint territoryTypeId, out string zoneName))
         {
             logger.LogWarning(
-                "ChangeZone event received but payload could not be parsed. MessageType: {MessageType}, Payload: {Payload}, RawJson: {RawJson}",
+                "ChangeZone event received but payload could not be parsed. MessageType: {MessageType}",
+                message.MessageType);
+            logger.LogDebug(
+                "Unparseable ChangeZone payload. MessageType: {MessageType}, Payload: {Payload}, RawJson: {RawJson}",
                 message.MessageType,
                 message.Payload.GetRawText(),
                 message.RawJson);
@@ -100,10 +106,10 @@ public sealed class OverlayPluginCurrentPlayerStateService : IOverlayPluginCurre
         }
 
         logger.LogInformation(
-            "ChangeZone parsed successfully. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}, RawJson: {RawJson}",
+            "ChangeZone parsed successfully. TerritoryTypeId: {TerritoryTypeId}, ZoneName: {ZoneName}",
             territoryTypeId,
-            zoneName,
-            message.RawJson);
+            zoneName);
+        logger.LogDebug("ChangeZone raw event JSON: {RawJson}", message.RawJson);
 
         currentTerritoryTypeId = territoryTypeId > 0 ? territoryTypeId : currentTerritoryTypeId;
         currentZoneName = string.IsNullOrWhiteSpace(zoneName) ? currentZoneName : zoneName;
