@@ -24,17 +24,17 @@ public sealed class AppEventLogViewModel
 
         if (application is null)
         {
-            Items.Insert(0, item);
+            AddCore(item);
             return;
         }
 
         if (application.Dispatcher.CheckAccess())
         {
-            Items.Insert(0, item);
+            AddCore(item);
             return;
         }
 
-        _ = application.Dispatcher.InvokeAsync(() => Items.Insert(0, item));
+        _ = application.Dispatcher.InvokeAsync(() => AddCore(item));
     }
 
     public void Clear()
@@ -53,5 +53,17 @@ public sealed class AppEventLogViewModel
         }
 
         _ = application.Dispatcher.InvokeAsync(Items.Clear);
+    }
+
+    private void AddCore(AppEventLogItemViewModel item)
+    {
+        if (Items.Count > 0
+            && string.Equals(Items[0].Level, item.Level, StringComparison.Ordinal)
+            && string.Equals(Items[0].Message, item.Message, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Items.Insert(0, item);
     }
 }

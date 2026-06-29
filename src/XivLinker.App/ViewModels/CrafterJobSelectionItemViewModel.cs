@@ -21,4 +21,9 @@ public sealed class CrafterJobSelectionItemViewModel
 
     public static CrafterJobSelectionItemViewModel NonCrafter { get; } =
         new(null, "-");
+
+    public override string ToString()
+    {
+        return DisplayName;
+    }
 }

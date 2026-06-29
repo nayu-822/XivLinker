@@ -36,6 +36,7 @@
                 <ComboBox Width="180"
                           VerticalAlignment="Center"
                           DisplayMemberPath="DisplayName"
+                          TextSearch.TextPath="DisplayName"
                           IsEnabled="{Binding CanChangeCrafterJob}"
                           ItemsSource="{Binding DisplayedCrafterJobs}"
                           SelectedItem="{Binding SelectedCrafterJob}" />
