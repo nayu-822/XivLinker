@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using XivLinker.App.DependencyInjection;
+using XivLinker.App.Logging;
 using XivLinker.App.ViewModels;
+using XivLinker.Application.Abstractions;
 using XivLinker.Infrastructure.Overlay.Services;
 
 namespace XivLinker.App;
@@ -30,6 +32,12 @@ public partial class App : System.Windows.Application
             {
                 services.AddApplicationServices(context.Configuration);
             })
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddDebug();
+                logging.Services.AddSingleton<ILoggerProvider, XivLinkerFileLoggerProvider>();
+            })
             .Build();
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -42,14 +50,19 @@ public partial class App : System.Windows.Application
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
+        IAppSettingsStore appSettingsStore = _host.Services.GetRequiredService<IAppSettingsStore>();
+        await appSettingsStore.LoadAsync();
         await _host.StartAsync();
+
+        ILogger<App> logger = _host.Services.GetRequiredService<ILogger<App>>();
+        logger.LogInformation("XivLinker を起動しました。");
+        logger.LogInformation("データソース初期化を開始します。");
 
         MainViewModel mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
         MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
 
-        ILogger<App> logger = _host.Services.GetRequiredService<ILogger<App>>();
         startupInitializationTask = InitializeDataSourcesAsync(
             mainViewModel,
             logger,
@@ -64,6 +77,7 @@ public partial class App : System.Windows.Application
         {
             startupInitializationCancellationTokenSource.Cancel();
             logger = _host.Services.GetService<ILogger<App>>();
+            logger?.LogInformation("XivLinker の終了処理を開始します。");
 
             if (startupInitializationTask is not null)
             {
@@ -96,6 +110,7 @@ public partial class App : System.Windows.Application
             try
             {
                 await _host.StopAsync();
+                logger?.LogInformation("XivLinker を終了しました。");
             }
             catch (OperationCanceledException)
             {
@@ -122,6 +137,7 @@ public partial class App : System.Windows.Application
         try
         {
             await mainViewModel.InitializeAsync(cancellationToken);
+            logger.LogInformation("データソース初期化が完了しました。");
         }
         catch (OperationCanceledException)
         {
@@ -137,7 +153,7 @@ public partial class App : System.Windows.Application
         try
         {
             ILogger<App>? logger = _host.Services.GetService<ILogger<App>>();
-            logger?.LogError(e.Exception, "Unhandled UI exception occurred.");
+            logger?.LogError(e.Exception, "未処理の UI 例外が発生しました。");
         }
         catch
         {
@@ -164,7 +180,7 @@ public partial class App : System.Windows.Application
         try
         {
             ILogger<App>? logger = _host.Services.GetService<ILogger<App>>();
-            logger?.LogCritical(exception, "AppDomain unhandled exception occurred.");
+            logger?.LogCritical(exception, "未処理のバックグラウンド例外が発生しました。");
         }
         catch
         {
@@ -177,7 +193,7 @@ public partial class App : System.Windows.Application
         try
         {
             ILogger<App>? logger = _host.Services.GetService<ILogger<App>>();
-            logger?.LogError(e.Exception, "Unobserved task exception occurred.");
+            logger?.LogError(e.Exception, "未観測のバックグラウンド例外が発生しました。");
         }
         catch
         {

@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Application.Abstractions;
 
 namespace XivLinker.App.Services;
@@ -7,10 +9,14 @@ namespace XivLinker.App.Services;
 public sealed class AppDataFolderService : IAppDataFolderService
 {
     private readonly IAppDataPathService appDataPathService;
+    private readonly ILogger<AppDataFolderService> logger;
 
-    public AppDataFolderService(IAppDataPathService appDataPathService)
+    public AppDataFolderService(
+        IAppDataPathService appDataPathService,
+        ILogger<AppDataFolderService>? logger = null)
     {
         this.appDataPathService = appDataPathService;
+        this.logger = logger ?? NullLogger<AppDataFolderService>.Instance;
     }
 
     public string AppDataRootPath => appDataPathService.AppDataRootPath;
@@ -28,6 +34,7 @@ public sealed class AppDataFolderService : IAppDataFolderService
 
         EnsureManagedPath(path);
         Directory.CreateDirectory(path);
+        logger.LogInformation("アプリデータフォルダを開きます。Path={Path}", path);
 
         Process.Start(new ProcessStartInfo
         {
@@ -81,9 +88,16 @@ public sealed class AppDataFolderService : IAppDataFolderService
         foreach (string filePath in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FileInfo fileInfo = new(filePath);
-            totalBytes += fileInfo.Length;
-            fileCount++;
+            try
+            {
+                FileInfo fileInfo = new(filePath);
+                totalBytes += fileInfo.Length;
+                fileCount++;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(exception, "アクセスできないファイルを集計から除外しました。Path={Path}", filePath);
+            }
         }
 
         return new AppDataStorageCategoryStats(displayName, path, totalBytes, fileCount, Exists: true);
@@ -102,6 +116,9 @@ public sealed class AppDataFolderService : IAppDataFolderService
                     return;
                 }
 
+                int deletedFileCount = 0;
+                int skippedFileCount = 0;
+
                 foreach (string filePath in Directory.EnumerateFiles(directoryPath, "*", SearchOption.AllDirectories))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -110,12 +127,17 @@ public sealed class AppDataFolderService : IAppDataFolderService
                     {
                         File.SetAttributes(filePath, FileAttributes.Normal);
                         File.Delete(filePath);
+                        deletedFileCount++;
                     }
-                    catch (IOException)
+                    catch (IOException exception)
                     {
+                        skippedFileCount++;
+                        logger.LogWarning(exception, "ファイルを削除できなかったためスキップしました。Path={Path}", filePath);
                     }
-                    catch (UnauthorizedAccessException)
+                    catch (UnauthorizedAccessException exception)
                     {
+                        skippedFileCount++;
+                        logger.LogWarning(exception, "ファイルを削除できなかったためスキップしました。Path={Path}", filePath);
                     }
                 }
 
@@ -132,13 +154,21 @@ public sealed class AppDataFolderService : IAppDataFolderService
                             Directory.Delete(childDirectory);
                         }
                     }
-                    catch (IOException)
+                    catch (IOException exception)
                     {
+                        logger.LogDebug(exception, "削除対象ディレクトリを整理できませんでした。Path={Path}", childDirectory);
                     }
-                    catch (UnauthorizedAccessException)
+                    catch (UnauthorizedAccessException exception)
                     {
+                        logger.LogDebug(exception, "削除対象ディレクトリを整理できませんでした。Path={Path}", childDirectory);
                     }
                 }
+
+                logger.LogInformation(
+                    "ディレクトリ配下のファイル削除を完了しました。Path={Path}, DeletedFiles={DeletedFiles}, SkippedFiles={SkippedFiles}",
+                    directoryPath,
+                    deletedFileCount,
+                    skippedFileCount);
             },
             cancellationToken);
     }

@@ -3,8 +3,12 @@ using System.Collections.Specialized;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using XivLinker.App.Services;
+using XivLinker.Application.Abstractions;
+using XivLinker.Application.Logging;
+using XivLinker.Application.Settings;
 using XivLinker.Infrastructure.CharacterConfig.Models;
 using XivLinker.Infrastructure.CharacterConfig.Services;
 using XivLinker.Infrastructure.Lumina.Services;
@@ -18,6 +22,9 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ICharacterProfileStore characterProfileStore;
     private readonly IAppDataFolderService appDataFolderService;
     private readonly IConfirmationDialogService confirmationDialogService;
+    private readonly IAppSettingsStore appSettingsStore;
+    private readonly ILogger<SettingsViewModel> logger;
+    private bool isUpdatingFileLogLevelSelection;
 
     [ObservableProperty]
     private string selectedCharacterName = "未選択";
@@ -58,6 +65,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool isAppDataOperationRunning;
 
+    [ObservableProperty]
+    private XivLinkerLogLevelOptionViewModel? selectedFileLogLevel;
+
     public SettingsViewModel(
         IOptions<OverlayPluginOptions> overlayPluginOptions,
         IOptions<LuminaOptions> luminaOptions,
@@ -66,12 +76,16 @@ public partial class SettingsViewModel : ObservableObject
         IFolderPickerService folderPickerService,
         ICharacterProfileStore characterProfileStore,
         IAppDataFolderService appDataFolderService,
-        IConfirmationDialogService confirmationDialogService)
+        IConfirmationDialogService confirmationDialogService,
+        IAppSettingsStore appSettingsStore,
+        ILogger<SettingsViewModel> logger)
     {
         this.folderPickerService = folderPickerService;
         this.characterProfileStore = characterProfileStore;
         this.appDataFolderService = appDataFolderService;
         this.confirmationDialogService = confirmationDialogService;
+        this.appSettingsStore = appSettingsStore;
+        this.logger = logger;
 
         OverlayWebSocketUri = overlayPluginOptions.Value.WebSocketUri;
         SqPackPath = string.IsNullOrWhiteSpace(luminaOptions.Value.SqPackPath)
@@ -95,11 +109,20 @@ public partial class SettingsViewModel : ObservableObject
         RefreshAppDataStatsCommand = new AsyncRelayCommand(RefreshAppDataStatsAsync, CanRunAppDataOperation);
         CharacterProfiles = [];
         AppDataRootPath = appDataFolderService.AppDataRootPath;
+        FileLogLevelOptions =
+        [
+            new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Debug, "DEBUG", "調査用の詳細ログまでファイルへ出力します。"),
+            new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Info, "INFO", "通常の動作確認に必要な主要ログを出力します。"),
+            new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Warn, "WARN", "警告とエラーのみを出力します。"),
+            new XivLinkerLogLevelOptionViewModel(XivLinkerLogLevel.Error, "ERROR", "エラーのみを出力します。"),
+        ];
+        selectedFileLogLevel = FindFileLogLevelOption(appSettingsStore.Current.FileLogLevel);
 
         // These page view models are singletons today. If their lifetime changes,
         // move command-state updates into a shared log presenter/service.
         EventLog.Items.CollectionChanged += OnItemsChanged;
         characterProfileStore.StateChanged += OnCharacterProfileStoreStateChanged;
+        appSettingsStore.SettingsChanged += OnAppSettingsChanged;
         RefreshCharacterProfiles();
         _ = RefreshAppDataStatsAsync();
     }
@@ -109,6 +132,8 @@ public partial class SettingsViewModel : ObservableObject
     public AppEventLogViewModel EventLog { get; }
 
     public ObservableCollection<CharacterProfileItemViewModel> CharacterProfiles { get; }
+
+    public IReadOnlyList<XivLinkerLogLevelOptionViewModel> FileLogLevelOptions { get; }
 
     public string OverlayWebSocketUri { get; }
 
@@ -155,6 +180,16 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnEditableSelectedCharacterNameChanged(string value)
     {
         SaveSelectedCharacterNameCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedFileLogLevelChanged(XivLinkerLogLevelOptionViewModel? value)
+    {
+        if (value is null || isUpdatingFileLogLevelSelection)
+        {
+            return;
+        }
+
+        _ = SaveFileLogLevelAsync(value.Value);
     }
 
     partial void OnIsAppDataOperationRunningChanged(bool value)
@@ -211,7 +246,8 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             await appDataFolderService.DeleteIconCacheAsync();
-            EventLog.Add("アイコンキャッシュを削除しました。", "Warning");
+            logger.LogInformation("アイコンキャッシュを削除しました。");
+            EventLog.Add("アイコンキャッシュを削除しました。");
             await RefreshAppDataStatsAsync();
         }
         finally
@@ -234,7 +270,8 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             await appDataFolderService.DeleteLogFilesAsync();
-            EventLog.Add("ログファイルを削除しました。", "Warning");
+            logger.LogInformation("ログファイルを削除しました。");
+            EventLog.Add("ログファイルを削除しました。");
             await RefreshAppDataStatsAsync();
         }
         finally
@@ -249,6 +286,16 @@ public partial class SettingsViewModel : ObservableObject
         AppDataRootPath = appDataFolderService.AppDataRootPath;
         IconCacheSummary = FormatSummary(stats.IconCache);
         LogFilesSummary = FormatSummary(stats.Logs);
+    }
+
+    private async Task SaveFileLogLevelAsync(XivLinkerLogLevel level)
+    {
+        AppSettings settings = appSettingsStore.Current;
+        settings.FileLogLevel = level;
+
+        await appSettingsStore.SaveAsync(settings);
+        logger.LogInformation("ファイルログ出力レベルを変更しました。Level={FileLogLevel}", level.ToDisplayName());
+        EventLog.Add($"ファイルログ出力レベルを {level.ToDisplayName()} に変更しました。");
     }
 
     private async Task AddCharacterProfileAsync()
@@ -395,6 +442,30 @@ public partial class SettingsViewModel : ObservableObject
         _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(RefreshCharacterProfiles);
     }
 
+    private void OnAppSettingsChanged(object? sender, EventArgs e)
+    {
+        void Apply()
+        {
+            isUpdatingFileLogLevelSelection = true;
+            try
+            {
+                SelectedFileLogLevel = FindFileLogLevelOption(appSettingsStore.Current.FileLogLevel);
+            }
+            finally
+            {
+                isUpdatingFileLogLevelSelection = false;
+            }
+        }
+
+        if (System.Windows.Application.Current?.Dispatcher.CheckAccess() != false)
+        {
+            Apply();
+            return;
+        }
+
+        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(Apply);
+    }
+
     private void AppendSelectedCharacterLoadLog(string action, string profileName)
     {
         CharacterData? selectedData = characterProfileStore.SelectedCharacterData;
@@ -433,5 +504,11 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         return $"{value:0.#} {units[unitIndex]}";
+    }
+
+    private XivLinkerLogLevelOptionViewModel FindFileLogLevelOption(XivLinkerLogLevel level)
+    {
+        return FileLogLevelOptions.FirstOrDefault(option => option.Value == level)
+            ?? FileLogLevelOptions.First(option => option.Value == XivLinkerLogLevel.Info);
     }
 }

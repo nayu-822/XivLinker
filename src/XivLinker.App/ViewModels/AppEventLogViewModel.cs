@@ -20,24 +20,38 @@ public sealed class AppEventLogViewModel
     public void Add(string message, string level = "Info")
     {
         var item = new AppEventLogItemViewModel(level, message);
+        System.Windows.Application? application = System.Windows.Application.Current;
 
-        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        if (application is null)
         {
             Items.Insert(0, item);
             return;
         }
 
-        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => Items.Insert(0, item));
+        if (application.Dispatcher.CheckAccess())
+        {
+            Items.Insert(0, item);
+            return;
+        }
+
+        _ = application.Dispatcher.InvokeAsync(() => Items.Insert(0, item));
     }
 
     public void Clear()
     {
-        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        System.Windows.Application? application = System.Windows.Application.Current;
+        if (application is null)
         {
             Items.Clear();
             return;
         }
 
-        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(Items.Clear);
+        if (application.Dispatcher.CheckAccess())
+        {
+            Items.Clear();
+            return;
+        }
+
+        _ = application.Dispatcher.InvokeAsync(Items.Clear);
     }
 }

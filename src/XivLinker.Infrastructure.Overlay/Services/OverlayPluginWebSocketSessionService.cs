@@ -4,6 +4,8 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using XivLinker.Infrastructure.Overlay.Models;
 
@@ -18,16 +20,20 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     private readonly ConcurrentDictionary<long, TaskCompletionSource<string>> pendingRequests = new();
     private readonly TimeSpan requestTimeout;
     private readonly Uri webSocketUri;
+    private readonly ILogger<OverlayPluginWebSocketSessionService> logger;
     private ClientWebSocket? webSocket;
     private CancellationTokenSource? receiveLoopCancellationTokenSource;
     private Task? receiveLoopTask;
     private long sequenceNumber;
 
-    public OverlayPluginWebSocketSessionService(IOptions<OverlayPluginOptions> options)
+    public OverlayPluginWebSocketSessionService(
+        IOptions<OverlayPluginOptions> options,
+        ILogger<OverlayPluginWebSocketSessionService>? logger = null)
     {
         OverlayPluginOptions value = options?.Value ?? throw new ArgumentNullException(nameof(options));
         webSocketUri = new Uri(value.WebSocketUri, UriKind.Absolute);
         requestTimeout = TimeSpan.FromSeconds(Math.Max(1, value.RequestTimeoutSeconds));
+        this.logger = logger ?? NullLogger<OverlayPluginWebSocketSessionService>.Instance;
     }
 
     public event EventHandler? ConnectionStateChanged;
@@ -57,14 +63,17 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
             try
             {
+                logger.LogInformation("OverlayPlugin WebSocket セッションを開始します。Uri={Uri}", webSocketUri);
                 await nextWebSocket.ConnectAsync(webSocketUri, timeoutSource.Token);
                 webSocket = nextWebSocket;
                 receiveLoopCancellationTokenSource = new CancellationTokenSource();
                 receiveLoopTask = Task.Run(() => ReceiveLoopAsync(nextWebSocket, receiveLoopCancellationTokenSource.Token));
+                logger.LogInformation("OverlayPlugin WebSocket セッションを開始しました。Uri={Uri}", webSocketUri);
                 ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
             }
-            catch
+            catch (Exception exception)
             {
+                logger.LogError(exception, "OverlayPlugin WebSocket セッションの開始に失敗しました。Uri={Uri}", webSocketUri);
                 nextWebSocket.Dispose();
                 throw;
             }
@@ -81,7 +90,9 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
 
         try
         {
+            logger.LogInformation("OverlayPlugin WebSocket セッションを停止します。");
             await DisposeCurrentSocketAsync(cancellationToken);
+            logger.LogInformation("OverlayPlugin WebSocket セッションを停止しました。");
             ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
         }
         finally
@@ -212,7 +223,8 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
     private async Task SendJsonAsync(string json, string? call, CancellationToken cancellationToken)
     {
         EnsureConnected();
-        LogCommunication("送信", json, call);
+        LogCommunication("send", json, call);
+        logger.LogDebug("OverlayPlugin へメッセージを送信しました。Call={Call}", call ?? "(unknown)");
 
         byte[] bytes = Encoding.UTF8.GetBytes(json);
         using CancellationTokenSource timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -259,8 +271,9 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         catch (OperationCanceledException)
         {
         }
-        catch (WebSocketException)
+        catch (WebSocketException exception)
         {
+            logger.LogWarning(exception, "OverlayPlugin WebSocket の受信ループが切断されました。");
         }
         finally
         {
@@ -280,7 +293,8 @@ public sealed class OverlayPluginWebSocketSessionService : IOverlayPluginWebSock
         string? responseName = responseSequence is long sequence && requestNames.TryGetValue(sequence, out string? call)
             ? call
             : null;
-        LogCommunication("受信", rawJson, responseName);
+        LogCommunication("receive", rawJson, responseName);
+        logger.LogDebug("OverlayPlugin からメッセージを受信しました。Call={Call}", responseName ?? "(event)");
 
         try
         {

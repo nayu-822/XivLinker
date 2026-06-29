@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using XivLinker.Application.Abstractions;
 using XivLinker.Application.Services;
+using XivLinker.App.Logging;
 using XivLinker.App.Services;
 using XivLinker.App.ViewModels;
 using XivLinker.Infrastructure.CharacterConfig.Services;
@@ -22,6 +23,12 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("OverlayPlugin"));
 
         services.AddSingleton<IAppDataPathService, AppDataPathService>();
+        services.AddSingleton<IAppSettingsStore, AppSettingsStore>();
+        services.AddSingleton(static serviceProvider => new FileLogOptions
+        {
+            LogsPath = serviceProvider.GetRequiredService<IAppDataPathService>().LogsPath,
+        });
+        services.AddSingleton<XivLinkerFileLogWriter>();
         services.AddSingleton<IAppDataFolderService, AppDataFolderService>();
         services.AddSingleton<LuminaGameDataService>();
         services.AddSingleton<ILuminaGameDataProvider>(static serviceProvider => serviceProvider.GetRequiredService<LuminaGameDataService>());

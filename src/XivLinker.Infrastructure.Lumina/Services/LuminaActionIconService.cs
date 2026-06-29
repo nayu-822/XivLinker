@@ -2,6 +2,8 @@ using Lumina;
 using Lumina.Data.Files;
 using System.Collections.Concurrent;
 using System.IO;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using XivLinker.Application.Abstractions;
 
 namespace XivLinker.Infrastructure.Lumina.Services;
@@ -10,14 +12,17 @@ public sealed class LuminaActionIconService
 {
     private readonly ILuminaGameDataProvider gameDataProvider;
     private readonly IAppDataPathService appDataPathService;
+    private readonly ILogger<LuminaActionIconService> logger;
     private readonly ConcurrentDictionary<uint, Task<byte[]?>> iconCache = [];
 
     public LuminaActionIconService(
         ILuminaGameDataProvider gameDataProvider,
-        IAppDataPathService appDataPathService)
+        IAppDataPathService appDataPathService,
+        ILogger<LuminaActionIconService>? logger = null)
     {
         this.gameDataProvider = gameDataProvider;
         this.appDataPathService = appDataPathService;
+        this.logger = logger ?? NullLogger<LuminaActionIconService>.Instance;
     }
 
     public async Task<byte[]?> GetIconPngAsync(uint iconId, CancellationToken cancellationToken = default)
@@ -30,6 +35,7 @@ public sealed class LuminaActionIconService
         string cachePath = GetIconCachePath(iconId);
         if (File.Exists(cachePath))
         {
+            logger.LogDebug("アクションアイコンをキャッシュから読み込みます。IconId={IconId}, Path={Path}", iconId, cachePath);
             return await File.ReadAllBytesAsync(cachePath, cancellationToken);
         }
 
@@ -47,9 +53,10 @@ public sealed class LuminaActionIconService
             iconCache.TryRemove(iconId, out _);
             throw;
         }
-        catch
+        catch (Exception exception)
         {
             iconCache.TryRemove(iconId, out _);
+            logger.LogError(exception, "アクションアイコンの取得に失敗しました。IconId={IconId}", iconId);
             return null;
         }
     }
@@ -66,17 +73,20 @@ public sealed class LuminaActionIconService
             var gameData = await gameDataProvider.GetGameDataAsync(cancellationToken);
             if (gameData is null)
             {
+                logger.LogWarning("Lumina のゲームデータが利用できないためアクションアイコンを取得できません。IconId={IconId}", iconId);
                 return null;
             }
 
             pngBytes = await Task.Run(() => LoadIconPng(gameData, iconId), cancellationToken);
             if (pngBytes is null)
             {
+                logger.LogWarning("Lumina からアクションアイコンを取得できませんでした。IconId={IconId}", iconId);
                 return null;
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
             await File.WriteAllBytesAsync(cachePath, pngBytes, cancellationToken);
+            logger.LogDebug("アクションアイコンをキャッシュへ保存しました。IconId={IconId}, Path={Path}", iconId, cachePath);
             return pngBytes;
         }
         finally

@@ -3,6 +3,8 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace XivLinker.Infrastructure.Overlay.Services;
@@ -11,13 +13,17 @@ public sealed class OverlayPluginWebSocketService : IOverlayPluginWebSocketServi
 {
     private readonly TimeSpan requestTimeout;
     private readonly Uri webSocketUri;
+    private readonly ILogger<OverlayPluginWebSocketService> logger;
     private long sequenceNumber;
 
-    public OverlayPluginWebSocketService(IOptions<OverlayPluginOptions> options)
+    public OverlayPluginWebSocketService(
+        IOptions<OverlayPluginOptions> options,
+        ILogger<OverlayPluginWebSocketService>? logger = null)
     {
         OverlayPluginOptions value = options?.Value ?? throw new ArgumentNullException(nameof(options));
         webSocketUri = new Uri(value.WebSocketUri, UriKind.Absolute);
         requestTimeout = TimeSpan.FromSeconds(Math.Max(1, value.RequestTimeoutSeconds));
+        this.logger = logger ?? NullLogger<OverlayPluginWebSocketService>.Instance;
     }
 
     public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
@@ -31,8 +37,9 @@ public sealed class OverlayPluginWebSocketService : IOverlayPluginWebSocketServi
         {
             throw;
         }
-        catch
+        catch (Exception exception)
         {
+            logger.LogWarning(exception, "OverlayPlugin WebSocket へ接続できませんでした。Uri={Uri}", webSocketUri);
             return false;
         }
     }
@@ -83,11 +90,20 @@ public sealed class OverlayPluginWebSocketService : IOverlayPluginWebSocketServi
 
         try
         {
+            logger.LogInformation("OverlayPlugin WebSocket への接続を開始します。Uri={Uri}", webSocketUri);
             await webSocket.ConnectAsync(webSocketUri, timeoutSource.Token);
+            logger.LogInformation("OverlayPlugin WebSocket に接続しました。Uri={Uri}", webSocketUri);
             return webSocket;
         }
-        catch
+        catch (OperationCanceledException)
         {
+            logger.LogWarning("OverlayPlugin WebSocket 接続がキャンセルまたはタイムアウトしました。Uri={Uri}", webSocketUri);
+            webSocket.Dispose();
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "OverlayPlugin WebSocket 接続に失敗しました。Uri={Uri}", webSocketUri);
             webSocket.Dispose();
             throw;
         }

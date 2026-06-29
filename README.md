@@ -11,3 +11,7 @@ dotnet restore
 dotnet build
 dotnet test
 ```
+
+## ファイルログ
+- `%LOCALAPPDATA%\XivLinker\Logs\xivlinker-yyyyMMdd.log` に日別のファイルログを出力します。
+- ファイルログの出力レベルは設定画面の「ログ設定」から `DEBUG / INFO / WARN / ERROR` を選択でき、設定は `%LOCALAPPDATA%\XivLinker\settings.json` に保存されます。
